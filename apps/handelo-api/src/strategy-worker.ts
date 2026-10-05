@@ -41,7 +41,7 @@ export function createPersistedStrategyWorker(
   let timer: ReturnType<typeof setInterval> | null = null;
   let inFlight: Promise<StrategySchedulerResult> | null = null;
 
-  const tick = async (): Promise<StrategySchedulerResult> => {
+  const tick = (): Promise<StrategySchedulerResult> => {
     if (inFlight) return inFlight;
 
     inFlight = runPersistedStrategyScheduler(dependencies).finally(() => {
