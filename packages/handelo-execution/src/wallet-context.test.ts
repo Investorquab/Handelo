@@ -117,3 +117,17 @@ test("agent spend blocks a transaction that breaches the minimum reserve", () =>
   assert.equal(result.decision, "BLOCK");
   assert.match(result.reasons.join(" "), /minimum wallet reserve/);
 });
+
+
+test("agent spend blocks a zero-balance wallet", () => {
+  const context = createAgentWalletContext(
+    "USER",
+    { address: "0x2222222222222222222222222222222222222222", network: "BSC" },
+    "0x1111111111111111111111111111111111111111",
+    0
+  );
+
+  const result = evaluateAgentSpend(context, "DCA", 5);
+  assert.equal(result.decision, "BLOCK");
+  assert.match(result.reasons.join(" "), /minimum wallet reserve/);
+});
