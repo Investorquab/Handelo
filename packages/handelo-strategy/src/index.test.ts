@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -422,6 +422,56 @@ test("scheduler never executes when market is closed", async () => {
 
     assert.equal(result.skipped, 1);
     assert.equal(executions, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("recurring schedules calculate the next execution deterministically", () => {
+  assert.equal(
+    nextExecutionAtForFrequency("Daily", "2026-10-05T12:00:00.000Z"),
+    "2026-10-06T12:00:00.000Z"
+  );
+  assert.equal(
+    nextExecutionAtForFrequency("Weekly", "2026-10-05T12:00:00.000Z"),
+    "2026-10-12T12:00:00.000Z"
+  );
+  assert.equal(
+    nextExecutionAtForFrequency("Every Monday", "2026-10-05T12:00:00.000Z"),
+    "2026-10-12T12:00:00.000Z"
+  );
+  assert.equal(nextExecutionAtForFrequency("Unsupported cadence", "2026-10-05T12:00:00.000Z"), null);
+});
+
+test("scheduler persists the next execution time after a successful recurring run", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-next-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA",
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily",
+      nextExecutionAt: "2026-10-05T11:00:00.000Z"
+    }));
+    let updated: StrategyDefinition | null = null;
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:00:00.000Z",
+      marketOpen: true,
+      listActiveStrategies: async () => [strategy],
+      updateStrategy: async value => { updated = value; },
+      riskCheck: async () => true,
+      execute: async () => undefined
+    });
+
+    assert.equal(result.finished, 1);
+    assert.equal(updated?.nextExecutionAt, "2026-10-06T12:00:00.000Z");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
