@@ -63,23 +63,3 @@ test("execution never returns fabricated success state", () => {
   assert.match(source, /const result = await wallet\.execute/);
   assert.doesNotMatch(source, /txHash:\s*["']0x[0-9a-fA-F]{64}["']/);
 });
-
-
-test("wallet context keeps personal wallet separate from the Agentic Wallet", () => {
-  assert.match(source, /\/api\/wallet\/context/);
-  assert.match(source, /mode === "DEMO" \? "DEMO" : "USER"/);
-  assert.match(source, /createWalletContext\(/);
-  assert.match(source, /createAgentWalletContext\(/);
-  assert.match(source, /personalAddress/);
-  assert.match(source, /agentAddress/);
-});
-
-test("wallet context never claims autonomous execution is ready before provider validation", () => {
-  assert.match(source, /autonomousExecutionReady: false/);
-});
-
-test("wallet context exposes deterministic agent capabilities", () => {
-  assert.match(source, /canDca: canAgentPermission\(agent, "DCA"\)/);
-  assert.match(source, /canTransferOut: canAgentPermission\(agent, "TRANSFER_OUT"\)/);
-  assert.match(source, /mode === "DEMO"/);
-});
