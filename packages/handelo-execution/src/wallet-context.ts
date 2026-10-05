@@ -67,3 +67,82 @@ export function canAgentPermission(
   if (context.policy.expiresAt && Date.parse(context.policy.expiresAt) <= Date.now()) return false;
   return context.policy.permissions.includes(permission);
 }
+
+
+export interface AgentSpendCheck {
+  decision: "PASS" | "BLOCK";
+  reasons: string[];
+}
+
+export function evaluateAgentSpend(
+  context: AgentWalletContext,
+  permission: WalletPermission,
+  amountUsd: number,
+  options: {
+    asset?: string;
+    dailySpentUsd?: number;
+  } = {}
+): AgentSpendCheck {
+  const reasons: string[] = [];
+
+  if (!canAgentPermission(context, permission)) {
+    reasons.push("Agent wallet permission is not active for this operation.");
+  }
+
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+    reasons.push("Spend amount must be greater than zero.");
+  }
+
+  const dailySpentUsd = options.dailySpentUsd ?? 0;
+  if (!Number.isFinite(dailySpentUsd) || dailySpentUsd < 0) {
+    reasons.push("Current daily spend must be a non-negative number.");
+  }
+
+  const maxTransactionUsd = context.policy.maxTransactionUsd;
+  if (
+    maxTransactionUsd !== undefined &&
+    Number.isFinite(amountUsd) &&
+    amountUsd > maxTransactionUsd
+  ) {
+    reasons.push("Transaction amount exceeds the $" + maxTransactionUsd + " agent limit.");
+  }
+
+  const maxDailySpendUsd = context.policy.maxDailySpendUsd;
+  if (
+    maxDailySpendUsd !== undefined &&
+    Number.isFinite(amountUsd) &&
+    Number.isFinite(dailySpentUsd) &&
+    dailySpentUsd + amountUsd > maxDailySpendUsd
+  ) {
+    reasons.push("Daily spend would exceed the $" + maxDailySpendUsd + " agent limit.");
+  }
+
+  if (options.asset && context.policy.allowedAssets?.length) {
+    const allowed = context.policy.allowedAssets.some(
+      (asset) => asset.toLowerCase() === options.asset!.trim().toLowerCase()
+    );
+    if (!allowed) {
+      reasons.push("Asset is not included in the agent wallet allowlist.");
+    }
+  }
+
+  const minimumReservePercent = context.policy.minimumReservePercent;
+  if (minimumReservePercent !== undefined) {
+    if (context.balanceUsd === null || !Number.isFinite(context.balanceUsd)) {
+      reasons.push("Wallet balance is unavailable, so the minimum reserve cannot be verified.");
+    } else if (
+      Number.isFinite(amountUsd) &&
+      context.balanceUsd > 0 &&
+      ((context.balanceUsd - amountUsd) / context.balanceUsd) * 100 < minimumReservePercent
+    ) {
+      reasons.push(
+        "Spend would breach the " + minimumReservePercent + "% minimum wallet reserve."
+      );
+    }
+  }
+
+  return {
+    decision: reasons.length === 0 ? "PASS" : "BLOCK",
+    reasons
+  };
+}
