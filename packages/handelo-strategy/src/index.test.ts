@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,createDraftStrategy,executionGrantFromStrategy,validateStrategyInput} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
