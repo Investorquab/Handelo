@@ -154,3 +154,5 @@ export class BinanceSimulationAdapter implements ExecutionAdapter{
 export * from "./wallet-context.js";
 
 export * from "./bnb-agent-provider.js";
+
+export * from "./wallet-provider.js";
