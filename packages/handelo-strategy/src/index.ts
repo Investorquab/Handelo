@@ -371,6 +371,47 @@ export class FileStrategyExecutionStore implements StrategyExecutionStore {
   }
 }
 
+
+export function nextExecutionAtForFrequency(
+  frequency: string,
+  from: string
+): string | null {
+  if (!validTimestamp(from)) throw new Error("Next execution calculation requires a valid timestamp.");
+  const date = new Date(from);
+  const normalized = frequency.trim().toLowerCase();
+  if (normalized === "daily" || normalized === "every day") {
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString();
+  }
+  if (normalized === "weekly" || normalized === "every week") {
+    date.setUTCDate(date.getUTCDate() + 7);
+    return date.toISOString();
+  }
+  if (normalized === "monthly" || normalized === "every month") {
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    return date.toISOString();
+  }
+  const weekday = normalized.match(/^every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/);
+  if (weekday) {
+    const days = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+    const target = days.indexOf(weekday[1]);
+    const delta = (target - date.getUTCDay() + 7) % 7 || 7;
+    date.setUTCDate(date.getUTCDate() + delta);
+    return date.toISOString();
+  }
+  return null;
+}
+
+export function scheduleNextStrategyExecution(
+  strategy: StrategyDefinition,
+  completedAt: string
+): StrategyDefinition {
+  if (!validTimestamp(completedAt)) throw new Error("Completed execution time is invalid.");
+  if (!strategy.nextExecutionAt) return strategy;
+  const next = nextExecutionAtForFrequency(strategy.frequency ?? "", completedAt);
+  return next ? { ...strategy, nextExecutionAt: next } : strategy;
+}
+
 export interface StrategyRuntimeDependencies {
   store: StrategyExecutionStore;
   now?: () => string;
