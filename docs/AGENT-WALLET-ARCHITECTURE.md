@@ -119,3 +119,81 @@ No autonomous money-moving implementation is considered complete until these que
 ## Build sequence
 
 Wallet architecture -> user wallet context -> agent wallet lifecycle -> portfolio ownership -> autonomous strategy runtime -> risk/execution -> verification -> withdrawal/revocation -> live validation.
+
+
+## BNB capability audit — 2026-10-05
+
+The current BNB Agent Studio / Agent SDK documentation changes the preferred architecture decision:
+
+### Preferred candidate: Altana session-key execution
+
+Altana's TypeScript wallet provider uses an EIP-7702 wallet model where the user's/admin EOA remains the wallet identity and the admin grants a scoped session key.
+
+The session can be constrained by:
+- allowed contract calls;
+- spending limits;
+- expiry;
+- revocation;
+- execution through the Altana relay.
+
+The agent process receives the scoped session key rather than the admin EOA private key.
+
+This is a strong match for Handelo's autonomous strategy model because the user can remain the owner while the agent receives bounded authority.
+
+Important: this does **not** necessarily create a second independent EOA with a separate address. The product should therefore model "Agent Wallet" as an execution/delegation context until the final wallet-provider decision proves that a separate balance address is required.
+
+### Alternatives
+
+**TWAK**
+- Uses Trust Wallet Agent Kit CLI.
+- The key stays outside the Handelo process.
+- Supports self-broadcasting and delegated intents.
+- Has command-level/payment limits.
+- Worth evaluating if its custody and user experience are better for the target flow.
+
+**EVMWalletProvider**
+- Local encrypted Keystore V3.
+- Full signing surface.
+- Suitable for a controlled server/demo agent wallet.
+- Not sufficient by itself for the desired user-delegated autonomous model because it does not provide the same native scoped-session boundary.
+
+**Turnkey**
+- Remote signing with keys held in secure infrastructure.
+- Strong production custody option.
+- More infrastructure than the hackathon demo needs.
+- Keep as a production alternative.
+
+### Agent Studio role
+
+Agent Studio is useful for the agent runtime, deployment, identity and wallet tooling, but its MCP layer is read-only and must not be treated as the signing boundary.
+
+The Studio security model keeps private keys in the agent's controlled environment and uses fixed deterministic signing code rather than exposing signing as an LLM tool.
+
+Handelo should therefore integrate the useful BNB primitives without allowing the LLM direct signing access.
+
+### Architecture decision
+
+For Phase 1, the working target is:
+
+Personal EOA
+  -> explicit delegation / session grant
+  -> scoped Agent execution context
+  -> deterministic Handelo Risk Governor
+  -> BNB wallet provider
+  -> BSC execution
+
+The agent never receives the user's admin private key.
+
+Before Phase 2 autonomous money movement is enabled, validate on BSC mainnet:
+1. session creation;
+2. session permissions;
+3. token spend cap;
+4. allowed contract/call scope;
+5. expiry;
+6. revocation;
+7. funding and balance semantics;
+8. transfer/withdrawal semantics;
+9. restart/recovery;
+10. exact UI consent flow.
+
+Reference implementation must use the BNB-supported SDK/provider rather than inventing EIP-7702 signing logic inside Handelo.
