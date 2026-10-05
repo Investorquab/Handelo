@@ -167,6 +167,56 @@ export function sessionGrantFromPolicy(
   });
 }
 
+export function intersectWalletPolicies(
+  walletPolicy: AgentWalletPolicy,
+  requested: WalletSessionGrant
+): WalletSessionGrant {
+  const walletAssets = walletPolicy.allowedAssets;
+  const requestedAssets = requested.allowedAssets;
+
+  if (
+    walletAssets?.length &&
+    requestedAssets?.length &&
+    requestedAssets.some(asset => !walletAssets.includes(asset))
+  ) {
+    throw new Error("Strategy asset scope exceeds the wallet policy asset scope.");
+  }
+
+  const permissions = requested.permissions.filter(permission =>
+    walletPolicy.permissions.includes(permission)
+  );
+  if (permissions.length !== requested.permissions.length) {
+    throw new Error("Strategy requests a wallet permission that is not authorized by the wallet policy.");
+  }
+
+  const maxTransactionUsd = [walletPolicy.maxTransactionUsd, requested.maxTransactionUsd]
+    .filter((value): value is number => value !== undefined)
+    .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
+
+  const maxDailySpendUsd = [walletPolicy.maxDailySpendUsd, requested.maxDailySpendUsd]
+    .filter((value): value is number => value !== undefined)
+    .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
+
+  const minimumReservePercent = Math.max(
+    walletPolicy.minimumReservePercent ?? 0,
+    requested.minimumReservePercent ?? 0
+  );
+
+  return validateWalletSessionGrant({
+    ...requested,
+    permissions,
+    maxTransactionUsd: Number.isFinite(maxTransactionUsd) ? maxTransactionUsd : undefined,
+    maxDailySpendUsd: Number.isFinite(maxDailySpendUsd) ? maxDailySpendUsd : undefined,
+    minimumReservePercent,
+    allowedAssets: requestedAssets?.length
+      ? [...requestedAssets]
+      : walletAssets?.length
+        ? [...walletAssets]
+        : undefined,
+    revocable: requested.revocable && walletPolicy.revocable
+  });
+}
+
 export function autonomousExecutionProviderReady(
   capabilities: WalletProviderCapabilities
 ): boolean {
