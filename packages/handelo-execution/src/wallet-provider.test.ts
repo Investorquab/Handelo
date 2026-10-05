@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
+import { intersectWalletPolicies, 
   autonomousExecutionProviderReady,
   sessionGrantFromPolicy,
   type WalletProviderCapabilities
@@ -87,4 +87,51 @@ test("wallet session validation requires a permission", () => {
     "0x2222222222222222222222222222222222222222",
     { permissions: [], revocable: true }
   ), /at least one permission/);
+});
+
+test("policy intersection never broadens the wallet policy", () => {
+  const result = intersectWalletPolicies(
+    {
+      permissions: ["DCA", "RECURRING"],
+      maxTransactionUsd: 8,
+      maxDailySpendUsd: 20,
+      minimumReservePercent: 15,
+      allowedAssets: ["NVDAB"],
+      revocable: true
+    },
+    {
+      ownerWallet: "0x1111111111111111111111111111111111111111",
+      agentWallet: "0x2222222222222222222222222222222222222222",
+      network: "BSC",
+      permissions: ["DCA"],
+      maxTransactionUsd: 10,
+      maxDailySpendUsd: 25,
+      minimumReservePercent: 10,
+      allowedAssets: ["NVDAB"],
+      revocable: true
+    }
+  );
+
+  assert.equal(result.maxTransactionUsd, 8);
+  assert.equal(result.maxDailySpendUsd, 20);
+  assert.equal(result.minimumReservePercent, 15);
+  assert.deepEqual(result.permissions, ["DCA"]);
+});
+
+test("policy intersection blocks an asset outside wallet scope", () => {
+  assert.throws(() => intersectWalletPolicies(
+    {
+      permissions: ["DCA"],
+      allowedAssets: ["NVDAB"],
+      revocable: true
+    },
+    {
+      ownerWallet: "0x1111111111111111111111111111111111111111",
+      agentWallet: "0x2222222222222222222222222222222222222222",
+      network: "BSC",
+      permissions: ["DCA"],
+      allowedAssets: ["NVDAon"],
+      revocable: true
+    }
+  ), /asset scope/);
 });
