@@ -158,3 +158,54 @@ export function transitionStrategyExecution(
   }
   return to;
 }
+
+export interface StrategyTriggerContext {
+  now?: string;
+  marketOpen?: boolean;
+  conditionMet?: boolean;
+}
+
+export interface StrategyTriggerDecision {
+  eligible: boolean;
+  reason: string;
+  triggeredAt: string | null;
+}
+
+function validTimestamp(value: string): boolean {
+  return Number.isFinite(Date.parse(value));
+}
+
+export function evaluateStrategyTrigger(
+  strategy: StrategyDefinition,
+  context: StrategyTriggerContext = {}
+): StrategyTriggerDecision {
+  const now = context.now ?? new Date().toISOString();
+  if (!validTimestamp(now)) throw new Error("Trigger evaluation requires a valid current timestamp.");
+
+  if (strategy.status !== "ACTIVE") {
+    return { eligible: false, reason: "Strategy is not active.", triggeredAt: null };
+  }
+
+  if (context.marketOpen === false) {
+    return { eligible: false, reason: "Market is closed.", triggeredAt: null };
+  }
+
+  if (strategy.nextExecutionAt) {
+    if (!validTimestamp(strategy.nextExecutionAt)) {
+      throw new Error("Strategy next execution time is invalid.");
+    }
+    if (Date.parse(strategy.nextExecutionAt) > Date.parse(now)) {
+      return { eligible: false, reason: "Next execution time has not arrived.", triggeredAt: null };
+    }
+  }
+
+  if (strategy.type === "CONDITIONAL" && context.conditionMet !== true) {
+    return { eligible: false, reason: "Strategy condition is not met.", triggeredAt: null };
+  }
+
+  return {
+    eligible: true,
+    reason: "Strategy trigger conditions are satisfied.",
+    triggeredAt: now
+  };
+}
