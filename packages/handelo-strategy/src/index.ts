@@ -2,7 +2,8 @@ import {
   createStrategyId,
   type StrategyConstraints,
   type StrategyDefinition,
-  type StrategyType
+  type StrategyType,
+  type WalletPermission
 } from "@handelo/core";
 
 export interface StrategyInput {
