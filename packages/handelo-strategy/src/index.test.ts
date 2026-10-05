@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -92,4 +92,60 @@ test("failed execution can recover only through an explicit active transition", 
   assert.equal(canTransitionStrategyExecution("EXECUTING", "FAILED"), true);
   assert.equal(transitionStrategyExecution("FAILED", "ACTIVE"), "ACTIVE");
   assert.equal(canTransitionStrategyExecution("FAILED", "EXECUTING"), false);
+});
+
+test("trigger evaluator fires an active strategy when its time has arrived", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "DCA",
+    asset: "NVDAB",
+    amountUsd: 10,
+    frequency: "Weekly",
+    nextExecutionAt: "2026-10-05T09:00:00.000Z"
+  }));
+
+  const decision = evaluateStrategyTrigger(strategy, {
+    now: "2026-10-05T10:00:00.000Z",
+    marketOpen: true
+  });
+  assert.equal(decision.eligible, true);
+  assert.equal(decision.triggeredAt, "2026-10-05T10:00:00.000Z");
+});
+
+test("trigger evaluator does not fire before the scheduled time or when market is closed", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "RECURRING",
+    asset: "NVDAB",
+    amountUsd: 10,
+    frequency: "Daily",
+    nextExecutionAt: "2026-10-05T11:00:00.000Z"
+  }));
+
+  assert.equal(evaluateStrategyTrigger(strategy, {
+    now: "2026-10-05T10:00:00.000Z",
+    marketOpen: true
+  }).eligible, false);
+
+  assert.equal(evaluateStrategyTrigger(strategy, {
+    now: "2026-10-05T12:00:00.000Z",
+    marketOpen: false
+  }).eligible, false);
+});
+
+test("conditional strategies require an explicit deterministic condition result", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "CONDITIONAL",
+    asset: "NVDAB",
+    condition: "price below reference"
+  }));
+
+  assert.equal(evaluateStrategyTrigger(strategy, {
+    now: "2026-10-05T12:00:00.000Z",
+    marketOpen: true
+  }).eligible, false);
+
+  assert.equal(evaluateStrategyTrigger(strategy, {
+    now: "2026-10-05T12:00:00.000Z",
+    marketOpen: true,
+    conditionMet: true
+  }).eligible, true);
 });
