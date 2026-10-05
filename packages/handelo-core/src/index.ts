@@ -80,7 +80,7 @@ export interface StrategyDefinition {
   targetAllocation?: Record<string, number>;
   constraints: StrategyConstraints;
   nextExecutionAt?: string | null;
-  status: "DRAFT" | "ACTIVE" | "PAUSED" | "BLOCKED";
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "BLOCKED" | "CANCELLED";
 }
 
 export interface PortfolioPosition {
