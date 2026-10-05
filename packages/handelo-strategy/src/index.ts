@@ -486,6 +486,7 @@ export interface StrategyRuntimeSchedulerDependencies extends StrategyRuntimeDep
   listActiveStrategies: () => Promise<StrategyDefinition[]>;
   marketOpen?: boolean;
   conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
+  updateStrategy?: (strategy: StrategyDefinition) => Promise<void>;
 }
 
 export interface StrategySchedulerResult {
@@ -517,6 +518,9 @@ export async function runStrategyScheduler(
     });
 
     const result = await runTriggeredStrategy(strategy, trigger, dependencies);
+    if (result.status === "FINISHED" && dependencies.updateStrategy) {
+      await dependencies.updateStrategy(scheduleNextStrategyExecution(strategy, result.record.finishedAt ?? result.record.triggeredAt));
+    }
     results.push(result);
   }
 
