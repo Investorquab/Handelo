@@ -1,8 +1,8 @@
 # Handelo Product Specification
 
 Status: LOCKED
-Version: 1.1
-Date: 2026-10-01
+Version: 1.2
+Date: 2026-10-05
 
 ## 1. Product definition
 
@@ -34,8 +34,9 @@ The homepage must explain:
 
 The homepage must use real Handelo visual language and real product UI components for capability demonstrations. Demo snippets must not be unrelated fake interfaces.
 
-Primary CTA:
-- Open Handelo / Launch Handelo
+Primary CTAs:
+- Try Demo
+- Connect Wallet / Use Handelo
 
 ### Page 2 — Handelo Workspace
 
@@ -48,18 +49,61 @@ The workspace uses a persistent two-column model:
 Left: financial and market context.
 Right: persistent AI Chat.
 
-
 ### External control surfaces
 
 The web pages remain the only primary product pages. Handelo may also expose the same runtime through:
 
-- **SDK** — `@handelo/sdk` for applications and agents sending natural-language requests.
-- **MCP** — read-only market-intelligence tools.
-- **Telegram** — a conversational client routed through the same Handelo runtime.
+- SDK — @handelo/sdk for applications and agents sending natural-language requests.
+- MCP — read-only market-intelligence tools.
+- Telegram — a conversational client routed through the same Handelo runtime.
 
 These are control surfaces, not parallel business-logic implementations.
 
 The left context remains visible while the user interacts with Chat.
+
+## 2.1 Wallet and agent architecture
+
+Handelo separates the human user's personal wallet from the wallet used by the autonomous Handelo agent.
+
+### Demo mode
+
+Try Demo opens a preconfigured Handelo environment using a configured Agentic Wallet.
+
+The judge must not need:
+- API credentials;
+- private keys;
+- wallet setup;
+- developer configuration.
+
+The UI must clearly disclose Demo Mode.
+
+Any real transaction shown in Demo Mode must be an actual transaction from the configured demo wallet. Simulated actions must be explicitly labelled simulated. Handelo must never fabricate transaction hashes, balances or execution results.
+
+### User mode
+
+Connect Wallet connects a user's BSC-compatible personal EVM wallet.
+
+Examples include MetaMask, Rabby, Binance Wallet, Bitget Wallet or another compatible provider.
+
+Connecting a personal wallet establishes wallet identity and allows supported portfolio information to be read. It does not, by itself, grant Handelo spending authority.
+
+### Agent wallet
+
+Autonomous execution uses a dedicated agent execution context based on a BNB-supported wallet/provider.
+
+The user must not be required to expose the agent wallet private key to the browser or LLM.
+
+The intended long-term model is:
+- personal wallet remains user-controlled;
+- user explicitly funds or authorizes an agent execution context;
+- agent operates only within deterministic spending, exposure, reserve and strategy policies;
+- user can inspect agent balance, permissions and activity;
+- user can revoke authority;
+- user can transfer supported funds back to the personal wallet through a controlled transaction flow.
+
+BNB Agent Studio and its supported wallet providers must be used where they provide the safest/native implementation rather than recreating wallet custody or signing infrastructure inside Handelo.
+
+The exact funding, withdrawal and delegation mechanism is an architecture gate and must be validated against the current BNB Agent Studio/wallet-provider capabilities before autonomous money movement is implemented.
 
 ## 3. Workspace — persistent left context
 
@@ -73,9 +117,11 @@ It may contain:
 - divergence
 - market status and market-hours context
 - charts
-- wallet balance
+- personal wallet balance
+- agent wallet balance
 - portfolio allocation and positions
 - active strategies
+- agent permissions
 - risk state
 - recent activity/history
 
@@ -97,13 +143,15 @@ Users can ask things such as:
 - Rebalance my portfolio to target allocations.
 - Why was my strategy blocked?
 - Review this transaction.
+- Transfer 10% of my agent wallet back to my personal wallet.
 
 Chat must:
 - auto-scroll to the newest response;
 - preserve the conversation;
 - expose useful capability prompt chips for new users;
 - render structured product cards where appropriate;
-- never fabricate market data, execution, transaction success, or unsupported assets.
+- never fabricate market data, execution, transaction success, or unsupported assets;
+- route wallet-moving actions through the same deterministic review, authorization and execution boundaries as UI actions.
 
 ## 5. Seven product capabilities
 
@@ -182,7 +230,8 @@ Initial policy dimensions:
 - maximum transaction/trade size;
 - minimum reserve;
 - strategy constraints;
-- market-condition restrictions.
+- market-condition restrictions;
+- agent-wallet spending limits.
 
 The Risk Governor returns an explicit decision and reason.
 
@@ -190,10 +239,15 @@ A blocked action must be explainable in user language without allowing the LLM t
 
 ### 5.6 Agentic Execution
 
-Execution follows a human-approval boundary.
+Execution follows the appropriate human-approval or delegated-policy boundary.
 
-Flow:
+For explicitly user-approved actions:
+
 Review -> deterministic policy -> transaction preview -> explicit confirmation -> wallet execution -> verification
+
+For autonomous strategy actions:
+
+Trigger -> deterministic risk/policy -> wallet permission check -> execution -> verification -> portfolio update
 
 Transaction previews must explain what the user is approving.
 
@@ -235,6 +289,8 @@ Chat may render structured UI cards for:
 - Transaction Preview
 - Portfolio/Rebalance Preview
 - Basket Preview
+- Wallet Transfer Preview
+- Agent Permission / Wallet Status
 
 Cards must be readable and actionable.
 
@@ -251,14 +307,17 @@ The workspace should guide users toward supported tokenized-stock representation
 ## 8. External interface rules
 
 ### SDK
+
 The SDK is a typed client over the Handelo runtime. It must not hold private keys, sign transactions, bypass risk/review controls, or fabricate execution evidence.
 
 ### Telegram
-Telegram is a conversational client, not a separate trading engine. It routes requests through the same market, strategy, portfolio, risk, review, and execution boundaries.
+
+Telegram is a conversational client, not a separate trading engine. It routes requests through the same market, strategy, portfolio, risk, review, authorization and execution boundaries.
 
 The bot must isolate Telegram users by application session, never receive or store private keys, preserve deterministic risk decisions, and never claim execution without verified evidence. If secured wallet interaction cannot be safely represented in Telegram, execution must hand off to the web wallet flow.
 
 ### MCP
+
 MCP remains read-only for market intelligence and is not a signing boundary.
 
 ## 9. Visual and interaction rules
@@ -283,6 +342,7 @@ Deterministic application code is authoritative for:
 - policy;
 - transaction constraints;
 - confirmation state;
+- authorization state;
 - execution state;
 - verification.
 
@@ -291,20 +351,27 @@ The LLM must not invent:
 - prices;
 - execution results;
 - transaction hashes;
-- unsupported token representations.
+- unsupported token representations;
+- wallet balances;
+- wallet permissions.
 
 Ambiguous stock requests must not silently select a representation.
 
 ## 11. Security rules
 
-- Private keys never enter the LLM.
-- Explicit user approval is required before execution.
+- Personal wallet private keys never enter the LLM.
+- Agent wallet private keys never enter the LLM or browser UI.
+- Wallet connection does not equal spending authorization.
+- Explicit user approval remains required where delegated authority is not configured.
+- Delegated autonomous execution is bounded by deterministic policy.
 - Execution policy is rechecked at the execution boundary.
 - Unsupported/high-risk audit results block execution according to the existing security path.
 - External links remain HTTPS-only.
 - User-controlled UI values remain safely escaped.
 - No fake execution evidence.
 - No bypass of wallet or audit controls for demos.
+- Agent authority must be revocable.
+- Recovery and idempotency must prevent duplicate autonomous execution.
 
 ## 12. Engineering direction
 
@@ -335,7 +402,19 @@ For each capability:
 9. Strategy Intelligence / baskets.
 10. Workspace integration and polish.
 11. Homepage and real UI demo snippets.
-12. Full regression, security review, demo and submission preparation.
+12. Agent Wallet Architecture gate:
+   - BNB Agent Studio/provider capability audit;
+   - personal-wallet context;
+   - agent-wallet lifecycle;
+   - permissions/delegation;
+   - funding;
+   - withdrawal;
+   - revocation;
+   - demo mode.
+13. Autonomous Strategy Runtime.
+14. Portfolio state reconciliation and post-execution verification.
+15. Liquidity-aware execution and event intelligence.
+16. Full regression, security review, live validation, demo and submission preparation.
 
 ## 14. Explicit non-goals
 
@@ -343,9 +422,10 @@ Handelo must not become:
 - a chatbot-only product;
 - a multi-page admin dashboard;
 - seven disconnected mini-apps;
-- an autonomous trading system that hides approval;
+- an autonomous trading system that hides approval or delegated authority;
 - a UI that claims unsupported execution is working;
-- a fake demo assembled from unrelated mock screens.
+- a fake demo assembled from unrelated mock screens;
+- a system that derives an agent private key from a user's personal wallet seed phrase.
 
 ## 15. Change-control rule
 
