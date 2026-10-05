@@ -9,7 +9,7 @@ import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
 import { activateStoredStrategy, listActiveStrategies } from "./strategy-store.js";
-import { canAgentPermission, createAgentWalletContext, createWalletContext, DEFAULT_AGENT_POLICY } from "@handelo/execution/wallet-context.js";
+import { canAgentPermission, createAgentWalletContext, createWalletContext, DEFAULT_AGENT_POLICY } from "@handelo/execution";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
