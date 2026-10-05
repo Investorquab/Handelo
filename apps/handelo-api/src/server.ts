@@ -9,6 +9,7 @@ import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
 import { activateStoredStrategy, listActiveStrategies } from "./strategy-store.js";
+import { canAgentPermission, createAgentWalletContext, createWalletContext, DEFAULT_AGENT_POLICY } from "@handelo/execution/wallet-context.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
@@ -196,6 +197,69 @@ const server = createServer(async (req, res) => {
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/wallet/context")) {
+    const url = new URL(req.url, "http://localhost");
+    const mode = url.searchParams.get("mode") === "DEMO" ? "DEMO" : "USER";
+    const requestedOwner = url.searchParams.get("wallet")?.trim() ?? null;
+
+    if (requestedOwner && !isEvmAddress(requestedOwner)) {
+      return json(res, 400, { error: "wallet must be a valid EVM address" });
+    }
+
+    try {
+      const status = await walletStatus();
+      let agentAddress: string | null = null;
+      if (status.status === "CONNECTED") {
+        const wallet = await bawJson<{
+          addresses?: Array<{ binanceChainId?: string; address?: string }>;
+        }>(["wallet", "address"]);
+        agentAddress = wallet.addresses
+          ?.find((entry) => entry.binanceChainId === "56")
+          ?.address?.trim() ?? null;
+        if (agentAddress && !isEvmAddress(agentAddress)) {
+          return json(res, 502, { error: "Binance Agentic Wallet returned an invalid BSC address." });
+        }
+      }
+
+      const personalAddress = mode === "DEMO"
+        ? null
+        : requestedOwner;
+
+      const personal = createWalletContext(
+        mode,
+        "PERSONAL",
+        personalAddress ? { address: personalAddress, network: "BSC" } : null,
+        null
+      );
+
+      const agent = createAgentWalletContext(
+        mode,
+        agentAddress ? { address: agentAddress, network: "BSC" } : null,
+        personalAddress,
+        null,
+        DEFAULT_AGENT_POLICY,
+        status.status === "CONNECTED" && agentAddress ? "ACTIVE" : "UNAVAILABLE"
+      );
+
+      return json(res, 200, {
+        mode,
+        personal,
+        agent,
+        capabilities: {
+          canReadPortfolio: true,
+          canDca: canAgentPermission(agent, "DCA"),
+          canTransferOut: canAgentPermission(agent, "TRANSFER_OUT"),
+          autonomousExecutionReady: false
+        }
+      });
+    } catch (error) {
+      return json(res, 503, {
+        error: walletServiceError(error),
+        mode
+      });
     }
   }
 
