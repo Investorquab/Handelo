@@ -131,8 +131,8 @@ export function evaluateAgentSpend(
     if (context.balanceUsd === null || !Number.isFinite(context.balanceUsd)) {
       reasons.push("Wallet balance is unavailable, so the minimum reserve cannot be verified.");
     } else if (
-      Number.isFinite(amountUsd) &&
-      context.balanceUsd > 0 &&
+      !Number.isFinite(amountUsd) ||
+      context.balanceUsd <= 0 ||
       ((context.balanceUsd - amountUsd) / context.balanceUsd) * 100 < minimumReservePercent
     ) {
       reasons.push(
