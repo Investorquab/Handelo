@@ -317,3 +317,56 @@ export class StrategyExecutionRegistry {
     return this.records.size;
   }
 }
+
+export interface StrategyExecutionStore {
+  claim(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord>;
+  get(executionKey: string): Promise<StrategyExecutionRecord | null>;
+  update(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord>;
+}
+
+export class FileStrategyExecutionStore implements StrategyExecutionStore {
+  constructor(private readonly filePath: string) {}
+
+  private async read(): Promise<StrategyExecutionRecord[]> {
+    const { readFile } = await import("node:fs/promises");
+    try {
+      const raw = await readFile(this.filePath, "utf8");
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed as StrategyExecutionRecord[] : [];
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }
+
+  private async write(records: StrategyExecutionRecord[]): Promise<void> {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const { dirname } = await import("node:path");
+    await mkdir(dirname(this.filePath), { recursive: true });
+    await writeFile(this.filePath, JSON.stringify(records, null, 2) + "\n", "utf8");
+  }
+
+  async claim(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord> {
+    const records = await this.read();
+    if (records.some(existing => existing.executionKey === record.executionKey)) {
+      throw new Error("Strategy execution key has already been claimed.");
+    }
+    records.push(record);
+    await this.write(records);
+    return record;
+  }
+
+  async get(executionKey: string): Promise<StrategyExecutionRecord | null> {
+    const records = await this.read();
+    return records.find(record => record.executionKey === executionKey) ?? null;
+  }
+
+  async update(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord> {
+    const records = await this.read();
+    const index = records.findIndex(existing => existing.executionKey === record.executionKey);
+    if (index === -1) throw new Error("Strategy execution record does not exist.");
+    records[index] = record;
+    await this.write(records);
+    return record;
+  }
+}
