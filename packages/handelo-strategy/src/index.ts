@@ -440,3 +440,52 @@ export async function runTriggeredStrategy(
     return { status: "FAILED", record: failed };
   }
 }
+
+export interface StrategyRuntimeSchedulerDependencies extends StrategyRuntimeDependencies {
+  listActiveStrategies: () => Promise<StrategyDefinition[]>;
+  marketOpen?: boolean;
+  conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
+}
+
+export interface StrategySchedulerResult {
+  evaluated: number;
+  triggered: number;
+  finished: number;
+  failed: number;
+  skipped: number;
+  duplicate: number;
+  results: StrategyRuntimeResult[];
+}
+
+export async function runStrategyScheduler(
+  dependencies: StrategyRuntimeSchedulerDependencies
+): Promise<StrategySchedulerResult> {
+  const now = dependencies.now ?? (() => new Date().toISOString());
+  const strategies = await dependencies.listActiveStrategies();
+  const results: StrategyRuntimeResult[] = [];
+
+  for (const strategy of strategies) {
+    const conditionMet = strategy.type === "CONDITIONAL"
+      ? await (dependencies.conditionMet?.(strategy) ?? Promise.resolve(false))
+      : undefined;
+
+    const trigger = evaluateStrategyTrigger(strategy, {
+      now: now(),
+      marketOpen: dependencies.marketOpen,
+      conditionMet
+    });
+
+    const result = await runTriggeredStrategy(strategy, trigger, dependencies);
+    results.push(result);
+  }
+
+  return {
+    evaluated: strategies.length,
+    triggered: results.filter(result => result.status !== "SKIPPED").length,
+    finished: results.filter(result => result.status === "FINISHED").length,
+    failed: results.filter(result => result.status === "FAILED").length,
+    skipped: results.filter(result => result.status === "SKIPPED").length,
+    duplicate: results.filter(result => result.status === "DUPLICATE").length,
+    results
+  };
+}
