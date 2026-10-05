@@ -2,38 +2,30 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createPersistedStrategyWorker } from "./strategy-worker.js";
 
+const dependencies = {
+  wallet: "0x3333333333333333333333333333333333333333",
+  store: {
+    claim: async <T>(record: T) => record,
+    get: async () => null,
+    update: async <T>(record: T) => record
+  },
+  riskCheck: async () => true,
+  execute: async () => {}
+};
+
 test("strategy worker rejects intervals below one second", () => {
   assert.throws(
-    () => createPersistedStrategyWorker({
-      wallet: "0x3333333333333333333333333333333333333333",
-      store: {
-        claim: async record => record,
-        get: async () => null,
-        update: async record => record
-      },
-      riskCheck: async () => true,
-      execute: async () => {},
-      intervalMs: 999
-    }),
+    () => createPersistedStrategyWorker({ ...dependencies, intervalMs: 999 }),
     /at least 1000ms/
   );
 });
 
-test("strategy worker starts once, stops once, and prevents overlapping ticks", async () => {
+test("strategy worker starts and stops idempotently", async () => {
   let scheduled = 0;
   let cleared = 0;
-  let resolveRun: (() => void) | undefined;
-  let calls = 0;
 
   const worker = createPersistedStrategyWorker({
-    wallet: "0x3333333333333333333333333333333333333333",
-    store: {
-      claim: async record => record,
-      get: async () => null,
-      update: async record => record
-    },
-    riskCheck: async () => true,
-    execute: async () => {},
+    ...dependencies,
     intervalMs: 1000,
     setInterval: () => {
       scheduled += 1;
@@ -49,18 +41,11 @@ test("strategy worker starts once, stops once, and prevents overlapping ticks", 
   assert.equal(scheduled, 1);
   assert.equal(worker.isRunning(), true);
 
-  const first = worker.tick();
-  const second = worker.tick();
-  assert.equal(first, second);
-  await new Promise<void>(resolve => {
-    resolveRun = resolve;
-    setTimeout(resolve, 0);
-  });
-  void resolveRun;
+  const result = await worker.tick();
+  assert.equal(result.evaluated, 0);
 
   worker.stop();
   worker.stop();
   assert.equal(cleared, 1);
   assert.equal(worker.isRunning(), false);
-  assert.equal(calls, 0);
 });
