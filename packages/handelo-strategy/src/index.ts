@@ -75,3 +75,47 @@ export function activateStrategy(strategy: StrategyDefinition): StrategyDefiniti
 
   return {...strategy,status:"ACTIVE"};
 }
+
+export interface StrategyExecutionGrant {
+  strategyId: string;
+  asset: string;
+  permission: WalletPermission;
+  maxTransactionUsd?: number;
+  maxDailySpendUsd?: number;
+  minimumReservePercent?: number;
+  allowedAssets: string[];
+}
+
+export function executionGrantFromStrategy(
+  strategy: StrategyDefinition,
+  maxDailySpendUsd?: number
+): StrategyExecutionGrant {
+  if (strategy.status !== "ACTIVE") {
+    throw new Error("Only active strategies can produce execution grants.");
+  }
+
+  const permission: WalletPermission =
+    strategy.type === "DCA" ? "DCA" :
+    strategy.type === "RECURRING" ? "RECURRING" :
+    strategy.type === "CONDITIONAL" ? "CONDITIONAL" :
+    "REBALANCE";
+
+  const maxTransactionUsd = strategy.constraints.maxTransactionUsd;
+  if (
+    maxTransactionUsd !== undefined &&
+    maxDailySpendUsd !== undefined &&
+    maxTransactionUsd > maxDailySpendUsd
+  ) {
+    throw new Error("Strategy transaction limit cannot exceed its daily wallet limit.");
+  }
+
+  return {
+    strategyId: strategy.id,
+    asset: strategy.asset,
+    permission,
+    maxTransactionUsd,
+    maxDailySpendUsd,
+    minimumReservePercent: strategy.constraints.minimumReservePercent,
+    allowedAssets: [strategy.asset]
+  };
+}
