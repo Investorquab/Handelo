@@ -5,6 +5,53 @@ export type RiskDecision = "PASS" | "BLOCK";
 export type ExecutionState = "PENDING" | "FINISHED" | "FAILED";
 export type StrategyType = "DCA" | "RECURRING" | "CONDITIONAL" | "REBALANCE";
 
+export type WalletMode = "DEMO" | "USER";
+export type WalletRole = "PERSONAL" | "AGENT";
+export type WalletPermission =
+  | "READ_PORTFOLIO"
+  | "DCA"
+  | "RECURRING"
+  | "CONDITIONAL"
+  | "REBALANCE"
+  | "TRANSFER_OUT";
+
+export interface WalletContext {
+  mode: WalletMode;
+  role: WalletRole;
+  address: string | null;
+  network: "BSC";
+  connected: boolean;
+  balanceUsd: number | null;
+}
+
+export interface AgentWalletPolicy {
+  permissions: WalletPermission[];
+  maxTransactionUsd?: number;
+  maxDailySpendUsd?: number;
+  minimumReservePercent?: number;
+  allowedAssets?: string[];
+  expiresAt?: string | null;
+  revocable: boolean;
+}
+
+export interface AgentWalletContext extends WalletContext {
+  role: "AGENT";
+  policy: AgentWalletPolicy;
+  status: "ACTIVE" | "PAUSED" | "REVOKED" | "UNAVAILABLE";
+  ownerWallet: string | null;
+}
+
+export interface WalletTransferPreview {
+  from: string;
+  to: string;
+  amountUsd: number;
+  network: "BSC";
+  risk: RiskResult;
+  requiresUserApproval: boolean;
+  executionState: ExecutionState;
+}
+
+
 export interface MarketInsight {
   underlyingTicker: string;
   tokenSymbol: string;
@@ -84,7 +131,8 @@ export type ChatCard =
   | {type:"RISK_RESULT"; data:RiskResult}
   | {type:"TRANSACTION_PREVIEW"; data:TransactionPreview}
   | {type:"PORTFOLIO_PREVIEW"; data:PortfolioSnapshot}
-  | {type:"BASKET_PREVIEW"; data:BasketDefinition};
+  | {type:"BASKET_PREVIEW"; data:BasketDefinition}
+  | {type:"WALLET_TRANSFER_PREVIEW"; data:WalletTransferPreview};
 
 export interface ChatMessage {
   id: string;
