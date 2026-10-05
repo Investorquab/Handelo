@@ -58,3 +58,33 @@ test("non-revocable and expired sessions are rejected", () => {
     { permissions: ["DCA"], expiresAt: "2020-01-01T00:00:00.000Z", revocable: true }
   ), /future timestamp/);
 });
+
+test("wallet session validation rejects unsafe policy bounds", () => {
+  assert.throws(() => sessionGrantFromPolicy(
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    { permissions: ["DCA"], maxTransactionUsd: 20, maxDailySpendUsd: 10, revocable: true }
+  ), /cannot exceed maximum daily spend/);
+
+  assert.throws(() => sessionGrantFromPolicy(
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    { permissions: ["DCA"], minimumReservePercent: 101, revocable: true }
+  ), /between 0 and 100/);
+});
+
+test("wallet session validation requires explicit scope for transfers", () => {
+  assert.throws(() => sessionGrantFromPolicy(
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    { permissions: ["TRANSFER_OUT"], revocable: true }
+  ), /allowed asset scope/);
+});
+
+test("wallet session validation requires a permission", () => {
+  assert.throws(() => sessionGrantFromPolicy(
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    { permissions: [], revocable: true }
+  ), /at least one permission/);
+});
