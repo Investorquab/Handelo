@@ -209,3 +209,111 @@ export function evaluateStrategyTrigger(
     triggeredAt: now
   };
 }
+
+export interface StrategyExecutionRecord {
+  runId: string;
+  strategyId: string;
+  status: StrategyExecutionStatus;
+  triggeredAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  attempt: number;
+  executionKey: string;
+  error?: string | null;
+}
+
+export function createExecutionKey(
+  strategyId: string,
+  triggerAt: string
+): string {
+  if (!strategyId.trim() || !validTimestamp(triggerAt)) {
+    throw new Error("Execution key requires a strategy ID and valid trigger timestamp.");
+  }
+  return strategyId + ":" + new Date(triggerAt).toISOString();
+}
+
+export function createStrategyExecutionRecord(
+  strategy: StrategyDefinition,
+  triggerAt: string
+): StrategyExecutionRecord {
+  if (strategy.status !== "ACTIVE") {
+    throw new Error("Only active strategies can create execution records.");
+  }
+
+  return {
+    runId: createStrategyId("run"),
+    strategyId: strategy.id,
+    status: "TRIGGERED",
+    triggeredAt: new Date(triggerAt).toISOString(),
+    startedAt: null,
+    finishedAt: null,
+    attempt: 1,
+    executionKey: createExecutionKey(strategy.id, triggerAt),
+    error: null
+  };
+}
+
+export function beginStrategyExecution(
+  record: StrategyExecutionRecord,
+  now: string
+): StrategyExecutionRecord {
+  if (record.status !== "RISK_CHECK") {
+    throw new Error("Strategy execution must pass through RISK_CHECK before execution.");
+  }
+  return {
+    ...record,
+    status: transitionStrategyExecution(record.status, "EXECUTING"),
+    startedAt: new Date(now).toISOString()
+  };
+}
+
+export function finishStrategyExecution(
+  record: StrategyExecutionRecord,
+  now: string
+): StrategyExecutionRecord {
+  if (record.status !== "EXECUTING") {
+    throw new Error("Only executing strategy runs can finish.");
+  }
+  return {
+    ...record,
+    status: transitionStrategyExecution(record.status, "FINISHED"),
+    finishedAt: new Date(now).toISOString()
+  };
+}
+
+export function failStrategyExecution(
+  record: StrategyExecutionRecord,
+  now: string,
+  error: string
+): StrategyExecutionRecord {
+  if (record.status !== "TRIGGERED" && record.status !== "RISK_CHECK" && record.status !== "EXECUTING") {
+    throw new Error("Only in-flight strategy runs can fail.");
+  }
+  return {
+    ...record,
+    status: transitionStrategyExecution(record.status, "FAILED"),
+    finishedAt: new Date(now).toISOString(),
+    error: error.trim() || "Strategy execution failed."
+  };
+}
+
+export class StrategyExecutionRegistry {
+  private readonly records = new Map<string, StrategyExecutionRecord>();
+
+  claim(record: StrategyExecutionRecord): StrategyExecutionRecord {
+    const existing = this.records.get(record.executionKey);
+    if (existing) {
+      throw new Error("Strategy execution key has already been claimed.");
+    }
+    this.records.set(record.executionKey, record);
+    return record;
+  }
+
+  get(executionKey: string): StrategyExecutionRecord | null {
+    return this.records.get(executionKey) ?? null;
+  }
+
+  size(): number {
+    return this.records.size;
+  }
+}
