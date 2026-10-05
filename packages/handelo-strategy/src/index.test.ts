@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,StrategyExecutionRegistry,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -148,4 +148,48 @@ test("conditional strategies require an explicit deterministic condition result"
     marketOpen: true,
     conditionMet: true
   }).eligible, true);
+});
+
+test("execution registry prevents duplicate claims for the same trigger", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "DCA",
+    asset: "NVDAB",
+    amountUsd: 10,
+    frequency: "Daily"
+  }));
+  const record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+  const registry = new StrategyExecutionRegistry();
+
+  assert.equal(registry.claim(record).runId, record.runId);
+  assert.equal(registry.get(record.executionKey)?.runId, record.runId);
+  assert.throws(() => registry.claim(record), /already been claimed/);
+  assert.equal(registry.size(), 1);
+});
+
+test("execution record follows risk-check, execute, and finish lifecycle", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "RECURRING",
+    asset: "NVDAB",
+    amountUsd: 10,
+    frequency: "Daily"
+  }));
+  let record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+  record = { ...record, status: transitionStrategyExecution(record.status, "RISK_CHECK") };
+  record = beginStrategyExecution(record, "2026-10-05T12:00:05.000Z");
+  assert.equal(record.status, "EXECUTING");
+  record = finishStrategyExecution(record, "2026-10-05T12:00:10.000Z");
+  assert.equal(record.status, "FINISHED");
+  assert.equal(record.finishedAt, "2026-10-05T12:00:10.000Z");
+});
+
+test("in-flight failures are recorded with an explicit reason", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "CONDITIONAL",
+    asset: "NVDAB",
+    condition: "price below reference"
+  }));
+  let record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+  record = failStrategyExecution(record, "2026-10-05T12:00:01.000Z", "Risk blocked");
+  assert.equal(record.status, "FAILED");
+  assert.equal(record.error, "Risk blocked");
 });
