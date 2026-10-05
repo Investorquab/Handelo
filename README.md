@@ -6,53 +6,93 @@ Handelo is an AI operating layer for tokenized-stock markets on BNB Smart Chain.
 
 ## Product workflow
 
-`Discover → Understand → Strategize → Check Risk → Review → Approve → Execute → Monitor`
+Discover → Understand → Strategize → Check Risk → Review → Approve → Execute → Monitor
 
 Handelo is not a chatbot-only product. The web workspace keeps market and portfolio context visible beside persistent AI Chat.
 
 ## Product surfaces
 
 ### Web
+
 Handelo has exactly two primary web pages:
 
 1. **Home** — product narrative, workflow and real UI demonstrations.
 2. **Workspace** — one persistent application page with financial/market context on the left and AI Chat on the right.
 
+The Home page provides two entry paths:
+
+- **Try Demo** — zero-setup evaluation using the configured Handelo Agentic Wallet.
+- **Connect Wallet** — user mode for a BSC-compatible personal wallet.
+
 ### SDK
+
 `@handelo/sdk` provides a typed client for sending natural-language requests to the same Handelo runtime.
 
 ### MCP
+
 `@handelo/mcp` exposes read-only tokenized-stock market-intelligence tools. MCP is not a signing boundary.
 
 ### Telegram
-`@handelo/telegram` provides a private-chat conversational client over the same runtime. It does not hold private keys, activate strategies, or bypass risk/review controls.
+
+`@handelo/telegram` provides a private-chat conversational client over the same runtime. It does not hold private keys or bypass risk/review controls.
 
 ## Architecture
 
 ```
-User
-  ↓
-Handelo control surface
-  ├── Web Workspace
-  ├── @handelo/sdk
-  ├── Telegram
-  └── MCP (read-only)
-        ↓
-   Handelo Agent
-        ↓
-  Market Intelligence
-  Strategy Engine
-  Portfolio Engine
-  Risk Governor
-        ↓
- Human Approval / Review
-        ↓
- Secured Agentic Wallet
-        ↓
-     BSC execution
+                         HANDELO
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+         Personal Wallet             Agent Wallet
+              │                           │
+          User-owned                Agent-controlled
+              │                    within policy
+              └─────────────┬─────────────┘
+                            │
+                     Handelo Core
+                            │
+             ┌──────────────┼──────────────┐
+             │              │              │
+        Intelligence    Strategies     Portfolio
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                      Risk Governor
+                            │
+                     Authorization
+                            │
+                        Execution
+                            │
+                           BSC
 ```
 
-AI interprets intent and explains context. Deterministic application code remains authoritative for policy, transaction construction, approval boundaries, execution state, and verification.
+The long-term agent-wallet architecture uses BNB-supported wallet/agent infrastructure where appropriate. Personal-wallet connection does not automatically grant spending authority.
+
+## Demo mode
+
+Try Demo is designed for hackathon judges and product evaluation.
+
+The judge should not need to:
+- create API credentials;
+- provide private keys;
+- configure a wallet;
+- install developer tooling.
+
+The configured demo environment may use a deliberately funded Handelo Agentic Wallet for real demonstration transactions. The UI must disclose Demo Mode, and simulated actions must be labelled as simulated.
+
+## User wallet mode
+
+Connect Wallet is intended for normal BSC-compatible EVM wallets.
+
+A connected personal wallet can establish identity and provide supported portfolio information. Autonomous spending requires a separate, explicit authorization/delegation model; simply connecting a wallet never gives the AI unrestricted access to funds.
+
+## Agent wallet
+
+Handelo's autonomous execution model uses a dedicated agent execution context. The agent wallet private key must never be exposed to the LLM or browser UI.
+
+BNB Agent Studio and its supported wallet providers are being evaluated as the native infrastructure for agent wallet, signing, identity and runtime concerns. The exact provider and funding/delegation model is locked only after mainnet capability validation.
+
+See `docs/AGENT-WALLET-ARCHITECTURE.md` for the architecture gate.
 
 ## Local development
 
@@ -111,16 +151,21 @@ Never commit secrets or private keys.
 
 ## Security boundary
 
-- Private keys never enter the LLM, SDK, MCP or Telegram bot.
-- Transaction execution requires explicit user confirmation.
+- Personal wallet private keys never enter the LLM.
+- Agent wallet private keys never enter the LLM or browser UI.
+- Wallet connection does not equal spending authorization.
+- Transaction execution requires the appropriate explicit approval or delegated policy.
 - Risk and market checks are re-run at the execution boundary.
 - Unsupported or unavailable security/audit paths remain blocking conditions.
 - Handelo never fabricates transaction hashes or execution success.
 - Ambiguous tokenized-stock representations are surfaced rather than silently selected.
+- Autonomous execution must be idempotent and revocable.
 
 ## Current validation status
 
 The repository uses GitHub Actions for TypeScript checks, frontend syntax checks and the full workspace test suite. The current implementation includes regression coverage for market intelligence, strategy construction, portfolio/risk checks, transaction review, execution gating, baskets, homepage architecture, SDK behavior, Telegram handling and workspace resilience.
+
+The next engineering gate is the Agent Wallet Architecture validation, followed by the autonomous Strategy Runtime. Local/live browser testing and controlled real-money validation remain explicit later phases.
 
 ## Hackathon direction
 
