@@ -1,11 +1,12 @@
 import {
   runStrategyScheduler,
-  type StrategyDefinition,
+
   type StrategyExecutionRecord,
   type StrategyExecutionStore,
   type StrategyRuntimeResult,
   type StrategySchedulerResult
 } from "@handelo/strategy";
+import type { StrategyDefinition } from "@handelo/core";
 import {
   listActiveStrategies,
   updateStoredStrategy
