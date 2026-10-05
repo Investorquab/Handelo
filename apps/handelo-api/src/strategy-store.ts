@@ -34,6 +34,16 @@ async function persist(): Promise<void> {
   await writeFile(storePath, JSON.stringify([...strategies.values()], null, 2) + "\n", "utf8");
 }
 
+export async function getStoredStrategy(wallet: string, strategyId: string): Promise<StoredStrategy | null> {
+  await ensureLoaded();
+  return [...strategies.values()].find(s => s.wallet.toLowerCase() === wallet.toLowerCase() && s.id === strategyId) ?? null;
+}
+
+export async function listStrategies(wallet: string): Promise<StoredStrategy[]> {
+  await ensureLoaded();
+  return [...strategies.values()].filter(s => s.wallet.toLowerCase() === wallet.toLowerCase());
+}
+
 export async function listActiveStrategies(wallet: string): Promise<StoredStrategy[]> {
   await ensureLoaded();
   return [...strategies.values()].filter(
@@ -57,4 +67,47 @@ export async function activateStoredStrategy(wallet: string, strategy: StrategyD
   strategies.set(activated.id, activated);
   await persist();
   return activated;
+}
+
+export async function updateStoredStrategy(wallet: string, strategyId: string, update: Partial<Pick<StoredStrategy, "asset" | "amountUsd" | "frequency" | "condition" | "targetAllocation" | "constraints" | "nextExecutionAt">>): Promise<StoredStrategy> {
+  await ensureLoaded();
+  const existing = await getStoredStrategy(wallet, strategyId);
+  if (!existing) throw new Error("Strategy not found.");
+  if (existing.status === "CANCELLED") throw new Error("Cancelled strategies cannot be edited.");
+  const updated = { ...existing, ...update };
+  strategies.set(updated.id, updated);
+  await persist();
+  return updated;
+}
+
+export async function pauseStoredStrategy(wallet: string, strategyId: string): Promise<StoredStrategy> {
+  await ensureLoaded();
+  const existing = await getStoredStrategy(wallet, strategyId);
+  if (!existing) throw new Error("Strategy not found.");
+  if (existing.status !== "ACTIVE") throw new Error("Only active strategies can be paused.");
+  const updated = { ...existing, status: "PAUSED" as const };
+  strategies.set(updated.id, updated);
+  await persist();
+  return updated;
+}
+
+export async function resumeStoredStrategy(wallet: string, strategyId: string): Promise<StoredStrategy> {
+  await ensureLoaded();
+  const existing = await getStoredStrategy(wallet, strategyId);
+  if (!existing) throw new Error("Strategy not found.");
+  if (existing.status !== "PAUSED") throw new Error("Only paused strategies can be resumed.");
+  const updated = { ...existing, status: "ACTIVE" as const };
+  strategies.set(updated.id, updated);
+  await persist();
+  return updated;
+}
+
+export async function cancelStoredStrategy(wallet: string, strategyId: string): Promise<StoredStrategy> {
+  await ensureLoaded();
+  const existing = await getStoredStrategy(wallet, strategyId);
+  if (!existing) throw new Error("Strategy not found.");
+  const updated = { ...existing, status: "CANCELLED" as const };
+  strategies.set(updated.id, updated);
+  await persist();
+  return updated;
 }
