@@ -150,3 +150,5 @@ export class BinanceSimulationAdapter implements ExecutionAdapter{
     throw new Error("Direct execution is disabled; use BinanceAgenticWalletAdapter.");
   }
 }
+
+export * from "./wallet-context.js";
