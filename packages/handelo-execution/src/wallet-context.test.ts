@@ -4,8 +4,7 @@ import {
   canAgentPermission,
   createAgentWalletContext,
   createWalletContext,
-  DEFAULT_AGENT_POLICY,
-  evaluateAgentSpend
+  DEFAULT_AGENT_POLICY
 } from "./wallet-context.js";
 
 test("personal and agent contexts are separate wallet roles", () => {
