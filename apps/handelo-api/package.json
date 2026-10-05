@@ -1,1 +1,19 @@
-{"name":"@handelo/api","private":true,"version":"0.1.0","type":"module","scripts":{"check":"tsc --noEmit","dev":"node --env-file=../../.env --import tsx src/server.ts","start":"node --env-file=../../.env --import tsx src/server.ts","test":"node --import tsx --test src/**/*.test.ts"},"dependencies":{"@handelo/agent":"workspace:*","@handelo/portfolio":"workspace:*","@handelo/execution":"workspace:*"},"devDependencies":{"tsx":"^4.20.5","typescript":"^5.9.2"}}
+{
+  "name":"@handelo/api",
+  "private":true,
+  "version":"0.1.0",
+  "type":"module",
+  "scripts":{
+    "check":"tsc --noEmit",
+    "dev":"node --env-file=../../.env --import tsx src/server.ts",
+    "start":"node --env-file=../../.env --import tsx src/server.ts",
+    "test":"node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies":{
+    "@handelo/agent":"workspace:*",
+    "@handelo/portfolio":"workspace:*",
+    "@handelo/execution":"workspace:*",
+    "@handelo/strategy":"workspace:*"
+  },
+  "devDependencies":{"tsx":"^4.20.5","typescript":"^5.9.2"}
+}
