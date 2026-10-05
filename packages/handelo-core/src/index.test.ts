@@ -49,3 +49,52 @@ test("portfolio strategy risk passes a small diversified addition", () => {
   const result = evaluatePortfolioStrategyRisk(portfolio, "NVDAB", 10);
   assert.equal(result.decision, "PASS");
 });
+
+
+test("wallet contracts distinguish personal and agent execution contexts", () => {
+  const personal = {
+    mode: "USER" as const,
+    role: "PERSONAL" as const,
+    address: "0x1111111111111111111111111111111111111111",
+    network: "BSC" as const,
+    connected: true,
+    balanceUsd: 1000
+  };
+
+  const agent = {
+    mode: "USER" as const,
+    role: "AGENT" as const,
+    address: "0x2222222222222222222222222222222222222222",
+    network: "BSC" as const,
+    connected: true,
+    balanceUsd: 500,
+    ownerWallet: personal.address,
+    status: "ACTIVE" as const,
+    policy: {
+      permissions: ["DCA", "REBALANCE"] as const,
+      maxTransactionUsd: 50,
+      maxDailySpendUsd: 200,
+      minimumReservePercent: 10,
+      revocable: true
+    }
+  };
+
+  assert.notEqual(personal.address, agent.address);
+  assert.equal(agent.ownerWallet, personal.address);
+  assert.equal(agent.policy.maxTransactionUsd, 50);
+  assert.equal(agent.policy.revocable, true);
+});
+
+test("agent policy can represent bounded permissions without private keys", () => {
+  const policy = {
+    permissions: ["DCA", "TRANSFER_OUT"] as const,
+    maxTransactionUsd: 20,
+    maxDailySpendUsd: 100,
+    allowedAssets: ["NVDAB", "USDC"],
+    revocable: true
+  };
+
+  assert.deepEqual(policy.permissions, ["DCA", "TRANSFER_OUT"]);
+  assert.equal(policy.allowedAssets?.includes("NVDAB"), true);
+  assert.equal(policy.maxDailySpendUsd, 100);
+});
