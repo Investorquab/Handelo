@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -219,6 +219,112 @@ test("file execution store persists claims and updates", async () => {
     assert.equal((await store.get(record.executionKey))?.status, "RISK_CHECK");
 
     await assert.rejects(() => store.claim(record), /already been claimed/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("runtime worker performs risk check before execution and persists completion", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-runtime-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA",
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily"
+    }));
+    const calls: string[] = [];
+
+    const result = await runTriggeredStrategy(
+      strategy,
+      { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+      {
+        store,
+        now: () => "2026-10-05T12:00:05.000Z",
+        riskCheck: async (_strategy, record) => {
+          calls.push(record.status);
+          return true;
+        },
+        execute: async (_strategy, record) => {
+          calls.push(record.status);
+        }
+      }
+    );
+
+    assert.equal(result.status, "FINISHED");
+    assert.deepEqual(calls, ["RISK_CHECK", "EXECUTING"]);
+    assert.equal((await store.get("bad-key"))?.status, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("runtime worker records risk blocks and never calls execution", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-runtime-block-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "CONDITIONAL",
+      asset: "NVDAB",
+      condition: "price below reference"
+    }));
+    let executed = false;
+
+    const result = await runTriggeredStrategy(
+      strategy,
+      { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+      {
+        store,
+        now: () => "2026-10-05T12:00:05.000Z",
+        riskCheck: async () => false,
+        execute: async () => { executed = true; }
+      }
+    );
+
+    assert.equal(result.status, "FAILED");
+    assert.equal(executed, false);
+    if (result.status === "FAILED") assert.equal(result.record.error, "Risk governor blocked execution.");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("runtime worker treats a duplicate trigger as non-executable", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-runtime-duplicate-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA",
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily"
+    }));
+    const trigger = { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" };
+    const dependencies = {
+      store,
+      now: () => "2026-10-05T12:00:05.000Z",
+      riskCheck: async () => true,
+      execute: async () => undefined
+    };
+
+    const first = await runTriggeredStrategy(strategy, trigger, dependencies);
+    const second = await runTriggeredStrategy(strategy, trigger, dependencies);
+
+    assert.equal(first.status, "FINISHED");
+    assert.equal(second.status, "DUPLICATE");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
