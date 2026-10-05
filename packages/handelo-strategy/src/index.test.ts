@@ -70,3 +70,26 @@ test("only active strategies can produce execution grants", () => {
   });
   assert.throws(() => executionGrantFromStrategy(draft), /Only active strategies/);
 });
+
+test("strategy execution lifecycle allows the deterministic happy path", () => {
+  assert.equal(transitionStrategyExecution("ACTIVE", "TRIGGERED"), "TRIGGERED");
+  assert.equal(transitionStrategyExecution("TRIGGERED", "RISK_CHECK"), "RISK_CHECK");
+  assert.equal(transitionStrategyExecution("RISK_CHECK", "EXECUTING"), "EXECUTING");
+  assert.equal(transitionStrategyExecution("EXECUTING", "FINISHED"), "FINISHED");
+});
+
+test("strategy execution lifecycle rejects unsafe transitions", () => {
+  assert.equal(canTransitionStrategyExecution("ACTIVE", "EXECUTING"), false);
+  assert.equal(canTransitionStrategyExecution("FINISHED", "EXECUTING"), false);
+  assert.equal(canTransitionStrategyExecution("CANCELLED", "ACTIVE"), false);
+  assert.throws(
+    () => transitionStrategyExecution("ACTIVE", "FINISHED"),
+    /Invalid strategy execution transition/
+  );
+});
+
+test("failed execution can recover only through an explicit active transition", () => {
+  assert.equal(canTransitionStrategyExecution("EXECUTING", "FAILED"), true);
+  assert.equal(transitionStrategyExecution("FAILED", "ACTIVE"), "ACTIVE");
+  assert.equal(canTransitionStrategyExecution("FAILED", "EXECUTING"), false);
+});
