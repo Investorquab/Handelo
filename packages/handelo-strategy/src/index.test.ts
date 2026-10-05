@@ -339,8 +339,7 @@ test("strategy scheduler evaluates active strategies and runs only eligible trig
   try {
     const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
     const due = activateStrategy(createDraftStrategy({
-      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z",
-      nextExecutionAt: "2026-10-05T11:00:00.000Z"
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z"
     }));
     const future = activateStrategy(createDraftStrategy({
       type: "DCA", asset: "NVDAon", amountUsd: 10, frequency: "Daily",
