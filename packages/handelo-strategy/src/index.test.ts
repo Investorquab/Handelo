@@ -458,7 +458,7 @@ test("scheduler persists the next execution time after a successful recurring ru
       frequency: "Daily",
       nextExecutionAt: "2026-10-05T11:00:00.000Z"
     }));
-    let updated: { nextExecutionAt?: string | null } | null = null;
+    let updated: { nextExecutionAt?: string | null } = { };
 
     const result = await runStrategyScheduler({
       store,
@@ -471,7 +471,7 @@ test("scheduler persists the next execution time after a successful recurring ru
     });
 
     assert.equal(result.finished, 1);
-    assert.equal(updated?.nextExecutionAt, "2026-10-06T12:00:00.000Z");
+    assert.equal(updated.nextExecutionAt, "2026-10-06T12:00:00.000Z");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
