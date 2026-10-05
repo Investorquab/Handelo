@@ -7,11 +7,21 @@ export interface StoredStrategy extends StrategyDefinition {
   activatedAt: string;
 }
 
-const storePath = resolve(process.env.HANDELO_STRATEGY_STORE_PATH ?? "./data/strategies.json");
+function getStorePath(): string {
+  return resolve(process.env.HANDELO_STRATEGY_STORE_PATH ?? "./data/strategies.json");
+}
+
+let loadedStorePath: string | null = null;
 let loaded = false;
 const strategies = new Map<string, StoredStrategy>();
 
 async function ensureLoaded(): Promise<void> {
+  const storePath = getStorePath();
+  if (loadedStorePath !== storePath) {
+    strategies.clear();
+    loadedStorePath = storePath;
+    loaded = false;
+  }
   if (loaded) return;
   loaded = true;
   try {
@@ -19,7 +29,12 @@ async function ensureLoaded(): Promise<void> {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
-        if (item && typeof item === "object" && typeof (item as StoredStrategy).id === "string" && typeof (item as StoredStrategy).wallet === "string") {
+        if (
+          item &&
+          typeof item === "object" &&
+          typeof (item as StoredStrategy).id === "string" &&
+          typeof (item as StoredStrategy).wallet === "string"
+        ) {
           strategies.set((item as StoredStrategy).id, item as StoredStrategy);
         }
       }
@@ -30,6 +45,7 @@ async function ensureLoaded(): Promise<void> {
 }
 
 async function persist(): Promise<void> {
+  const storePath = getStorePath();
   await mkdir(dirname(storePath), { recursive: true });
   await writeFile(storePath, JSON.stringify([...strategies.values()], null, 2) + "\n", "utf8");
 }
@@ -69,7 +85,13 @@ export async function activateStoredStrategy(wallet: string, strategy: StrategyD
   return activated;
 }
 
-export async function updateStoredStrategy(wallet: string, strategyId: string, update: Partial<Pick<StoredStrategy, "asset" | "amountUsd" | "frequency" | "condition" | "targetAllocation" | "constraints" | "nextExecutionAt">>): Promise<StoredStrategy> {
+export async function updateStoredStrategy(
+  wallet: string,
+  strategyId: string,
+  update: Partial<
+    Pick<StoredStrategy, "asset" | "amountUsd" | "frequency" | "condition" | "targetAllocation" | "constraints" | "nextExecutionAt">
+  >
+): Promise<StoredStrategy> {
   await ensureLoaded();
   const existing = await getStoredStrategy(wallet, strategyId);
   if (!existing) throw new Error("Strategy not found.");
