@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,StrategyDefinition,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -458,7 +458,7 @@ test("scheduler persists the next execution time after a successful recurring ru
       frequency: "Daily",
       nextExecutionAt: "2026-10-05T11:00:00.000Z"
     }));
-    let updated: StrategyDefinition | null = null;
+    let updated: { nextExecutionAt?: string | null } | null = null;
 
     const result = await runStrategyScheduler({
       store,
