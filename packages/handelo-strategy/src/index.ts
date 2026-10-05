@@ -120,3 +120,41 @@ export function executionGrantFromStrategy(
     allowedAssets: [strategy.asset]
   };
 }
+
+export type StrategyExecutionStatus =
+  | "ACTIVE"
+  | "TRIGGERED"
+  | "RISK_CHECK"
+  | "EXECUTING"
+  | "FINISHED"
+  | "FAILED"
+  | "PAUSED"
+  | "CANCELLED";
+
+const EXECUTION_TRANSITIONS: Record<StrategyExecutionStatus, readonly StrategyExecutionStatus[]> = {
+  ACTIVE: ["TRIGGERED", "PAUSED", "CANCELLED"],
+  TRIGGERED: ["RISK_CHECK", "FAILED"],
+  RISK_CHECK: ["EXECUTING", "FAILED"],
+  EXECUTING: ["FINISHED", "FAILED"],
+  FINISHED: ["ACTIVE", "PAUSED", "CANCELLED"],
+  FAILED: ["ACTIVE", "PAUSED", "CANCELLED"],
+  PAUSED: ["ACTIVE", "CANCELLED"],
+  CANCELLED: []
+};
+
+export function canTransitionStrategyExecution(
+  from: StrategyExecutionStatus,
+  to: StrategyExecutionStatus
+): boolean {
+  return EXECUTION_TRANSITIONS[from].includes(to);
+}
+
+export function transitionStrategyExecution(
+  from: StrategyExecutionStatus,
+  to: StrategyExecutionStatus
+): StrategyExecutionStatus {
+  if (!canTransitionStrategyExecution(from, to)) {
+    throw new Error(`Invalid strategy execution transition: ${from} -> ${to}.`);
+  }
+  return to;
+}
