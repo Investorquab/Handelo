@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,StrategyExecutionRegistry,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -192,4 +192,34 @@ test("in-flight failures are recorded with an explicit reason", () => {
   record = failStrategyExecution(record, "2026-10-05T12:00:01.000Z", "Risk blocked");
   assert.equal(record.status, "FAILED");
   assert.equal(record.error, "Risk blocked");
+});
+
+test("file execution store persists claims and updates", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-strategy-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA",
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily"
+    }));
+    const record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+
+    await store.claim(record);
+    const loaded = await store.get(record.executionKey);
+    assert.equal(loaded?.runId, record.runId);
+
+    const riskChecked = { ...record, status: transitionStrategyExecution(record.status, "RISK_CHECK") };
+    await store.update(riskChecked);
+    assert.equal((await store.get(record.executionKey))?.status, "RISK_CHECK");
+
+    await assert.rejects(() => store.claim(record), /already been claimed/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
