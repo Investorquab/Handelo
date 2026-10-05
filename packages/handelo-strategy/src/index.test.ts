@@ -329,3 +329,101 @@ test("runtime worker treats a duplicate trigger as non-executable", async () => 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("strategy scheduler evaluates active strategies and runs only eligible triggers", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const due = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily",
+      nextExecutionAt: "2026-10-05T11:00:00.000Z"
+    }));
+    const future = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAon", amountUsd: 10, frequency: "Daily",
+      nextExecutionAt: "2026-10-05T13:00:00.000Z"
+    }));
+    const executed: string[] = [];
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:00:00.000Z",
+      marketOpen: true,
+      listActiveStrategies: async () => [due, future],
+      riskCheck: async () => true,
+      execute: async strategy => { executed.push(strategy.asset); }
+    });
+
+    assert.equal(result.evaluated, 2);
+    assert.equal(result.triggered, 1);
+    assert.equal(result.finished, 1);
+    assert.equal(result.skipped, 1);
+    assert.deepEqual(executed, ["NVDAB"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("scheduler supplies deterministic condition results to conditional strategies", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-condition-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "CONDITIONAL", asset: "NVDAB", condition: "price below reference"
+    }));
+    let conditionCalls = 0;
+    let executions = 0;
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:00:00.000Z",
+      marketOpen: true,
+      listActiveStrategies: async () => [strategy],
+      conditionMet: async () => { conditionCalls += 1; return true; },
+      riskCheck: async () => true,
+      execute: async () => { executions += 1; }
+    });
+
+    assert.equal(conditionCalls, 1);
+    assert.equal(executions, 1);
+    assert.equal(result.finished, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("scheduler never executes when market is closed", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-closed-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+    }));
+    let executions = 0;
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:00:00.000Z",
+      marketOpen: false,
+      listActiveStrategies: async () => [strategy],
+      riskCheck: async () => true,
+      execute: async () => { executions += 1; }
+    });
+
+    assert.equal(result.skipped, 1);
+    assert.equal(executions, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
