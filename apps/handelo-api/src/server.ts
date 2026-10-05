@@ -8,7 +8,7 @@ import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, Ma
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
-import { activateStoredStrategy, listActiveStrategies } from "./strategy-store.js";
+import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
@@ -270,6 +270,57 @@ const server = createServer(async (req, res) => {
     } catch (error) {
       return json(res, 500, { error: errorMessage(error) });
     }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/strategies/all")) {
+    const walletAddress = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() ?? "";
+    if (!isEvmAddress(walletAddress)) return json(res, 400, { error: "A valid wallet is required." });
+    return json(res, 200, { strategies: await listStrategies(walletAddress) });
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/strategies/")) {
+    const url = new URL(req.url, "http://localhost");
+    const strategyId = url.pathname.split("/").pop() ?? "";
+    const walletAddress = url.searchParams.get("wallet")?.trim() ?? "";
+    if (!isEvmAddress(walletAddress) || !strategyId) return json(res, 400, { error: "A valid wallet and strategy ID are required." });
+    const strategy = await getStoredStrategy(walletAddress, strategyId);
+    return strategy ? json(res, 200, { strategy }) : json(res, 404, { error: "Strategy not found." });
+  }
+
+  if (req.method === "POST" && req.url === "/api/strategies/pause") {
+    try {
+      const body = parseJsonBody<{wallet?: unknown; strategyId?: unknown}>(await readRequestBody(req));
+      const walletAddress=String(body.wallet??"").trim(), strategyId=String(body.strategyId??"").trim();
+      if (!isEvmAddress(walletAddress)||!strategyId) return json(res,400,{error:"A valid wallet and strategyId are required."});
+      return json(res,200,{strategy:await pauseStoredStrategy(walletAddress,strategyId)});
+    } catch(error){ return json(res,409,{error:errorMessage(error)}); }
+  }
+
+  if (req.method === "POST" && req.url === "/api/strategies/resume") {
+    try {
+      const body = parseJsonBody<{wallet?: unknown; strategyId?: unknown}>(await readRequestBody(req));
+      const walletAddress=String(body.wallet??"").trim(), strategyId=String(body.strategyId??"").trim();
+      if (!isEvmAddress(walletAddress)||!strategyId) return json(res,400,{error:"A valid wallet and strategyId are required."});
+      return json(res,200,{strategy:await resumeStoredStrategy(walletAddress,strategyId)});
+    } catch(error){ return json(res,409,{error:errorMessage(error)}); }
+  }
+
+  if (req.method === "POST" && req.url === "/api/strategies/cancel") {
+    try {
+      const body = parseJsonBody<{wallet?: unknown; strategyId?: unknown}>(await readRequestBody(req));
+      const walletAddress=String(body.wallet??"").trim(), strategyId=String(body.strategyId??"").trim();
+      if (!isEvmAddress(walletAddress)||!strategyId) return json(res,400,{error:"A valid wallet and strategyId are required."});
+      return json(res,200,{strategy:await cancelStoredStrategy(walletAddress,strategyId)});
+    } catch(error){ return json(res,409,{error:errorMessage(error)}); }
+  }
+
+  if (req.method === "POST" && req.url === "/api/strategies/edit") {
+    try {
+      const body = parseJsonBody<{wallet?: unknown; strategyId?: unknown; update?: unknown}>(await readRequestBody(req));
+      const walletAddress=String(body.wallet??"").trim(), strategyId=String(body.strategyId??"").trim();
+      if(!isEvmAddress(walletAddress)||!strategyId||!body.update||typeof body.update!=="object") return json(res,400,{error:"A valid wallet, strategyId, and update are required."});
+      return json(res,200,{strategy:await updateStoredStrategy(walletAddress,strategyId,body.update as Parameters<typeof updateStoredStrategy>[2])});
+    } catch(error){ return json(res,409,{error:errorMessage(error)}); }
   }
 
   if (req.method === "POST" && req.url === "/api/strategies/activate") {
