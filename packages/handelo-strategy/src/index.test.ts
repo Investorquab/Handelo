@@ -408,7 +408,7 @@ test("scheduler never executes when market is closed", async () => {
   try {
     const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
     const strategy = activateStrategy(createDraftStrategy({
-      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z", nextExecutionAt: "2026-10-05T11:00:00.000Z"
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z"
     }));
     let executions = 0;
 
