@@ -58,7 +58,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Map BNB Agent Studio/provider options
 - [x] Validate documented BSC mainnet wallet-provider APIs
 - [x] Validate per-user agent-wallet isolation — session admission now binds both owner and agent addresses to the current USER-mode context, with cross-user reuse tests
-- [ ] Validate funding from personal wallet — Binance `wallet send` cannot satisfy this direction; a personal-wallet signing/provider flow remains required
+- [ ] Validate funding from personal wallet — the personal-wallet EIP-1193 signing boundary now builds a BSC ERC-20 transfer request and verifies chain/account before `eth_sendTransaction`; live wallet confirmation and on-chain validation remain pending
 - [x] Define provider-backed withdrawal boundary — outbound `wallet send` is bound to the verified personal owner and explicit approval; live withdrawal remains unvalidated
 - [x] Define funding authorization boundary — explicit owner approval, owner/agent context binding, BSC-only checks, and personal-balance fail-closed validation; live provider transfer remains unvalidated
 - [x] Validate permission/revocation model — session admission intersects requested grants with the active agent policy and revocation is capability-gated
@@ -70,11 +70,12 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Wallet Center
 - [x] Agent wallet lifecycle state machine — configure/pause/resume/revoke transitions are deterministic and fail closed; provider wallet creation remains separately unvalidated
 - [x] Agent permissions/policies — effective session grants cannot exceed active wallet permissions, spend caps, reserve or asset scope
-- [x] Funding authorization boundary — provider-independent, explicit user approval and balance checks; actual on-chain funding remains pending
+- [x] Funding authorization boundary — provider-independent, explicit user approval and balance checks; personal-wallet signing boundary is now implemented, while actual on-chain funding remains pending
 - [x] Withdrawal authorization + provider invocation boundary — verified owner, active BSC agent context and explicit approval; live wallet flow remains pending
 - [x] Revocation — provider revocation is explicitly capability-gated and tested before the provider is invoked
 - [x] Wallet activity/audit state
 - [x] Demo Mode environment and disclosure — Demo actions are explicitly labelled simulated; live wallet execution rejects DEMO contexts before provider execution
+- [x] Personal-wallet funding signing boundary — approved owner-to-agent BSC ERC-20 transfer requests are built and provider chain/account checks fail closed; no on-chain success is claimed
 
 ### Phase 3 — Autonomous Strategy Runtime
 - [ ] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN

@@ -58,7 +58,7 @@ This preserves a deep Binance Wallet integration while giving Handelo a credible
 The following remain live-validation gates:
 
 1. Per-user isolation across two distinct owner wallets.
-2. Funding from personal wallet into the selected agent execution context. The documented `wallet send` primitive is insufficient for this direction because it operates from the connected Agentic Wallet; Handelo therefore keeps personal-wallet funding explicitly unimplemented until a user-wallet/provider signing primitive is validated.
+2. Funding from personal wallet into the selected agent execution context. The documented `wallet send` primitive is insufficient for this direction because it operates from the connected Agentic Wallet. Handelo now has a provider-neutral EIP-1193 personal-wallet signing boundary that builds the BSC ERC-20 transfer and verifies the connected chain/account; live wallet confirmation and on-chain validation remain required.
 3. Withdrawal back to the verified personal wallet.
 4. Permission scope enforcement on a real BSC execution.
 5. Spend-cap enforcement.
@@ -67,6 +67,10 @@ The following remain live-validation gates:
 8. User consent UX.
 
 These are intentionally not marked complete by documentation alone.
+
+## Personal-wallet funding boundary
+
+The funding authorization remains provider-independent and pre-chain. After explicit approval, `buildPersonalWalletFundingTransaction` constructs the ERC-20 `transfer(agentWallet, amount)` request for BSC, and `sendPersonalWalletFunding` requires chain ID `0x38`, verifies the connected personal account matches the approved owner, then delegates the signature to the injected EIP-1193 provider. A returned transaction hash is accepted only when it has the expected hex shape; Handelo does not treat this as proof of confirmation or settlement.
 
 ## Evidence references
 
