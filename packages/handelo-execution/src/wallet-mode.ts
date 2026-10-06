@@ -26,11 +26,14 @@ export function assertLiveWalletExecutionContext(
   if (context.role !== "AGENT") {
     throw new Error("Live autonomous execution requires an AGENT wallet context.");
   }
-  if (!context.connected || context.network !== "BSC") {
+
+  const agentContext = context as AgentWalletContext;
+
+  if (!agentContext.connected || agentContext.network !== "BSC") {
     throw new Error("Live wallet execution requires a connected BSC agent wallet.");
   }
-  if (context.status !== "ACTIVE") {
+  if (agentContext.status !== "ACTIVE") {
     throw new Error("Live wallet execution requires an active agent wallet.");
   }
-  return context;
+  return agentContext;
 }
