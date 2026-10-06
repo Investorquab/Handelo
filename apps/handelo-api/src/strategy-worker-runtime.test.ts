@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isSupportedAutonomousStrategy, createHandeloStrategyWorkerDependencies } from "./strategy-worker-runtime.js";
+import { runTriggeredStrategy } from "@handelo/strategy";
 import type { StrategyDefinition } from "@handelo/core";
 
 const base: StrategyDefinition = {
@@ -104,4 +105,88 @@ test("autonomous worker blocks execution when cash balance cannot fund the strat
     /cash balance/i
   );
   assert.deepEqual(executionCalls, []);
+});
+
+
+test("autonomous worker retries transient API/network failures before broadcast", async () => {
+  let quoteCalls = 0;
+  let executeCalls = 0;
+  const dependencies = createHandeloStrategyWorkerDependencies({
+    walletAddress: "0x1111111111111111111111111111111111111111",
+    executionWallet: {
+      quote: async () => {
+        quoteCalls += 1;
+        if (quoteCalls === 1) {
+          const error = new Error("fetch failed");
+          (error as Error & { code: string }).code = "ECONNRESET";
+          throw error;
+        }
+        return { fromCoinAmount: "10", toCoinAmount: "0.1", slippage: 0 };
+      },
+      execute: async () => {
+        executeCalls += 1;
+        return { orderId: "order-1", status: "FINISHED", txHash: "tx-1" };
+      }
+    } as never,
+    market: {
+      find: async () => ({
+        binanceChainId: "56", tokenContractAddress: "0x2222222222222222222222222222222222222222", platformId: "bstock", tokenSymbol: "NVDAB", decimals: "18", underlyingTicker: "NVDA", underlyingName: "NVIDIA", tokenToShareRatio: "1", tokenPrice: "95", referencePrice: "100", volume24H: "1000", marketCap: "100000",
+        statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
+      })
+    },
+    store: {
+      records: new Map(),
+      claim: async function(record: any) { this.records.set(record.executionKey, record); return record; },
+      get: async function(key: string) { return this.records.get(key) ?? null; },
+      update: async function(record: any) { this.records.set(record.executionKey, record); return record; },
+      list: async function() { return [...this.records.values()]; }
+    } as never,
+    portfolioSnapshot: async () => ({ wallet: "0x1111111111111111111111111111111111111111", balanceUsd: 100, totalValueUsd: 100, positions: [] })
+  });
+  const strategy = { ...base, amountUsd: 10, nextExecutionAt: "2026-10-06T09:00:00.000Z" };
+  const result = await runTriggeredStrategy(strategy, { eligible: true, reason: "test", triggeredAt: "2026-10-06T10:00:00.000Z" }, {
+    store: dependencies.store,
+    now: () => "2026-10-06T10:00:01.000Z",
+    riskCheck: async () => true,
+    execute: dependencies.execute,
+    maxAttempts: 2
+  });
+  assert.equal(result.status, "FINISHED");
+  assert.equal(quoteCalls, 2);
+  assert.equal(executeCalls, 1);
+});
+
+test("autonomous worker does not retry an uncertain execution-network failure", async () => {
+  let executeCalls = 0;
+  const dependencies = createHandeloStrategyWorkerDependencies({
+    walletAddress: "0x1111111111111111111111111111111111111111",
+    executionWallet: {
+      quote: async () => ({ fromCoinAmount: "10", toCoinAmount: "0.1", slippage: 0 }),
+      execute: async () => {
+        executeCalls += 1;
+        const error = new Error("socket hang up");
+        (error as Error & { code: string }).code = "ECONNRESET";
+        throw error;
+      }
+    } as never,
+    market: {
+      find: async () => ({
+        binanceChainId: "56", tokenContractAddress: "0x2222222222222222222222222222222222222222", platformId: "bstock", tokenSymbol: "NVDAB", decimals: "18", underlyingTicker: "NVDA", underlyingName: "NVIDIA", tokenToShareRatio: "1", tokenPrice: "95", referencePrice: "100", volume24H: "1000", marketCap: "100000",
+        statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
+      })
+    },
+    store: { claim: async (r: any) => r, get: async () => null, update: async (r: any) => r, list: async () => [] } as never,
+    portfolioSnapshot: async () => ({ wallet: "0x1111111111111111111111111111111111111111", balanceUsd: 100, totalValueUsd: 100, positions: [] })
+  });
+  const strategy = { ...base, amountUsd: 10, nextExecutionAt: "2026-10-06T09:00:00.000Z" };
+  const result = await runTriggeredStrategy(strategy, { eligible: true, reason: "test", triggeredAt: "2026-10-06T10:00:00.000Z" }, {
+    store: dependencies.store,
+    now: () => "2026-10-06T10:00:01.000Z",
+    riskCheck: async () => true,
+    execute: dependencies.execute,
+    maxAttempts: 3
+  });
+  assert.equal(result.status, "FAILED");
+  if (result.status === "FAILED") assert.equal(result.record.retryable, false);
+  assert.equal(executeCalls, 1);
 });

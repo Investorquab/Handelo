@@ -121,7 +121,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Wrong wallet — BNB session creation now rejects owner/address mismatches and non-user/non-agent, disconnected, non-BSC, or inactive contexts before provider invocation
 - [x] Insufficient balance — live portfolio snapshots now reconcile the configured quote-token cash balance; strategy risk and execution re-check spend against available cash plus the minimum reserve before provider invocation
 - [x] Execution timeout/rejection — bounded timeout gate; unknown execution outcome is not blindly retried
-- [ ] API/network failure
+- [x] API/network failure — transient portfolio/market/quote transport failures are retryable before broadcast; uncertain execution transport failures fail closed and are never blindly retried
 - [ ] Malformed LLM output
 - [ ] Security-audit failure
 - [ ] Recovery/idempotency

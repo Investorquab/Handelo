@@ -1,5 +1,5 @@
 import { evaluatePortfolioStrategyRisk, type PortfolioSnapshot, type StrategyDefinition } from "@handelo/core";
-import { evaluateStrategyCondition, executionGrantFromStrategy, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
+import { evaluateStrategyCondition, executionGrantFromStrategy, RetryableStrategyExecutionError, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
 import { createRebalancePreview } from "@handelo/core";
 import { BinanceAgenticWalletAdapter } from "@handelo/execution";
 import { marketClientFromEnv, type RwaAsset } from "@handelo/market";
@@ -24,6 +24,30 @@ function assertSufficientCash(balanceUsd: number | null, amountUsd: number, mini
   if (balanceUsd - amountUsd + 1e-9 < minimumReserveUsd) {
     throw new Error("Insufficient available cash balance for autonomous execution while preserving the minimum reserve.");
   }
+}
+
+
+function isTransientNetworkError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; name?: unknown; message?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code.toUpperCase() : "";
+  const name = typeof candidate.name === "string" ? candidate.name.toLowerCase() : "";
+  const message = typeof candidate.message === "string" ? candidate.message : String(error);
+  const transientCodes = new Set([
+    "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN",
+    "EHOSTUNREACH", "ENETUNREACH", "EPIPE"
+  ]);
+  if (transientCodes.has(code) || name === "timeouterror") return true;
+  return /fetch failed|socket hang up|connection (?:reset|refused|closed)|network (?:error|failure)|timed out/i.test(message);
+}
+
+function retryableDependencyError(error: unknown, operation: string): Error {
+  if (error instanceof RetryableStrategyExecutionError) return error;
+  if (!isTransientNetworkError(error)) return error instanceof Error ? error : new Error(String(error));
+  const message = error instanceof Error ? error.message : String(error);
+  return new RetryableStrategyExecutionError(
+    `${operation} failed due to a transient network/API error: ${message}`
+  );
 }
 
 function premiumPercent(asset: RwaAsset): number | null {
@@ -65,7 +89,12 @@ export function createHandeloStrategyWorkerDependencies(
     },
     riskCheck: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<boolean> => {
       if (!isSupportedAutonomousStrategy(strategy)) return false;
-      const portfolio = await loadPortfolio(dependencies.walletAddress);
+      let portfolio: PortfolioSnapshot;
+      try {
+        portfolio = await loadPortfolio(dependencies.walletAddress);
+      } catch (error) {
+        throw retryableDependencyError(error, "Portfolio reconciliation");
+      }
 
       if (strategy.type === "REBALANCE") {
         if (!strategy.targetAllocation || !Number.isFinite(Number(portfolio.totalValueUsd)) || Number(portfolio.totalValueUsd) <= 0) return false;
@@ -95,7 +124,12 @@ export function createHandeloStrategyWorkerDependencies(
       }
 
       if (!strategy.amountUsd || strategy.amountUsd <= 0) return false;
-      const asset = await dependencies.market.find(strategy.asset);
+      let asset: RwaAsset;
+      try {
+        asset = await dependencies.market.find(strategy.asset);
+      } catch (error) {
+        throw retryableDependencyError(error, "Market data lookup");
+      }
       if (!asset.statusInfo.openState) return false;
 
       const { evaluatePolicy } = await import("@handelo/policy");
@@ -186,24 +220,39 @@ export function createHandeloStrategyWorkerDependencies(
         throw new Error("Autonomous strategy amount must be greater than zero.");
       }
 
-      const portfolio = await loadPortfolio(dependencies.walletAddress);
+      let portfolio: PortfolioSnapshot;
+      try {
+        portfolio = await loadPortfolio(dependencies.walletAddress);
+      } catch (error) {
+        throw retryableDependencyError(error, "Portfolio reconciliation");
+      }
       assertSufficientCash(
         portfolio.balanceUsd,
         strategy.amountUsd,
         strategy.constraints.minimumReservePercent ?? 10
       );
 
-      const asset = await dependencies.market.find(strategy.asset);
+      let asset: RwaAsset;
+      try {
+        asset = await dependencies.market.find(strategy.asset);
+      } catch (error) {
+        throw retryableDependencyError(error, "Market data lookup");
+      }
       if (!asset.statusInfo.openState) {
         throw new Error("Tokenized-stock reference market is closed; autonomous execution is blocked.");
       }
 
-      const quote = await dependencies.executionWallet.quote({
-        fromTokenQty: String(strategy.amountUsd),
-        fromToken: quoteToken,
-        toToken: asset.tokenContractAddress,
-        binanceChainId: "56"
-      });
+      let quote: Awaited<ReturnType<BinanceAgenticWalletAdapter["quote"]>>;
+      try {
+        quote = await dependencies.executionWallet.quote({
+          fromTokenQty: String(strategy.amountUsd),
+          fromToken: quoteToken,
+          toToken: asset.tokenContractAddress,
+          binanceChainId: "56"
+        });
+      } catch (error) {
+        throw retryableDependencyError(error, "Agentic Wallet quote");
+      }
 
       const toAmount = Number(quote.toCoinAmount);
       if (!Number.isFinite(toAmount) || toAmount <= 0) {
