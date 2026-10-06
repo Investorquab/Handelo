@@ -26,7 +26,7 @@ Do not continue if either command fails.
 cp -n .env.example .env
 pnpm dev
 ```
-In another terminal, verify the health endpoint exposed by the running API. Record the HTTP status and response. Provider/LLM secrets must be configured before provider-backed tests; never paste secrets into evidence.
+In another terminal, verify the health endpoint exposed by the running API. Provider/LLM secrets must be configured before provider-backed tests; never paste secrets into evidence.
 
 ### 4. Web smoke
 Open the deployed Handelo web app in a real browser and verify:
@@ -125,3 +125,11 @@ After the real flow succeeds:
 - A transaction is not considered successful without on-chain confirmation.
 - Never expose private keys or secrets in logs, screenshots or the demo.
 - Do not claim Agent Studio, ERC-8004 or provider-backed wallet creation was used unless the live environment actually demonstrates it.
+
+## Binance token-audit interpretation
+
+The Binance token-audit endpoint can report a supported token with no detailed audit result. For example, a live NVDAB response returned `isSupported=true`, `hasResult=false`, `riskLevelEnum=LOW`, and `riskLevel=-1`. Handelo treats this state as supported/low-risk rather than as an unsupported token.
+
+The safety boundary remains fail-closed for `isSupported=false` and for explicit high-risk results (risk level >= 4). A supported token with no detailed result still requires all other Handelo review gates to pass before a review token can be issued or execution can occur.
+
+This interpretation is based on the live provider response captured during Phase 7 validation; it is not evidence that a real transaction is safe or that execution succeeded.

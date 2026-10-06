@@ -16,8 +16,25 @@ test("sends Binance's documented agent headers for token audits", () => {
   });
 });
 
+test("preserves a supported LOW audit even when Binance has no detailed result", () => {
+  const normalized = normalizeTokenAudit({
+    hasResult: false,
+    isSupported: true,
+    riskLevel: -1,
+    riskLevelEnum: "LOW",
+    riskItems: []
+  });
+  assert.deepEqual(normalized, {
+    hasResult: false,
+    isSupported: true,
+    riskLevel: -1,
+    riskLevelEnum: "LOW",
+    riskItems: []
+  });
+  assert.doesNotThrow(() => assertTokenAuditSafe(normalized));
+});
 
-test("hides risk details when Binance has no audit result", () => {
+test("hides details and blocks unsupported audit data", () => {
   const normalized = normalizeTokenAudit({
     hasResult: false,
     isSupported: false,
@@ -30,6 +47,10 @@ test("hides risk details when Binance has no audit result", () => {
     hasResult: false,
     isSupported: false
   });
+  assert.throws(
+    () => assertTokenAuditSafe(normalized),
+    /audit data is unavailable/
+  );
 });
 
 test("preserves supported audit details", () => {
@@ -42,26 +63,15 @@ test("preserves supported audit details", () => {
     riskItems: []
   };
   assert.deepEqual(normalizeTokenAudit(audit), audit);
-});
-
-
-test("security audit blocks missing or unsupported audit data before execution", () => {
-  assert.throws(
-    () => assertTokenAuditSafe({ hasResult: false, isSupported: false }),
-    /audit data is unavailable/,
-  );
-  assert.throws(
-    () => assertTokenAuditSafe({ hasResult: true, isSupported: false, riskLevel: 1 }),
-    /audit data is unavailable/,
-  );
+  assert.doesNotThrow(() => assertTokenAuditSafe(audit));
 });
 
 test("security audit blocks high-risk tokens before execution", () => {
   assert.throws(
     () => assertTokenAuditSafe({ hasResult: true, isSupported: true, riskLevel: 4, riskLevelEnum: "HIGH" }),
-    /HIGH risk/,
+    /HIGH risk/
   );
   assert.doesNotThrow(
-    () => assertTokenAuditSafe({ hasResult: true, isSupported: true, riskLevel: 3, riskLevelEnum: "MEDIUM" }),
+    () => assertTokenAuditSafe({ hasResult: true, isSupported: true, riskLevel: 3, riskLevelEnum: "MEDIUM" })
   );
 });

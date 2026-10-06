@@ -83,8 +83,15 @@ export interface TokenAudit {
 }
 
 export function normalizeTokenAudit(audit:TokenAudit):TokenAudit{
-  if(audit.hasResult && audit.isSupported) return audit;
-  return {hasResult:audit.hasResult,isSupported:audit.isSupported};
+  if(audit.isSupported) return {
+    hasResult:audit.hasResult,
+    isSupported:true,
+    ...(typeof audit.riskLevel==="number"?{riskLevel:audit.riskLevel}:{}),
+    ...(audit.riskLevelEnum?{riskLevelEnum:audit.riskLevelEnum}:{}),
+    ...(audit.hasResult && audit.extraInfo?{extraInfo:audit.extraInfo}:{}),
+    ...(audit.hasResult && audit.riskItems?{riskItems:audit.riskItems}: {})
+  };
+  return {hasResult:audit.hasResult,isSupported:false};
 }
 
 export const TOKEN_AUDIT_HEADERS={
@@ -95,7 +102,7 @@ export const TOKEN_AUDIT_HEADERS={
 } as const;
 
 export function assertTokenAuditSafe(audit: TokenAudit): void {
-  if (!audit.hasResult || !audit.isSupported) {
+  if (!audit.isSupported) {
     throw new Error("Token security audit data is unavailable for the requested token; execution is blocked.");
   }
   if (typeof audit.riskLevel === "number" && audit.riskLevel >= 4) {
