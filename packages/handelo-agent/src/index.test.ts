@@ -64,6 +64,14 @@ test("structured intent validation rejects malformed LLM output", () => {
     () => validateUserIntent({ action: "unknown", ticker: null, amountUsd: null, horizon: null, riskTolerance: "low", strategyType: null, frequency: null, condition: null }),
     /invalid investment intent/,
   );
+  assert.throws(
+    () => validateUserIntent({ action: "buy", ticker: "NVDA", amountUsd: 20, horizon: null, riskTolerance: "low", unexpected: true }),
+    /unexpected field/,
+  );
+  assert.throws(
+    () => validateUserIntent({ action: "buy", ticker: "NVDA", amountUsd: 20, riskTolerance: "low" }),
+    /missing field "horizon"/,
+  );
 });
 
 
@@ -78,6 +86,7 @@ test("agent response validation rejects malformed provider output", () => {
   assert.throws(() => validateAgentResponse({ answer: "   " }), /invalid answer/);
   assert.throws(() => validateAgentResponse({ answer: "x".repeat(12001) }), /answer that is too long/);
   assert.deepEqual(validateAgentResponse({ answer: "  Ready.  " }), { answer: "Ready." });
+  assert.throws(() => validateAgentResponse({ answer: "Ready.", execute: true }), /unexpected field/);
 });
 
 
@@ -145,4 +154,41 @@ test("agent execution gate blocks when policy or market prerequisites are unavai
   assert.equal(result.trace.executionPlan.requiresExplicitConfirmation, true);
   assert.equal(result.trace.executionPlan.privateKeysExposedToModel, false);
   assert.equal(result.trace.stages.find(stage => stage.stage === "EXECUTION_GATED")?.status, "BLOCKED");
+});
+
+
+test("agent aborts instead of consuming malformed intent from the provider", async () => {
+  const llm: LlmClient = {
+    provider: "groq",
+    model: "test",
+    async generateJson<T>(): Promise<T> {
+      return { action: "buy", ticker: "NVDA", amountUsd: 20, horizon: null, riskTolerance: "low", unexpected: "execute" } as T;
+    }
+  };
+  const market = { findAll: async () => [asset] } as unknown as HandeloMarketClient;
+  await assert.rejects(
+    () => new HandeloAgent({ llmClient: llm, marketClient: market }).run("Buy $20 of NVDA."),
+    /unexpected field/,
+  );
+});
+
+test("agent aborts instead of consuming malformed response from the provider", async () => {
+  let calls = 0;
+  const llm: LlmClient = {
+    provider: "groq",
+    model: "test",
+    async generateJson<T>(request: {schemaName:string;system:string;user:string;schema:Record<string,unknown>}): Promise<T> {
+      calls++;
+      if (request.schemaName === "handelo_intent") {
+        return { action: "research", ticker: "NVDA", amountUsd: null, horizon: null, riskTolerance: "unknown" } as T;
+      }
+      return { answer: "Looks fine.", execute: true } as T;
+    }
+  };
+  const market = { findAll: async () => [asset] } as unknown as HandeloMarketClient;
+  await assert.rejects(
+    () => new HandeloAgent({ llmClient: llm, marketClient: market }).run("Research NVDA."),
+    /unexpected field/,
+  );
+  assert.equal(calls, 2);
 });

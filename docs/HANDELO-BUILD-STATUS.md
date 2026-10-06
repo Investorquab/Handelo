@@ -122,7 +122,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Insufficient balance — live portfolio snapshots now reconcile the configured quote-token cash balance; strategy risk and execution re-check spend against available cash plus the minimum reserve before provider invocation
 - [x] Execution timeout/rejection — bounded timeout gate; unknown execution outcome is not blindly retried
 - [x] API/network failure — transient portfolio/market/quote transport failures are retryable before broadcast; uncertain execution transport failures fail closed and are never blindly retried
-- [ ] Malformed LLM output
+- [x] Malformed LLM output — agent intent/response validators enforce declared fields, required intent fields, types/enums, size limits, and fail closed before malformed provider data reaches policy or execution
 - [ ] Security-audit failure
 - [ ] Recovery/idempotency
 

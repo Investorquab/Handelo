@@ -92,9 +92,16 @@ const RESPONSE_SCHEMA = {
   additionalProperties: false
 };
 
+function assertAllowedKeys(value: Record<string, unknown>, allowed: readonly string[], label: string): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) throw new Error(`LLM returned an invalid ${label}: unexpected field "${key}".`);
+  }
+}
+
 export function validateAgentResponse(value: unknown): { answer: string } {
-  if (!value || typeof value !== "object") throw new Error("LLM returned an invalid response.");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("LLM returned an invalid response.");
   const response = value as Record<string, unknown>;
+  assertAllowedKeys(response, ["answer"], "response");
   if (typeof response.answer !== "string" || !response.answer.trim()) {
     throw new Error("LLM returned an invalid answer.");
   }
@@ -112,8 +119,15 @@ export function normalizeUserMessage(message: string): string {
 }
 
 export function validateUserIntent(value: unknown): UserIntent {
-  if (!value || typeof value !== "object") throw new Error("LLM returned an invalid intent.");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("LLM returned an invalid intent.");
   const intent = value as Record<string, unknown>;
+  assertAllowedKeys(intent, [
+    "action", "ticker", "amountUsd", "horizon", "riskTolerance",
+    "strategyType", "frequency", "condition", "basketAssets", "basketName"
+  ], "intent");
+  for (const required of ["action", "ticker", "amountUsd", "horizon", "riskTolerance"]) {
+    if (!(required in intent)) throw new Error(`LLM returned an invalid intent: missing field "${required}".`);
+  }
   const actions = ["research", "buy", "sell", "invest"];
   const risks = ["low", "medium", "high", "unknown"];
   const strategyTypes: Array<StrategyType | null> = ["DCA", "RECURRING", "CONDITIONAL", "REBALANCE", null];
