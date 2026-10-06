@@ -527,11 +527,13 @@ export async function runTriggeredStrategy(
 
   while (true) {
     try {
-      current = {
-        ...current,
-        status: transitionStrategyExecution(current.status, "RISK_CHECK")
-      };
-      await dependencies.store.update(current);
+      if (current.status !== "RISK_CHECK") {
+        current = {
+          ...current,
+          status: transitionStrategyExecution(current.status, "RISK_CHECK")
+        };
+        await dependencies.store.update(current);
+      }
 
       const riskPassed = await dependencies.riskCheck(strategy, current);
       if (!riskPassed) {
