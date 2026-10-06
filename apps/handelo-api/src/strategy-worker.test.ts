@@ -29,7 +29,7 @@ test("strategy worker starts and stops idempotently", async () => {
     intervalMs: 1000,
     setInterval: () => {
       scheduled += 1;
-      return 1 as ReturnType<typeof setInterval>;
+      return 1 as unknown as ReturnType<typeof setInterval>;
     },
     clearInterval: () => {
       cleared += 1;
