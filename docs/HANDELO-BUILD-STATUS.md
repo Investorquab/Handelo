@@ -81,9 +81,9 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Conditional triggers
 - [x] Rebalance execution
 - [x] Pause/resume/edit/cancel
-- [ ] Retry/failure recovery
-- [ ] Restart recovery
-- [ ] Idempotency/duplicate-execution protection
+- [x] Retry/failure recovery — bounded explicit retryable failures only
+- [x] Restart recovery — stale in-flight records fail closed before scheduling
+- [x] Idempotency/duplicate-execution protection — execution-key claim blocks duplicate triggers
 - [x] Execution history
 - [x] Next-run and last-run state
 - [x] Strategy runtime tests
@@ -119,7 +119,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Stale quote/data — review token binds quote price and execution rejects material fresh-quote drift
 - [ ] Wrong wallet
 - [ ] Insufficient balance
-- [ ] Execution timeout/rejection
+- [x] Execution timeout/rejection — explicit timeout boundary; unknown outcomes are not blindly retried
 - [ ] API/network failure
 - [ ] Malformed LLM output
 - [ ] Security-audit failure
