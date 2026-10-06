@@ -68,7 +68,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 ### Phase 2 — User Wallet + Agent Wallet Product Foundation
 - [x] User wallet connection/context
 - [x] Wallet Center
-- [ ] Agent wallet lifecycle
+- [x] Agent wallet lifecycle state machine — configure/pause/resume/revoke transitions are deterministic and fail closed; provider wallet creation remains separately unvalidated
 - [x] Agent permissions/policies — effective session grants cannot exceed active wallet permissions, spend caps, reserve or asset scope
 - [x] Funding authorization boundary — provider-independent, explicit user approval and balance checks; actual on-chain funding remains pending
 - [x] Withdrawal authorization + provider invocation boundary — verified owner, active BSC agent context and explicit approval; live wallet flow remains pending
