@@ -1,7 +1,8 @@
 import type {
   StrategyExecutionRecord,
   StrategyExecutionStore,
-  StrategySchedulerResult
+  StrategySchedulerResult,
+  recoverStaleStrategyExecutions
 } from "@handelo/strategy";
 import type { StrategyDefinition } from "@handelo/core";
 import { runPersistedStrategyScheduler } from "./strategy-runtime.js";
@@ -15,6 +16,7 @@ export interface PersistedStrategyWorkerDependencies {
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
   intervalMs?: number;
+  recoveryAfterMs?: number;
   setInterval?: (handler: () => void, timeoutMs: number) => ReturnType<typeof setInterval>;
   clearInterval?: (handle: ReturnType<typeof setInterval>) => void;
 }
@@ -44,7 +46,15 @@ export function createPersistedStrategyWorker(
   const tick = (): Promise<StrategySchedulerResult> => {
     if (inFlight) return inFlight;
 
-    inFlight = runPersistedStrategyScheduler(dependencies).finally(() => {
+    inFlight = (async () => {
+      const now = dependencies.now?.() ?? new Date().toISOString();
+      await recoverStaleStrategyExecutions(
+        dependencies.store,
+        now,
+        dependencies.recoveryAfterMs
+      );
+      return runPersistedStrategyScheduler(dependencies);
+    })().finally(() => {
       inFlight = null;
     });
 
