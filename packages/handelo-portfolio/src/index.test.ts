@@ -47,13 +47,20 @@ test("portfolio snapshot reconciles live token balances and records provenance",
   const liveAsset=asset({tokenPrice:"180"});
   const market={
     tokens:async()=>[liveAsset],
-    tokenBalances:async()=>new Map([[liveAsset.tokenContractAddress.toLowerCase(),"2000000000000000000"]])
+    tokenBalances:async()=>new Map([[liveAsset.tokenContractAddress.toLowerCase(),"2000000000000000000"]]),
+    tokenBalance:async()=>({
+      assetId:"0x55d398326f99059fF775485246999027B3197955",
+      wallet:"0x2222222222222222222222222222222222222222",
+      rawBalance:"15000000000000000000",
+      decimals:18
+    })
   } as unknown as ConstructorParameters<typeof HandeloPortfolio>[0];
   const snapshot=await new HandeloPortfolio(market).snapshot("0x2222222222222222222222222222222222222222");
   assert.equal(snapshot.wallet,"0x2222222222222222222222222222222222222222");
   assert.equal(snapshot.positions.length,1);
   assert.equal(snapshot.positions[0]?.balance,"2000000000000000000");
   assert.equal(snapshot.totalEstimatedValueUsd,360);
+  assert.equal(snapshot.balanceUsd,15);
   assert.equal(snapshot.source,"BSC_TOKEN_BALANCES");
   assert.ok(snapshot.asOf);
   assert.ok(!Number.isNaN(Date.parse(snapshot.asOf)));

@@ -12,6 +12,20 @@ export function isSupportedAutonomousStrategy(strategy: StrategyDefinition): str
   return SUPPORTED_AUTONOMOUS_STRATEGIES.includes(strategy.type as SupportedAutonomousStrategy);
 }
 
+
+function assertSufficientCash(balanceUsd: number | null, amountUsd: number, minimumReservePercent = 10): void {
+  if (balanceUsd === null) {
+    throw new Error("Cash balance is unavailable; autonomous execution is blocked until available balance can be verified.");
+  }
+  if (!Number.isFinite(balanceUsd) || balanceUsd < 0 || !Number.isFinite(amountUsd) || amountUsd <= 0) {
+    throw new Error("Invalid cash balance or execution amount; autonomous execution is blocked.");
+  }
+  const minimumReserveUsd = balanceUsd * (minimumReservePercent / 100);
+  if (balanceUsd - amountUsd + 1e-9 < minimumReserveUsd) {
+    throw new Error("Insufficient available cash balance for autonomous execution while preserving the minimum reserve.");
+  }
+}
+
 function premiumPercent(asset: RwaAsset): number | null {
   const tokenPrice = Number(asset.tokenPrice);
   const referencePrice = Number(asset.referencePrice);
@@ -54,6 +68,13 @@ export function createHandeloStrategyWorkerDependencies(
       if (strategy.type === "REBALANCE") {
         if (!strategy.targetAllocation || !Number.isFinite(Number(portfolio.totalValueUsd)) || Number(portfolio.totalValueUsd) <= 0) return false;
         const preview = createRebalancePreview(portfolio, strategy.targetAllocation);
+        const totalBuyUsd = preview.actions
+          .filter(item => item.direction === "BUY")
+          .reduce((sum, item) => sum + item.amountUsd, 0);
+        if (totalBuyUsd > 0) {
+          const reserve = strategy.constraints.minimumReservePercent ?? 10;
+          assertSufficientCash(portfolio.balanceUsd, totalBuyUsd, reserve);
+        }
         for (const action of preview.actions.filter(item => item.direction === "BUY")) {
           const asset = await dependencies.market.find(action.asset);
           if (!asset.statusInfo.openState) return false;
@@ -107,6 +128,13 @@ export function createHandeloStrategyWorkerDependencies(
         if (!strategy.targetAllocation) throw new Error("Rebalance strategy requires target allocation.");
         const portfolio = await portfolioSnapshot(dependencies.walletAddress);
         const preview = createRebalancePreview(portfolio, strategy.targetAllocation);
+        const totalBuyUsd = preview.actions
+          .filter(item => item.direction === "BUY")
+          .reduce((sum, item) => sum + item.amountUsd, 0);
+        if (totalBuyUsd > 0) {
+          const reserve = strategy.constraints.minimumReservePercent ?? 10;
+          assertSufficientCash(portfolio.balanceUsd, totalBuyUsd, reserve);
+        }
         const stableToken = quoteToken;
         for (const action of preview.actions.filter(item => item.direction !== "HOLD")) {
           const asset = await dependencies.market.find(action.asset);
@@ -155,6 +183,13 @@ export function createHandeloStrategyWorkerDependencies(
       if (!strategy.amountUsd || strategy.amountUsd <= 0) {
         throw new Error("Autonomous strategy amount must be greater than zero.");
       }
+
+      const portfolio = await portfolioSnapshot(dependencies.walletAddress);
+      assertSufficientCash(
+        portfolio.balanceUsd,
+        strategy.amountUsd,
+        strategy.constraints.minimumReservePercent ?? 10
+      );
 
       const asset = await dependencies.market.find(strategy.asset);
       if (!asset.statusInfo.openState) {

@@ -302,11 +302,29 @@ export function evaluatePortfolioStrategyRisk(
   const projectedExposurePercent = projectedTotal > 0
     ? ((currentValue + amountUsd) / projectedTotal) * 100
     : 100;
-  return createRiskResult(constraints, {
+  const balance = portfolio.balanceUsd;
+  const minimumReservePercent = constraints.minimumReservePercent ?? 0;
+  const minimumReserveUsd = Number.isFinite(Number(balance)) && Number(balance) >= 0
+    ? Number(balance) * (minimumReservePercent / 100)
+    : null;
+  const availableAfterSpend = Number.isFinite(Number(balance)) && Number(balance) >= 0
+    ? Number(balance) - amountUsd
+    : null;
+  const cashSufficient = availableAfterSpend === null ||
+    (availableAfterSpend >= 0 && availableAfterSpend + 1e-9 >= (minimumReserveUsd ?? 0));
+  const result = createRiskResult(constraints, {
     proposedAmountUsd: amountUsd,
     projectedAssetExposurePercent: projectedExposurePercent,
     now: new Date().toISOString()
   });
+  if (!cashSufficient) {
+    result.decision = "BLOCK";
+    result.reasons.push(
+      "Insufficient available cash balance for the requested transaction while preserving the " +
+      minimumReservePercent + "% minimum reserve."
+    );
+  }
+  return result;
 }
 
 

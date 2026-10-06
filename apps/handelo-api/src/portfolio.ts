@@ -17,6 +17,7 @@ export async function portfolioSnapshot(wallet: string): Promise<WorkspacePortfo
     balanceUsd: null,
     positions,
     totalValueUsd,
+    balanceUsd: snapshot.balanceUsd,
     source: snapshot.source,
     asOf: snapshot.asOf
   };

@@ -63,6 +63,29 @@ test("portfolio strategy risk blocks excessive projected exposure", () => {
   assert.match(result.reasons[0], /exposure/i);
 });
 
+test("portfolio strategy risk blocks a spend that would violate the cash reserve", () => {
+  const portfolio: PortfolioSnapshot = {
+    wallet: "0x1111111111111111111111111111111111111111",
+    balanceUsd: 20,
+    totalValueUsd: 100,
+    positions: []
+  };
+  const result = evaluatePortfolioStrategyRisk(portfolio, "NVDAB", 19);
+  assert.equal(result.decision, "BLOCK");
+  assert.match(result.reasons.join(" "), /insufficient available cash balance/i);
+});
+
+test("portfolio strategy risk passes when cash covers spend and reserve", () => {
+  const portfolio: PortfolioSnapshot = {
+    wallet: "0x1111111111111111111111111111111111111111",
+    balanceUsd: 20,
+    totalValueUsd: 100,
+    positions: []
+  };
+  const result = evaluatePortfolioStrategyRisk(portfolio, "NVDAB", 17);
+  assert.equal(result.decision, "PASS");
+});
+
 test("portfolio strategy risk passes a small diversified addition", () => {
   const portfolio: PortfolioSnapshot = {
     wallet: "0x1111111111111111111111111111111111111111",
