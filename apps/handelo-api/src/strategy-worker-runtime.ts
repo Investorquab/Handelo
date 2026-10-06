@@ -100,12 +100,6 @@ export function createHandeloStrategyWorkerDependencies(
     },
     execute: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<void> => {
       if (!isSupportedAutonomousStrategy(strategy)) {
-      const connectedWallet = await dependencies.executionWallet.getConnectedWalletAddress();
-      if (connectedWallet.toLowerCase() !== dependencies.walletAddress.toLowerCase()) {
-        throw new Error("Autonomous execution wallet does not match the configured strategy worker wallet.");
-      }
-
-
         throw new Error("This strategy type is not enabled for autonomous BAW execution yet.");
       }
 

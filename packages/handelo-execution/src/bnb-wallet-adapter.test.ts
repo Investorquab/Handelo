@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AgentWalletContext } from "@handelo/core";
 import { BnbWalletAdapter, probeBnbWalletAdapter } from "./bnb-wallet-adapter.js";
+import type { WalletPermission } from "@handelo/core";
 import type { WalletProviderCapabilities, WalletSessionGrant } from "./wallet-provider.js";
 
 const complete: WalletProviderCapabilities = {
@@ -15,17 +15,17 @@ const complete: WalletProviderCapabilities = {
   transferOut: true
 };
 
-function context(): AgentWalletContext {
+function context(): import("@handelo/core").AgentWalletContext {
   return {
-    mode: "USER",
-    role: "AGENT",
+    mode: "USER" as const,
+    role: "AGENT" as const,
     address: "0x2222222222222222222222222222222222222222",
-    network: "BSC",
+    network: "BSC" as const,
     connected: true,
     balanceUsd: 100,
     ownerWallet: "0x1111111111111111111111111111111111111111",
-    policy: { permissions: ["DCA"], revocable: true },
-    status: "ACTIVE"
+    policy: { permissions: ["DCA" satisfies WalletPermission], revocable: true },
+    status: "ACTIVE" as const
   };
 }
 
@@ -33,7 +33,7 @@ function validGrant(): WalletSessionGrant {
   return {
     ownerWallet: "0x1111111111111111111111111111111111111111",
     agentWallet: "0x2222222222222222222222222222222222222222",
-    network: "BSC",
+    network: "BSC" as const,
     permissions: ["DCA"],
     revocable: true
   };
@@ -136,12 +136,12 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
 });
 
 test("BNB adapter forwards the validated normalized grant to the provider", async () => {
-  const received: { grant: WalletSessionGrant | null } = { grant: null };
+  let received: WalletSessionGrant | null = null;
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
     getContext: async () => context(),
     createSession: async grant => {
-      received.grant = grant;
+      received = grant;
       return { sessionId: "session-valid" };
     }
   });
@@ -153,7 +153,7 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   });
 
   assert.equal(result.sessionId, "session-valid");
-  assert.ok(received.grant);
-  assert.equal(received.grant.ownerWallet, "0x1111111111111111111111111111111111111111");
-  assert.deepEqual(received.grant.allowedAssets, ["NVDAB"]);
+  assert.ok(received);
+  assert.equal(received.ownerWallet, "0x1111111111111111111111111111111111111111");
+  assert.deepEqual(received.allowedAssets, ["NVDAB"]);
 });

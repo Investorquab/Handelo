@@ -81,17 +81,6 @@ export async function auditToken(chainId:string,contractAddress:string):Promise<
 }
 
 export class BinanceAgenticWalletAdapter{
-  async getConnectedWalletAddress():Promise<string>{
-    const wallet = await baw<{addresses?:Array<{binanceChainId?:string;address?:string}>>>(["wallet","address"]);
-    const address = wallet.addresses
-      ?.find((entry) => entry.binanceChainId === "56")
-      ?.address?.trim() ?? "";
-    if(!/^0x[a-fA-F0-9]{40}$/.test(address)){
-      throw new Error("Binance Agentic Wallet did not return a valid connected BSC wallet address.");
-    }
-    return address;
-  }
-
   async quote(request:WalletSwapRequest):Promise<WalletQuote>{
     return baw<WalletQuote>([
       "market-order","quote",

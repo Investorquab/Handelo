@@ -36,8 +36,8 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     }
     const validatedGrant = validateWalletSessionGrant(grant);
     const context = await this.getContext();
-    const contextAddress = context.address?.trim().toLowerCase();
     const ownerMatches = context.ownerWallet?.trim().toLowerCase() === validatedGrant.ownerWallet.toLowerCase();
+    const contextAddress = context.address?.trim().toLowerCase();
     const agentMatches = contextAddress === validatedGrant.agentWallet.toLowerCase();
     if (!ownerMatches || !agentMatches) {
       throw new Error("Wallet session grant does not match the connected BNB wallet context.");
