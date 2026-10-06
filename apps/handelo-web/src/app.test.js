@@ -248,3 +248,14 @@ test("transaction review renders quote-backed execution quality metrics", () => 
   assert.match(source, /quoteVsOnChainPercent/);
   assert.match(source, /quoteVsReferencePercent/);
 });
+
+
+test("workspace provides first-stock onboarding from live market data", () => {
+  assert.match(indexSource, /id="workspaceOnboarding"/);
+  assert.match(indexSource, /id="workspaceOnboardingContent"/);
+  assert.match(source, /function renderFirstStockOnboarding\(markets = \[\]\)/);
+  assert.match(source, /handelo:first-stock-onboarded/);
+  assert.match(source, /data-onboard-market/);
+  assert.match(source, /Selecting a stock only opens an explanation/);
+  assert.match(source, /Explain " \+ symbol \+ " and its reference-price gap/);
+});

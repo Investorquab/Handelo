@@ -571,3 +571,15 @@ button{cursor:pointer}
     scroll-behavior: auto !important;
   }
 }
+
+
+.first-stock-panel[hidden] { display: none; }
+.first-stock-copy strong { display: block; font-size: 0.86rem; letter-spacing: 0.01em; }
+.first-stock-copy p { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.78rem; line-height: 1.55; }
+.first-stock-options { display: grid; gap: 0.5rem; margin-top: 0.8rem; }
+.first-stock-option { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.7rem 0.75rem; border: 1px solid var(--line); border-radius: 0.65rem; background: rgba(255,255,255,0.025); color: inherit; text-align: left; cursor: pointer; }
+.first-stock-option:hover { border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+.first-stock-option span { display: grid; gap: 0.2rem; }
+.first-stock-option small { color: var(--muted); font-size: 0.68rem; }
+.first-stock-option b { font-family: "DM Mono", monospace; font-size: 0.72rem; }
+.first-stock-note { display: block; margin-top: 0.7rem; color: var(--muted); font-size: 0.66rem; line-height: 1.45; }

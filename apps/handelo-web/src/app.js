@@ -91,6 +91,43 @@ function renderWorkspaceError(element, message) {
   element.innerHTML = `<div class="workspace-empty workspace-error" role="status">${escapeHtml(message)}</div>`;
 }
 
+
+function renderFirstStockOnboarding(markets = []) {
+  const panel = document.querySelector("#workspaceOnboarding");
+  const target = document.querySelector("#workspaceOnboardingContent");
+  if (!panel || !target) return;
+  if (localStorage.getItem("handelo:first-stock-onboarded") === "1") {
+    panel.hidden = true;
+    return;
+  }
+  const candidates = (Array.isArray(markets) ? markets : [])
+    .filter((market) => market?.ticker && market?.tokenSymbol && Number.isFinite(Number(market?.tokenPrice)))
+    .slice(0, 3);
+  if (!candidates.length) {
+    panel.hidden = false;
+    target.innerHTML = '<div class="workspace-empty">No supported tokenized stocks are available right now.</div>';
+    return;
+  }
+  panel.hidden = false;
+  target.innerHTML = '<div class="first-stock-copy"><strong id="workspaceOnboardingTitle">Start with a supported stock.</strong><p>Pick a live tokenized-stock representation to understand its market gap before you decide whether to act.</p></div><div class="first-stock-options">' +
+    candidates.map((market) => {
+      const gap = Number(market.premiumPct);
+      const gapText = Number.isFinite(gap) ? (gap >= 0 ? "+" : "") + gap.toFixed(2) + "%" : "—";
+      return '<button class="first-stock-option" type="button" data-onboard-market="' + escapeHtml(market.tokenSymbol) + '"><span><strong>' + escapeHtml(market.ticker) + '</strong><small>' + escapeHtml(market.tokenSymbol) + ' · ' + escapeHtml(market.provider || "BSC") + '</small></span><b>' + escapeHtml(gapText) + '</b></button>';
+    }).join("") +
+    '</div><small class="first-stock-note">Market data is live. Selecting a stock only opens an explanation; it does not create an order.</small>';
+  target.querySelectorAll("[data-onboard-market]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const symbol = button.dataset.onboardMarket;
+      if (!symbol) return;
+      localStorage.setItem("handelo:first-stock-onboarded", "1");
+      panel.hidden = true;
+      showView("workspace");
+      ask("Explain " + symbol + " and its reference-price gap.");
+    });
+  });
+}
+
 function renderWorkspaceMarket(market) {
   if (!workspaceMarket) return;
   const gap = market.premiumPct;
@@ -148,7 +185,7 @@ async function refreshWorkspaceContext() {
   try {
     const marketsResponse = await fetch(API_BASE + "/api/markets", {cache:"no-store"});
     const markets = await marketsResponse.json();
-    if (marketsResponse.ok && Array.isArray(markets) && markets.length) { renderWorkspaceMarket(normalizeMarketRecord(markets[0])); workspaceMarket?.setAttribute("aria-busy", "false"); }
+    if (marketsResponse.ok && Array.isArray(markets) && markets.length) { const normalizedMarkets = markets.map(normalizeMarketRecord); renderWorkspaceMarket(normalizedMarkets[0]); renderFirstStockOnboarding(normalizedMarkets); workspaceMarket?.setAttribute("aria-busy", "false"); }
     else { renderWorkspaceError(workspaceMarket, "Market data is unavailable right now."); workspaceMarket?.setAttribute("aria-busy", "false"); }
   } catch {
     renderWorkspaceError(workspaceMarket, "Could not reach market data. Try again.");
