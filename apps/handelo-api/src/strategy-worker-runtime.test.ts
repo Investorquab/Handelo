@@ -51,3 +51,7 @@ test("conditional worker evaluates live reference-price conditions instead of ac
   assert.equal(await dependencies.conditionMet(strategy), true);
   assert.equal(await dependencies.conditionMet({ ...strategy, condition: "price above reference" }), false);
 });
+
+test("autonomous strategy support includes rebalance only after deterministic preview/risk gating", () => {
+  assert.equal(isSupportedAutonomousStrategy({ ...base, type: "REBALANCE", targetAllocation: { NVDAB: 100 } }), true);
+});

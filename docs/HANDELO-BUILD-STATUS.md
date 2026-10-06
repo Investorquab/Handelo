@@ -79,7 +79,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] DCA execution
 - [x] Recurring execution
 - [x] Conditional triggers
-- [ ] Rebalance execution
+- [x] Rebalance execution
 - [x] Pause/resume/edit/cancel
 - [ ] Retry/failure recovery
 - [ ] Restart recovery

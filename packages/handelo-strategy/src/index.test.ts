@@ -656,3 +656,14 @@ test("conditional condition evaluator supports deterministic reference-price rul
   assert.equal(evaluateStrategyCondition("market is open", context), true);
   assert.equal(evaluateStrategyCondition("unknown natural language", context), false);
 });
+
+test("rebalance execution grants are scoped to target assets", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "REBALANCE",
+    asset: "BASKET",
+    targetAllocation: { NVDAB: 60, AAPLX: 40 },
+    constraints: {}
+  }));
+  const grant = executionGrantFromStrategy(strategy);
+  assert.deepEqual(grant.allowedAssets.sort(), ["AAPLX", "NVDAB"]);
+});

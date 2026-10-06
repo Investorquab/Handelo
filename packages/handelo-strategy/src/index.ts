@@ -117,7 +117,9 @@ export function executionGrantFromStrategy(
     maxTransactionUsd,
     maxDailySpendUsd,
     minimumReservePercent: strategy.constraints.minimumReservePercent,
-    allowedAssets: [strategy.asset]
+    allowedAssets: strategy.type === "REBALANCE" && strategy.targetAllocation
+      ? Object.keys(strategy.targetAllocation)
+      : [strategy.asset]
   };
 }
 
