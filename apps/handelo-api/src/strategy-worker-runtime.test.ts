@@ -55,3 +55,19 @@ test("conditional worker evaluates live reference-price conditions instead of ac
 test("autonomous rebalance support is explicit", () => {
   assert.equal(isSupportedAutonomousStrategy({ ...base, type: "REBALANCE", targetAllocation: { NVDAB: 100 } }), true);
 });
+
+test("autonomous execution blocks when the connected BAW wallet differs from the configured worker wallet", async () => {
+  const dependencies = createHandeloStrategyWorkerDependencies({
+    walletAddress: "0x1111111111111111111111111111111111111111",
+    executionWallet: {
+      getConnectedWalletAddress: async () => "0x3333333333333333333333333333333333333333"
+    } as never,
+    market: { find: async () => { throw new Error("market must not be reached"); } },
+    store: {} as never
+  });
+
+  await assert.rejects(
+    dependencies.execute(base, {} as never),
+    /does not match the configured strategy worker wallet/
+  );
+});
