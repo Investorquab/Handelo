@@ -79,7 +79,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 
 ### Phase 3 — Autonomous Strategy Runtime
 - [x] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN — execution runtime now persists an explicit VERIFYING gate and fails closed when post-execution verification rejects the provider outcome
-- [ ] Deterministic scheduler
+- [x] Deterministic scheduler — scheduler snapshots one timestamp per tick, sorts active strategies by stable strategy ID, and selects persisted retries deterministically with a run-ID tie-breaker
 - [x] DCA execution
 - [x] Recurring execution
 - [x] Conditional triggers

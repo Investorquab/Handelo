@@ -538,6 +538,68 @@ test("strategy scheduler evaluates active strategies and runs only eligible trig
   }
 });
 
+test("scheduler processes active strategies in deterministic id order", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-order-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const first = activateStrategy(createDraftStrategy({ type: "DCA", asset: "FIRST", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" }));
+    const second = activateStrategy(createDraftStrategy({ type: "DCA", asset: "SECOND", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" }));
+    const ordered = [first, second].sort((a, b) => a.id.localeCompare(b.id));
+    const executed: string[] = [];
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:00:00.000Z",
+      marketOpen: true,
+      listActiveStrategies: async () => [second, first],
+      riskCheck: async () => true,
+      execute: async strategy => { executed.push(strategy.id); }
+    });
+
+    assert.equal(result.evaluated, 2);
+    assert.deepEqual(executed, ordered.map(strategy => strategy.id));
+    assert.deepEqual(result.results.map(item => item.status), ["FINISHED", "FINISHED"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("scheduler uses one deterministic timestamp for trigger evaluation", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-clock-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T12:00:00.000Z"
+    }));
+    let clockCalls = 0;
+
+    const result = await runStrategyScheduler({
+      store,
+      now: () => {
+        clockCalls += 1;
+        return "2026-10-05T12:00:00.000Z";
+      },
+      marketOpen: true,
+      listActiveStrategies: async () => [strategy],
+      riskCheck: async () => true,
+      execute: async () => undefined
+    });
+
+    assert.equal(result.finished, 1);
+    assert.equal(clockCalls, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("scheduler supplies deterministic condition results to conditional strategies", async () => {
   const { mkdtemp, rm } = await import("node:fs/promises");
   const { join } = await import("node:path");

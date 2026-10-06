@@ -850,7 +850,10 @@ export async function runStrategyScheduler(
   dependencies: StrategyRuntimeSchedulerDependencies
 ): Promise<StrategySchedulerResult> {
   const now = dependencies.now ?? (() => new Date().toISOString());
-  const strategies = await dependencies.listActiveStrategies();
+  const schedulerNow = now();
+  if (!validTimestamp(schedulerNow)) throw new Error("Strategy scheduler requires a valid current timestamp.");
+  const strategies = (await dependencies.listActiveStrategies()).slice().sort((a, b) => a.id.localeCompare(b.id));
+  const persistedRecords = await dependencies.store.list();
   const results: StrategyRuntimeResult[] = [];
 
   for (const strategy of strategies) {
@@ -858,7 +861,7 @@ export async function runStrategyScheduler(
       ? await (dependencies.conditionMet?.(strategy) ?? Promise.resolve(false))
       : undefined;
 
-    const retryable = (await dependencies.store.list())
+    const retryable = persistedRecords
       .filter(record =>
         record.strategyId === strategy.id &&
         record.status === "FAILED" &&
@@ -866,7 +869,10 @@ export async function runStrategyScheduler(
         (!record.nextRetryAt || Date.parse(record.nextRetryAt) <= Date.parse(now())) &&
         record.attempt < (dependencies.maxAttempts ?? 1)
       )
-      .sort((a, b) => Date.parse(b.triggeredAt) - Date.parse(a.triggeredAt))[0];
+      .sort((a, b) => {
+        const triggeredAt = Date.parse(b.triggeredAt) - Date.parse(a.triggeredAt);
+        return triggeredAt !== 0 ? triggeredAt : a.runId.localeCompare(b.runId);
+      })[0];
 
     if (retryable) {
       const result = await retryPersistedStrategyExecution(strategy, retryable, dependencies);
@@ -878,7 +884,7 @@ export async function runStrategyScheduler(
     }
 
     const trigger = evaluateStrategyTrigger(strategy, {
-      now: now(),
+      now: schedulerNow,
       marketOpen: dependencies.marketOpen,
       conditionMet
     });
