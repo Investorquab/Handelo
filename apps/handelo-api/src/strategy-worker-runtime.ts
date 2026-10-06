@@ -1,5 +1,5 @@
 import { evaluatePortfolioStrategyRisk, type StrategyDefinition } from "@handelo/core";
-import { executionGrantFromStrategy, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
+import { evaluateStrategyCondition, executionGrantFromStrategy, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
 import { BinanceAgenticWalletAdapter } from "@handelo/execution";
 import { marketClientFromEnv, type RwaAsset } from "@handelo/market";
 import { portfolioSnapshot } from "./portfolio.js";
@@ -34,7 +34,18 @@ export function createHandeloStrategyWorkerDependencies(
     wallet: dependencies.walletAddress,
     store: dependencies.store,
     marketOpen: true,
-    conditionMet: async () => false,
+    conditionMet: async (strategy: StrategyDefinition) => {
+      if (strategy.type !== "CONDITIONAL" || !strategy.condition) return false;
+      const asset = await dependencies.market.find(strategy.asset);
+      const tokenPrice = Number(asset.tokenPrice);
+      const referencePrice = Number(asset.referencePrice);
+      if (!Number.isFinite(tokenPrice) || !Number.isFinite(referencePrice) || referencePrice <= 0) return false;
+      return evaluateStrategyCondition(strategy.condition, {
+        tokenPrice,
+        referencePrice,
+        marketOpen: asset.statusInfo.openState
+      });
+    },
     riskCheck: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<boolean> => {
       if (!isSupportedAutonomousStrategy(strategy) || !strategy.amountUsd || strategy.amountUsd <= 0) return false;
 

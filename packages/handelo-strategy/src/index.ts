@@ -159,6 +159,48 @@ export function transitionStrategyExecution(
   return to;
 }
 
+export interface StrategyConditionContext {
+  tokenPrice: number;
+  referencePrice: number;
+  marketOpen: boolean;
+}
+
+export function evaluateStrategyCondition(
+  condition: string,
+  context: StrategyConditionContext
+): boolean {
+  const normalized = condition.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!normalized) return false;
+  if (normalized === "market open" || normalized === "market is open") return context.marketOpen;
+  if (normalized === "price below reference" || normalized === "price is below reference") {
+    return context.tokenPrice < context.referencePrice;
+  }
+  if (normalized === "price above reference" || normalized === "price is above reference") {
+    return context.tokenPrice > context.referencePrice;
+  }
+  if (normalized === "price at or below reference" || normalized === "price is at or below reference") {
+    return context.tokenPrice <= context.referencePrice;
+  }
+  if (normalized === "price at or above reference" || normalized === "price is at or above reference") {
+    return context.tokenPrice >= context.referencePrice;
+  }
+
+  const gap = normalized.match(/(?:gap|premium|discount)\s*(?:is\s*)?(above|below|at or above|at or below)\s*(\d+(?:\.\d+)?)\s*%/);
+  if (gap) {
+    const reference = context.referencePrice;
+    if (!Number.isFinite(reference) || reference <= 0) return false;
+    const percent = ((context.tokenPrice - reference) / reference) * 100;
+    const threshold = Number(gap[2]);
+    if (!Number.isFinite(percent) || !Number.isFinite(threshold)) return false;
+    return gap[1] === "above" ? percent > threshold
+      : gap[1] === "below" ? percent < -threshold
+      : gap[1] === "at or above" ? percent >= threshold
+      : percent <= -threshold;
+  }
+
+  return false;
+}
+
 export interface StrategyTriggerContext {
   now?: string;
   marketOpen?: boolean;

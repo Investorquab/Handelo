@@ -97,13 +97,45 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
     const stats = byId.get(strategy.id);
     const runs = stats ? String(stats.finishedCount) + "/" + String(stats.executionCount) + " runs finished" : "No recorded runs";
     const planned = stats?.successfulPlannedUsd == null ? "" : " · " + money(stats.successfulPlannedUsd) + " attributed";
+    const status = String(strategy.status || "ACTIVE");
+    const action = status === "ACTIVE"
+      ? '<button type="button" class="strategy-control" data-strategy-action="pause" data-strategy-id="' + escapeHtml(strategy.id) + '">Pause</button>'
+      : status === "PAUSED"
+        ? '<button type="button" class="strategy-control" data-strategy-action="resume" data-strategy-id="' + escapeHtml(strategy.id) + '">Resume</button>'
+        : "";
+    const cancel = status === "CANCELLED"
+      ? ""
+      : '<button type="button" class="strategy-control danger" data-strategy-action="cancel" data-strategy-id="' + escapeHtml(strategy.id) + '">Cancel</button>';
     return '<div class="workspace-position workspace-strategy"><span><strong>' +
       escapeHtml(strategy.type || "STRATEGY") + '</strong><small>' +
       escapeHtml(strategy.asset || "—") + ' · ' +
       escapeHtml(strategy.frequency || strategy.condition || "Rule-based") +
-      '</small><small>' + escapeHtml(runs + planned) + '</small></span><b>ACTIVE</b></div>';
+      '</small><small>' + escapeHtml(runs + planned) + '</small></span><span class="strategy-actions"><b>' + escapeHtml(status) + '</b>' + action + cancel + '</span></div>';
   }).join("");
 }
+  workspaceStrategies.querySelectorAll("[data-strategy-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.strategyAction;
+      const strategyId = button.dataset.strategyId;
+      if (!action || !strategyId || !workspaceWalletAddressValue) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(API_BASE + "/api/strategies/" + action, {
+          method: "POST",
+          headers: {"content-type":"application/json"},
+          body: JSON.stringify({wallet: workspaceWalletAddressValue, strategyId})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "Strategy update failed.");
+        await refreshWorkspaceContext();
+      } catch (error) {
+        addAgentError(error instanceof Error ? error.message : String(error));
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
 
 
 function addPortfolioPreview(portfolio) {

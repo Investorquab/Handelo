@@ -78,9 +78,9 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [ ] Deterministic scheduler
 - [x] DCA execution
 - [x] Recurring execution
-- [ ] Conditional triggers
+- [x] Conditional triggers
 - [ ] Rebalance execution
-- [ ] Pause/resume/edit/cancel
+- [x] Pause/resume/edit/cancel
 - [ ] Retry/failure recovery
 - [ ] Restart recovery
 - [ ] Idempotency/duplicate-execution protection

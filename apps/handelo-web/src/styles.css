@@ -598,3 +598,7 @@ button{cursor:pointer}
 .wallet-center-status{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .wallet-center-status span{font-size:9px;letter-spacing:.08em;opacity:.62}
 .wallet-center-note{display:block;margin-top:10px;line-height:1.45;opacity:.62}
+
+.strategy-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.strategy-control{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);border-radius:7px;padding:4px 7px;font:inherit;font-size:9px;cursor:pointer}
+.strategy-control.danger{border-color:rgba(255,90,90,.25)}

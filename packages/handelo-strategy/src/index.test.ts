@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution,markRetryableStrategyFailure} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyCondition,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution,markRetryableStrategyFailure} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -644,4 +644,15 @@ test("scheduler persists the next execution time after a successful recurring ru
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("conditional condition evaluator supports deterministic reference-price rules", () => {
+  const context = { tokenPrice: 95, referencePrice: 100, marketOpen: true };
+  assert.equal(evaluateStrategyCondition("price below reference", context), true);
+  assert.equal(evaluateStrategyCondition("price above reference", context), false);
+  assert.equal(evaluateStrategyCondition("gap below 3%", context), false);
+  assert.equal(evaluateStrategyCondition("gap below 6%", context), true);
+  assert.equal(evaluateStrategyCondition("gap above 3%", { ...context, tokenPrice: 105 }), true);
+  assert.equal(evaluateStrategyCondition("market is open", context), true);
+  assert.equal(evaluateStrategyCondition("unknown natural language", context), false);
 });
