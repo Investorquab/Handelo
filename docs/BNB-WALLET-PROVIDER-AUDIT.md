@@ -24,6 +24,7 @@ Handelo uses these surfaces as follows:
 | Chain support | baw wallet chains | BSC contract pinned to 56 |
 | Quote | baw market-order quote | Implemented |
 | Execution | baw market-order swap | Implemented behind policy/security/confirmation gates |
+| Token transfer | baw wallet send | Implemented as an explicit-confirmation BSC outbound transfer primitive; live confirmation remains pending |
 | Verification | baw market-order list | Implemented order polling |
 | Token security | Binance Web3 token audit | Implemented before execution |
 
@@ -56,7 +57,7 @@ This preserves a deep Binance Wallet integration while giving Handelo a credible
 The following remain live-validation gates:
 
 1. Per-user isolation across two distinct owner wallets.
-2. Funding from personal wallet into the selected agent execution context.
+2. Funding from personal wallet into the selected agent execution context. The documented `wallet send` primitive is insufficient for this direction because it operates from the connected Agentic Wallet; Handelo therefore keeps personal-wallet funding explicitly unimplemented until a user-wallet/provider signing primitive is validated.
 3. Withdrawal back to the verified personal wallet.
 4. Permission scope enforcement on a real BSC execution.
 5. Spend-cap enforcement.

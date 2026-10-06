@@ -20,6 +20,39 @@ export interface WalletSwapRequest{
   gasLevel?:"LOW"|"MEDIUM"|"HIGH";
 }
 export interface WalletQuote{fromCoinSymbol:string;fromCoinAmount:string;toCoinSymbol:string;toCoinAmount:string;slippage:number;}
+
+export interface WalletSendRequest{
+  recipient:string;
+  amount:string;
+  tokenAddress:string;
+  binanceChainId:"56";
+  gasLevel?:"LOW"|"MEDIUM"|"HIGH";
+}
+
+export interface WalletSendResult{
+  txHash:string;
+  network:"BSC";
+  recipient:string;
+  tokenAddress:string;
+  amount:string;
+}
+
+const EVM_WALLET_ADDRESS=/^0x[a-fA-F0-9]{40}$/;
+
+export function buildWalletSendArgs(request:WalletSendRequest):string[]{
+  if(!EVM_WALLET_ADDRESS.test(request.recipient.trim())) throw new Error("Transfer recipient must be a valid EVM wallet address.");
+  if(request.binanceChainId!=="56") throw new Error("Wallet transfers are restricted to BSC.");
+  if(!request.tokenAddress.trim()) throw new Error("Transfer token address is required.");
+  if(!request.amount.trim() || Number(request.amount)<=0 || !Number.isFinite(Number(request.amount))) throw new Error("Transfer amount must be a finite positive value.");
+  return [
+    "wallet","send",
+    "--amount",request.amount.trim(),
+    "--recipient",request.recipient.trim(),
+    "--binanceChainId","56",
+    "--tokenAddress",request.tokenAddress.trim(),
+    ...(request.gasLevel?["--gasLevel",request.gasLevel]:[])
+  ];
+}
 export interface WalletOrder{orderId:string;status:"PENDING"|"FINISHED"|"FAILED";txHash:string|null;toCoinAmount?:string;}
 interface BawEnvelope<T>{success:boolean;data:T;message?:string;code?:string|number;}
 interface MarketOrderStatus{orderId:string;status:"PENDING"|"FINISHED"|"FAILED";txHash:string|null;toCoinActualQty?:string;}
@@ -82,6 +115,17 @@ export async function auditToken(chainId:string,contractAddress:string):Promise<
 }
 
 export class BinanceAgenticWalletAdapter{
+  async sendToken(request:WalletSendRequest,confirmed:boolean):Promise<WalletSendResult>{
+    if(!confirmed) throw new Error("Token transfer requires explicit user confirmation.");
+    const wallet = await baw<{status:"CONNECTED"|"UNCONNECTED"|"CREATING"}>(["wallet","status"]);
+    if(wallet.status !== "CONNECTED"){
+      throw new Error("Binance Agentic Wallet is not connected (status: "+wallet.status+"). Transfer is blocked.");
+    }
+    const args=buildWalletSendArgs(request);
+    const result=await baw<{txHash:string}>(args);
+    return {txHash:result.txHash,network:"BSC",recipient:request.recipient.trim(),tokenAddress:request.tokenAddress.trim(),amount:request.amount.trim()};
+  }
+
   async quote(request:WalletSwapRequest):Promise<WalletQuote>{
     return baw<WalletQuote>([
       "market-order","quote",
