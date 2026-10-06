@@ -134,13 +134,15 @@ test("autonomous worker retries transient API/network failures before broadcast"
         statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
       })
     },
-    store: {
-      records: new Map(),
-      claim: async function(record: any) { this.records.set(record.executionKey, record); return record; },
-      get: async function(key: string) { return this.records.get(key) ?? null; },
-      update: async function(record: any) { this.records.set(record.executionKey, record); return record; },
-      list: async function() { return [...this.records.values()]; }
-    } as never,
+    store: (() => {
+      const records = new Map<string, any>();
+      return {
+        claim: async (record: any) => { records.set(record.executionKey, record); return record; },
+        get: async (key: string) => records.get(key) ?? null,
+        update: async (record: any) => { records.set(record.executionKey, record); return record; },
+        list: async () => [...records.values()]
+      };
+    })() as never,
     portfolioSnapshot: async () => ({ wallet: "0x1111111111111111111111111111111111111111", balanceUsd: 100, totalValueUsd: 100, positions: [] })
   });
   const strategy = { ...base, amountUsd: 10, nextExecutionAt: "2026-10-06T09:00:00.000Z" };
