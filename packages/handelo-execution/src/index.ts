@@ -193,4 +193,4 @@ export * from "./bnb-wallet-adapter.js";
 export * from "./bnb-agentic-wallet-contract.js";
 export * from "./wallet-funding.js";
 export * from "./wallet-withdrawal.js";
-\nexport * from "./wallet-mode.js";\n
+export * from "./wallet-mode.js";
