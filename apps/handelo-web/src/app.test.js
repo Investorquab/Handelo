@@ -277,5 +277,5 @@ test("workspace exposes the Wallet Center guardrail surface", () => {
   assert.match(source, /DAILY LIMIT/);
   assert.match(source, /QUOTA LEFT/);
   assert.match(source, /TX LOCK/);
-  assert.match(source, /provider guardrails are read-only here/);
+  assert.match(source, /Provider guardrails are read-only here/);
 });
