@@ -284,5 +284,5 @@ test("workspace strategy cards expose pause, resume and cancel controls", () => 
   assert.match(source, /data-strategy-action="pause"/);
   assert.match(source, /data-strategy-action="resume"/);
   assert.match(source, /data-strategy-action="cancel"/);
-  assert.match(source, /\/api\/strategies\/\+" \/\+ action/);
+  assert.match(source, /\/api\/strategies\/"\s*\+\s*action/);
 });
