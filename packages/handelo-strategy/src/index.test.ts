@@ -546,8 +546,8 @@ test("scheduler processes active strategies in deterministic id order", async ()
   const dir = await mkdtemp(join(tmpdir(), "handelo-scheduler-order-"));
   try {
     const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
-    const first = activateStrategy(createDraftStrategy({ type: "DCA", asset: "FIRST", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" }));
-    const second = activateStrategy(createDraftStrategy({ type: "DCA", asset: "SECOND", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" }));
+    const first = { ...activateStrategy(createDraftStrategy({ type: "DCA", asset: "FIRST", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" })), id: "strategy-a" };
+    const second = { ...activateStrategy(createDraftStrategy({ type: "DCA", asset: "SECOND", amountUsd: 10, frequency: "Daily", nextExecutionAt: "2026-10-05T11:00:00.000Z" })), id: "strategy-b" };
     const ordered = [first, second].sort((a, b) => a.id.localeCompare(b.id));
     const executed: string[] = [];
 

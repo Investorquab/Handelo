@@ -875,7 +875,7 @@ export async function runStrategyScheduler(
       })[0];
 
     if (retryable) {
-      const result = await retryPersistedStrategyExecution(strategy, retryable, dependencies);
+      const result = await retryPersistedStrategyExecution(strategy, retryable, { ...dependencies, now: () => schedulerNow });
       if (result.status === "FINISHED" && dependencies.updateStrategy) {
         await dependencies.updateStrategy(scheduleNextStrategyExecution(strategy, result.record.finishedAt ?? result.record.triggeredAt));
       }
@@ -889,7 +889,7 @@ export async function runStrategyScheduler(
       conditionMet
     });
 
-    const result = await runTriggeredStrategy(strategy, trigger, dependencies);
+    const result = await runTriggeredStrategy(strategy, trigger, { ...dependencies, now: () => schedulerNow });
     if (result.status === "FINISHED" && dependencies.updateStrategy) {
       await dependencies.updateStrategy(scheduleNextStrategyExecution(strategy, result.record.finishedAt ?? result.record.triggeredAt));
     }
