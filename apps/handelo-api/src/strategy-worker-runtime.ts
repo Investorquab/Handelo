@@ -1,4 +1,4 @@
-import { evaluatePortfolioStrategyRisk, type StrategyDefinition } from "@handelo/core";
+import { evaluatePortfolioStrategyRisk, type PortfolioSnapshot, type StrategyDefinition } from "@handelo/core";
 import { evaluateStrategyCondition, executionGrantFromStrategy, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
 import { createRebalancePreview } from "@handelo/core";
 import { BinanceAgenticWalletAdapter } from "@handelo/execution";
@@ -38,12 +38,14 @@ export interface HandeloStrategyWorkerDependencies {
   executionWallet: BinanceAgenticWalletAdapter;
   market: Pick<ReturnType<typeof marketClientFromEnv>, "find">;
   store: StrategyExecutionStore;
+  portfolioSnapshot?: (wallet: string) => Promise<PortfolioSnapshot>;
 }
 
 export function createHandeloStrategyWorkerDependencies(
   dependencies: HandeloStrategyWorkerDependencies
 ) {
   const quoteToken = process.env.HANDELO_QUOTE_TOKEN ?? "0x55d398326f99059fF775485246999027B3197955";
+  const loadPortfolio = dependencies.portfolioSnapshot ?? portfolioSnapshot;
 
   return {
     wallet: dependencies.walletAddress,
@@ -63,7 +65,7 @@ export function createHandeloStrategyWorkerDependencies(
     },
     riskCheck: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<boolean> => {
       if (!isSupportedAutonomousStrategy(strategy)) return false;
-      const portfolio = await portfolioSnapshot(dependencies.walletAddress);
+      const portfolio = await loadPortfolio(dependencies.walletAddress);
 
       if (strategy.type === "REBALANCE") {
         if (!strategy.targetAllocation || !Number.isFinite(Number(portfolio.totalValueUsd)) || Number(portfolio.totalValueUsd) <= 0) return false;
@@ -126,7 +128,7 @@ export function createHandeloStrategyWorkerDependencies(
 
       if (strategy.type === "REBALANCE") {
         if (!strategy.targetAllocation) throw new Error("Rebalance strategy requires target allocation.");
-        const portfolio = await portfolioSnapshot(dependencies.walletAddress);
+        const portfolio = await loadPortfolio(dependencies.walletAddress);
         const preview = createRebalancePreview(portfolio, strategy.targetAllocation);
         const totalBuyUsd = preview.actions
           .filter(item => item.direction === "BUY")
@@ -184,7 +186,7 @@ export function createHandeloStrategyWorkerDependencies(
         throw new Error("Autonomous strategy amount must be greater than zero.");
       }
 
-      const portfolio = await portfolioSnapshot(dependencies.walletAddress);
+      const portfolio = await loadPortfolio(dependencies.walletAddress);
       assertSufficientCash(
         portfolio.balanceUsd,
         strategy.amountUsd,

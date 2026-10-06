@@ -45,7 +45,13 @@ test("conditional worker evaluates live reference-price conditions instead of ac
         statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
       })
     },
-    store: {} as never
+    store: {} as never,
+    portfolioSnapshot: async () => ({
+      wallet: "0x1111111111111111111111111111111111111111",
+      balanceUsd: 20,
+      totalValueUsd: 100,
+      positions: []
+    })
   });
   const strategy = { ...base, type: "CONDITIONAL" as const, condition: "price below reference" };
   assert.equal(await dependencies.conditionMet(strategy), true);
@@ -87,8 +93,6 @@ test("autonomous worker blocks execution when cash balance cannot fund the strat
     },
     store: {} as never
   });
-  // The worker's portfolio boundary is backed by the live portfolio service; this test proves the execution path
-  // cannot be allowed to silently proceed when the required cash precondition is unavailable.
   await assert.rejects(
     dependencies.execute({ ...base, amountUsd: 19 }, {} as never),
     /cash balance/i
