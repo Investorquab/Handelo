@@ -26,4 +26,5 @@ export function transitionAgentWallet(context:AgentWalletContext,action:AgentWal
     if(context.status==="REVOKED") throw new Error("Agent wallet is already revoked.");
     return {...context,status:"REVOKED"};
   }
+  throw new Error(`Unsupported agent wallet lifecycle action: ${action}`);
 }
