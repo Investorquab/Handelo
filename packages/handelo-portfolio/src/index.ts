@@ -18,7 +18,7 @@ function normalizeAssets(assets:RwaAsset[]):RwaAsset[]{
 }
 
 function normalizeRawBalance(rawBalance:string):string{
-  if(!/^\\d+$/.test(rawBalance)) throw new Error("Binance returned an invalid token balance.");
+  if(!/^\d+$/.test(rawBalance)) throw new Error("Binance returned an invalid token balance.");
   return rawBalance;
 }
 
