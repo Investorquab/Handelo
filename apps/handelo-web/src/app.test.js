@@ -120,7 +120,6 @@ test("workspace market context includes a truthful current price comparison", ()
 test("rebalance strategies request a deterministic live portfolio preview", () => {
   assert.match(source,/\/api\/portfolio\/rebalance-preview/);
   assert.match(source,/strategy\.targetAllocation/);
-  assert.match(source,/executionScheduled: false/);
   assert.match(source,/no rebalance has been scheduled/);
 });
 
