@@ -286,6 +286,46 @@ Respond naturally and concisely.`
 
     const validatedResponse = validateAgentResponse(response);
 
+    const trace: AgentDecisionTrace = {
+      stages: [
+        {
+          stage: "OBSERVED",
+          status: market || candidates.length ? "COMPLETE" : "BLOCKED",
+          evidence: market
+            ? ["live market record resolved", "market insight derived from live data"]
+            : candidates.length
+              ? ["live market candidates discovered"]
+              : ["no live market record resolved"]
+        },
+        {
+          stage: "REASONED",
+          status: "COMPLETE",
+          evidence: [market ? "market context and reference-price relationship supplied to the response model" : "response model received the available live-data context"]
+        },
+        {
+          stage: "PROPOSED",
+          status: strategy || basket || parsedIntent.action === "research" ? "COMPLETE" : "SKIPPED",
+          evidence: [
+            ...(strategy ? ["deterministic strategy draft created"] : []),
+            ...(basket ? ["deterministic basket draft created"] : []),
+            ...(parsedIntent.action === "research" ? ["research response requested; no execution proposal created"] : [])
+          ]
+        },
+        {
+          stage: "POLICY_CHECKED",
+          status: policy ? "COMPLETE" : "BLOCKED",
+          evidence: policy ? [`policy decision: ${policy.decision}`] : ["policy was not evaluated without a resolved market"]
+        }
+      ],
+      executionReady: Boolean(
+        market &&
+        policy &&
+        policy.decision !== "BLOCK" &&
+        parsedIntent.amountUsd !== null &&
+        parsedIntent.amountUsd > 0
+      )
+    };
+
     return {
       intent: parsedIntent,
       market,
