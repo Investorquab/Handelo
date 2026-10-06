@@ -3,6 +3,8 @@
 Status: ACTIVE
 Last updated: 2026-10-06
 
+Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provider contract and remaining live mainnet gates.
+
 ## Operating rules
 
 - Build in meaningful batches.
@@ -48,13 +50,13 @@ Last updated: 2026-10-06
 - [x] Define Try Demo vs Connect Wallet product modes
 - [x] Define security boundaries
 - [x] Map BNB Agent Studio/provider options
-- [ ] Validate exact BSC mainnet wallet-provider APIs
+- [x] Validate documented BSC mainnet wallet-provider APIs
 - [ ] Validate per-user agent-wallet isolation
 - [ ] Validate funding from personal wallet
 - [ ] Validate withdrawal to personal wallet
 - [ ] Validate permission/revocation model
-- [ ] Decide Agent Studio runtime vs selected wallet/identity primitives
-- [ ] Add automated architecture/contract tests
+- [x] Decide Agent Studio runtime vs selected wallet/identity primitives
+- [x] Add automated architecture/contract tests
 
 ### Phase 2 — User Wallet + Agent Wallet Product Foundation
 - [ ] User wallet connection/context

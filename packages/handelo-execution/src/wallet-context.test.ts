@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertAgentWalletOwnership,
   canAgentPermission,
   createAgentWalletContext,
   createWalletContext,
@@ -60,4 +61,44 @@ test("paused, revoked, and expired agent contexts cannot execute permissions", (
 
   assert.equal(canAgentPermission(paused, "DCA"), false);
   assert.equal(canAgentPermission(expired, "DCA"), false);
+});
+
+test("agent ownership is bound to the requesting personal wallet", () => {
+  const agent = createAgentWalletContext(
+    "USER",
+    { address: "0x2222222222222222222222222222222222222222", network: "BSC" },
+    "0x1111111111111111111111111111111111111111",
+    10
+  );
+
+  assert.strictEqual(
+    assertAgentWalletOwnership(agent, "0x1111111111111111111111111111111111111111"),
+    agent
+  );
+
+  assert.throws(
+    () => assertAgentWalletOwnership(agent, "0x3333333333333333333333333333333333333333"),
+    /does not match/
+  );
+  assert.throws(
+    () => assertAgentWalletOwnership(
+      { ...agent, ownerWallet: null },
+      "0x1111111111111111111111111111111111111111"
+    ),
+    /missing a valid owner/
+  );
+  assert.throws(
+    () => assertAgentWalletOwnership(
+      { ...agent, mode: "DEMO" },
+      "0x1111111111111111111111111111111111111111"
+    ),
+    /USER mode/
+  );
+  assert.throws(
+    () => assertAgentWalletOwnership(
+      { ...agent, status: "REVOKED" },
+      "0x1111111111111111111111111111111111111111"
+    ),
+    /not available/
+  );
 });

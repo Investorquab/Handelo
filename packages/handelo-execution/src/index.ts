@@ -158,3 +158,4 @@ export * from "./bnb-agent-provider.js";
 export * from "./wallet-provider.js";
 
 export * from "./bnb-wallet-adapter.js";
+export * from "./bnb-agentic-wallet-contract.js";

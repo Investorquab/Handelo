@@ -26,6 +26,8 @@ export const DEFAULT_AGENT_POLICY: AgentWalletPolicy = {
   revocable: true
 };
 
+const EVM_WALLET = /^0x[a-fA-F0-9]{40}$/;
+
 export function createWalletContext(
   mode: WalletMode,
   role: WalletContext["role"],
@@ -57,6 +59,35 @@ export function createAgentWalletContext(
     policy,
     status
   };
+}
+
+export function assertAgentWalletOwnership(
+  context: AgentWalletContext,
+  ownerWallet: string
+): AgentWalletContext {
+  const expectedOwner = ownerWallet.trim();
+  if (!EVM_WALLET.test(expectedOwner)) {
+    throw new Error("Agent wallet ownership check requires a valid BSC EVM owner wallet.");
+  }
+
+  const contextOwner = context.ownerWallet?.trim() ?? "";
+  if (!EVM_WALLET.test(contextOwner)) {
+    throw new Error("Agent wallet context is missing a valid owner wallet.");
+  }
+
+  if (contextOwner.toLowerCase() !== expectedOwner.toLowerCase()) {
+    throw new Error("Agent wallet owner does not match the requesting personal wallet.");
+  }
+
+  if (context.mode !== "USER") {
+    throw new Error("Autonomous user-owned agent wallet execution requires USER mode.");
+  }
+
+  if (context.status === "REVOKED" || context.status === "UNAVAILABLE") {
+    throw new Error("Agent wallet is not available for the requesting owner.");
+  }
+
+  return context;
 }
 
 export function canAgentPermission(
