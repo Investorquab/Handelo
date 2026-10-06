@@ -692,11 +692,11 @@ test("strategy runtime does not retry an execution timeout", async () => {
   const strategy = activateStrategy(createDraftStrategy({
     type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
   }));
-  const records = new Map<string, StrategyExecutionRecord>();
+  const records = new Map<string, any>();
   const store = {
-    claim: async (record: StrategyExecutionRecord) => { records.set(record.executionKey, record); return record; },
+    claim: async (record: any) => { records.set(record.executionKey, record); return record; },
     get: async (key: string) => records.get(key) ?? null,
-    update: async (record: StrategyExecutionRecord) => { records.set(record.executionKey, record); return record; },
+    update: async (record: any) => { records.set(record.executionKey, record); return record; },
     list: async () => [...records.values()]
   };
   const result = await runTriggeredStrategy(
