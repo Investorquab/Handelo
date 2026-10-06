@@ -141,7 +141,8 @@ export class HandeloMarketClient {
     const matches=all.filter(
       asset =>
         contracts.has(asset.tokenContractAddress.toLowerCase()) &&
-        asset.underlyingTicker.trim().toLowerCase()===normalizedTicker
+        (asset.tokenSymbol.trim().toLowerCase()===normalizedTicker ||
+          asset.underlyingTicker.trim().toLowerCase()===normalizedTicker)
     );
     const unique=new Map(matches.map(asset=>[asset.tokenContractAddress.toLowerCase(),asset]));
     if(!unique.size) throw new MarketResolutionError("NOT_FOUND",`No live BSC tokenized-stock market record found for ${query}.`);

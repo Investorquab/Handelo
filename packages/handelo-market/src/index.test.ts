@@ -126,6 +126,35 @@ test("findAll rejects search results that have no matching live market record", 
   );
 });
 
+
+test("findAll resolves an exact token symbol as well as an underlying ticker", async () => {
+  const bstock = asset({
+    platformId: "bstock",
+    tokenSymbol: "NVDAB",
+    tokenContractAddress: "0x0000000000000000000000000000000000000003",
+  });
+
+  const market = client(
+    [{
+      ticker: "NVDA",
+      companyName: "NVIDIA Corporation",
+      assets: [{
+        platformId: "bstock",
+        binanceChainId: "56",
+        tokenContractAddress: bstock.tokenContractAddress,
+        tokenSymbol: bstock.tokenSymbol,
+        assetType: 1,
+      }],
+    }],
+    [bstock],
+  );
+
+  const matches = await market.findAll(" nvdab ");
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].tokenSymbol, "NVDAB");
+  assert.equal(matches[0].underlyingTicker, "NVDA");
+});
+
 test("find resolves an exact token symbol before underlying ticker lookup", async () => {
   const bstock = asset({
     platformId: "bstock",
