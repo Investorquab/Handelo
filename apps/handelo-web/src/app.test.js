@@ -120,7 +120,7 @@ test("workspace market context includes a truthful current price comparison", ()
 test("workspace portfolio exposes live BSC reconciliation provenance", () => {
   assert.match(source, /portfolio\?\.source === "BSC_TOKEN_BALANCES"/);
   assert.match(source, /LIVE BSC SNAPSHOT/);
-  assert.match(source, /portfolio\.asOf/);
+  assert.match(source, /portfolio\?\.asOf/);
   assert.match(source, /formatMarketTime\(portfolio\?\.asOf\)/);
 });
 
