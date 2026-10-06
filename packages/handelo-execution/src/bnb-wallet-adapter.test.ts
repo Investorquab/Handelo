@@ -266,7 +266,7 @@ test("BNB adapter rejects a requested permission outside the active wallet polic
 
   await assert.rejects(
     adapter.createSession({ ...validGrant(), permissions: ["RECURRING"] }),
-    /permission that is not authorized/
+    /does not authorize permission "RECURRING"/
   );
   assert.equal(providerCalls, 0);
 });
