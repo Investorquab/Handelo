@@ -583,3 +583,9 @@ button{cursor:pointer}
 .first-stock-option small { color: var(--muted); font-size: 0.68rem; }
 .first-stock-option b { font-family: "DM Mono", monospace; font-size: 0.72rem; }
 .first-stock-note { display: block; margin-top: 0.7rem; color: var(--muted); font-size: 0.66rem; line-height: 1.45; }
+
+
+/* Handelo workspace earnings intelligence */
+.workspace-earnings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.workspace-earnings-row:last-child{border-bottom:0}
+.workspace-earnings-row span{min-width:0}.workspace-earnings-row strong{display:block;font:10px var(--mono);color:#ddd7cd}.workspace-earnings-row small{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:8px var(--mono);color:var(--faint)}.workspace-earnings-row b{font:10px var(--mono);font-weight:400;white-space:nowrap}

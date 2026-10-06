@@ -327,3 +327,15 @@ test("compareRepresentations ignores invalid prices and unrelated assets", () =>
   const result = compareRepresentations([invalid, unrelated]);
   assert.deepEqual(result, []);
 });
+
+
+test("upcomingEarnings requests the Binance Upcoming Earnings tab and ranks live BSC assets", async () => {
+  const nvda = asset({ tokenSymbol: "NVDAB", platformId: "bstock", volume24H: "9000" });
+  const msft = asset({ tokenSymbol: "MSFTB", platformId: "bstock", underlyingTicker: "MSFT", volume24H: "1000" });
+  const market = new HandeloMarketClient("test-key", "test-secret");
+  let requestedTab: number | undefined;
+  market.tokens = async (tabId?: number) => { requestedTab = tabId; return [msft, nvda]; };
+  const result = await market.upcomingEarnings(2);
+  assert.equal(requestedTab, 3);
+  assert.deepEqual(result.map(item => item.tokenSymbol), ["NVDAB", "MSFTB"]);
+});

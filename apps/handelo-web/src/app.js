@@ -36,6 +36,8 @@ const workspaceRiskState = document.querySelector("#workspaceRiskState");
 const workspaceRiskBar = document.querySelector("#workspaceRiskBar");
 const workspaceRiskCopy = document.querySelector("#workspaceRiskCopy");
 const workspaceWalletAction = document.querySelector("#workspaceWalletAction");
+const workspaceEarningsContent = document.querySelector("#workspaceEarningsContent");
+const workspaceEarningsStatus = document.querySelector("#workspaceEarningsStatus");
 const workspacePortfolioRefresh = document.querySelector("#workspacePortfolioRefresh");
 const workspaceHistoryRefresh = document.querySelector("#workspaceHistoryRefresh");
 
@@ -128,6 +130,23 @@ function renderFirstStockOnboarding(markets = []) {
   });
 }
 
+function renderWorkspaceEarnings(events = []) {
+  if (!workspaceEarningsContent) return;
+  workspaceEarningsContent.setAttribute("aria-busy", "false");
+  if (!Array.isArray(events) || !events.length) {
+    workspaceEarningsContent.innerHTML = '<div class="workspace-empty">No stocks are currently flagged by Binance for upcoming earnings.</div>';
+    if (workspaceEarningsStatus) workspaceEarningsStatus.textContent = "NONE";
+    return;
+  }
+  if (workspaceEarningsStatus) workspaceEarningsStatus.textContent = "LIVE";
+  workspaceEarningsContent.innerHTML = events.slice(0, 5).map((event) => {
+    const gap = Number(event.divergencePercent);
+    const gapText = Number.isFinite(gap) ? (gap >= 0 ? "+" : "") + gap.toFixed(2) + "%" : "—";
+    const gapClass = gap > 0 ? "positive" : gap < 0 ? "negative" : "";
+    return '<div class="workspace-earnings-row"><span><strong>' + escapeHtml(event.ticker || "—") + '</strong><small>' + escapeHtml(event.tokenSymbol || "—") + ' · ' + escapeHtml(event.provider || "BSC") + '</small><small>BINANCE EARNINGS SIGNAL · ' + escapeHtml(event.marketStatus || "UNKNOWN") + '</small></span><b class="' + gapClass + '">' + escapeHtml(gapText) + '</b></div>';
+  }).join("");
+}
+
 function renderWorkspaceMarket(market) {
   if (!workspaceMarket) return;
   const gap = market.premiumPct;
@@ -189,6 +208,22 @@ async function refreshWorkspaceContext() {
     else { renderWorkspaceError(workspaceMarket, "Market data is unavailable right now."); workspaceMarket?.setAttribute("aria-busy", "false"); }
   } catch {
     renderWorkspaceError(workspaceMarket, "Could not reach market data. Try again.");
+  }
+  try {
+    workspaceEarningsContent?.setAttribute("aria-busy", "true");
+    const earningsResponse = await fetch(API_BASE + "/api/earnings?limit=5", {cache:"no-store"});
+    const earningsData = await earningsResponse.json();
+    if (earningsResponse.ok && Array.isArray(earningsData.events)) {
+      renderWorkspaceEarnings(earningsData.events);
+    } else {
+      if (workspaceEarningsStatus) workspaceEarningsStatus.textContent = "UNAVAILABLE";
+      renderWorkspaceError(workspaceEarningsContent, "Earnings intelligence is unavailable right now.");
+    }
+    workspaceEarningsContent?.setAttribute("aria-busy", "false");
+  } catch {
+    if (workspaceEarningsStatus) workspaceEarningsStatus.textContent = "UNAVAILABLE";
+    renderWorkspaceError(workspaceEarningsContent, "Could not reach the earnings intelligence service.");
+    workspaceEarningsContent?.setAttribute("aria-busy", "false");
   }
   try {
     const gapResponse = await fetch(API_BASE + "/api/gap-radar?limit=5", {cache:"no-store"});

@@ -93,8 +93,8 @@ Last updated: 2026-10-06
   - [x] Liquidity activity telemetry from 24h volume and market-cap turnover
   - [x] Quote-backed slippage and price-impact measurement
 - [x] Route/execution-quality analysis (quote telemetry; execution remains policy/security gated)
-- [ ] Event/earnings intelligence
-- [ ] First-stock onboarding
+- [x] Event/earnings intelligence (Binance RWA Upcoming Earnings signal)
+- [x] First-stock onboarding
 
 ### Phase 5 — Agent Layer + BNB Integration
 - [ ] Agent observes -> reasons -> proposes -> policy -> executes -> verifies

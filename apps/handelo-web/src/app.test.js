@@ -259,3 +259,13 @@ test("workspace provides first-stock onboarding from live market data", () => {
   assert.match(source, /Selecting a stock only opens an explanation/);
   assert.match(source, /Explain " \+ symbol \+ " and its reference-price gap/);
 });
+
+
+test("workspace exposes Binance-backed upcoming earnings intelligence", () => {
+  assert.match(indexSource, /id="workspaceEarnings"/);
+  assert.match(indexSource, /id="workspaceEarningsContent"/);
+  assert.match(source, /\/api\/earnings\?limit=5/);
+  assert.match(source, /function renderWorkspaceEarnings\(events = \[\]\)/);
+  assert.match(source, /BINANCE EARNINGS SIGNAL/);
+  assert.match(source, /earningsResponse/);
+});

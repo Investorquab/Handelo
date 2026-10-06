@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { HandeloAgent } from "@handelo/agent";
 import { portfolioSnapshot } from "./portfolio.js";
 import { createQuoteQuality } from "@handelo/core";
+import { toMarketInsight } from "@handelo/market";
 import { BAW_COMMAND, BAW_SHELL, BinanceAgenticWalletAdapter } from "@handelo/execution";
 import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError } from "@handelo/market";
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
@@ -81,6 +82,23 @@ async function verifyWalletAuth(qrCodeId: string) {
 }
 
 const MAX_REQUEST_BODY_BYTES = 64 * 1024;
+function toMarketInsightForServer(asset: import("@handelo/market").RwaAsset) {
+  const insight = toMarketInsight(asset);
+  return {
+    ticker: insight.underlyingTicker,
+    tokenSymbol: insight.tokenSymbol,
+    provider: insight.provider,
+    tokenPrice: insight.onChainPrice,
+    referencePrice: insight.referencePrice,
+    divergencePercent: insight.divergencePercent,
+    marketStatus: insight.marketStatus,
+    marketOpen: asset.statusInfo.openState,
+    nextOpenAt: insight.nextOpenAt,
+    nextCloseAt: insight.nextCloseAt,
+    marketStatusReason: insight.marketStatusReason,
+    liquidityContext: insight.liquidityContext
+  };
+}
 
 async function readRequestBody(req: import("node:http").IncomingMessage): Promise<string> {
   let raw = "";
@@ -185,6 +203,25 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/api/markets") {
     try {
       return json(res, 200, await getMarket().discover(8));
+    } catch (error) {
+      const status = marketErrorStatus(error);
+      return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/earnings")) {
+    const requestedLimit = Number(new URL(req.url, "http://localhost").searchParams.get("limit") ?? "8");
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), 25) : 8;
+    try {
+      const assets = await getMarket().upcomingEarnings(limit);
+      return json(res, 200, {
+        source: "BINANCE_RWA_UPCOMING_EARNINGS_TAB",
+        generatedAt: new Date().toISOString(),
+        events: assets.map(asset => ({
+          ...toMarketInsightForServer(asset),
+          underlyingName: asset.underlyingName
+        }))
+      });
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });

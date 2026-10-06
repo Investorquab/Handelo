@@ -75,8 +75,18 @@ export class HandeloMarketClient {
   async search(ticker:string):Promise<Array<{ticker:string;companyName:string;assets:Array<{platformId:string;binanceChainId:string;tokenContractAddress:string;tokenSymbol:string;assetType:number}>}>>{
     return this.request("GET","/api/v1/dex/market/rwa/search",undefined,{keyword:ticker});
   }
-  async tokens():Promise<RwaAsset[]>{
-    return this.request("GET","/api/v1/dex/market/rwa/tokens",undefined,{binanceChainId:"56"}) as Promise<RwaAsset[]>;
+  async tokens(tabId?:number):Promise<RwaAsset[]>{
+    const params:Record<string,string>={binanceChainId:"56"};
+    if(tabId !== undefined) params.tabId=String(tabId);
+    return this.request("GET","/api/v1/dex/market/rwa/tokens",undefined,params) as Promise<RwaAsset[]>;
+  }
+
+  async upcomingEarnings(limit=8):Promise<RwaAsset[]>{
+    const normalizedLimit=Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit),1),25) : 8;
+    return (await this.tokens(3))
+      .filter(asset=>asset.binanceChainId==="56"&&asset.underlyingTicker.trim())
+      .sort((a,b)=>Number(b.volume24H)-Number(a.volume24H))
+      .slice(0,normalizedLimit);
   }
   async tokenBalance(wallet:string,assetId:string):Promise<TokenBalance>{
     if(!/^0x[0-9a-fA-F]{40}$/.test(wallet)||!/^0x[0-9a-fA-F]{40}$/.test(assetId)) throw new Error("Invalid EVM wallet or token contract address.");
