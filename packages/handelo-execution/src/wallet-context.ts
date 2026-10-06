@@ -61,6 +61,16 @@ export function createAgentWalletContext(
   };
 }
 
+export function assertAgentWalletIsolation(context: AgentWalletContext, ownerWallet: string, agentWallet: string): AgentWalletContext {
+  const normalizedAgent = agentWallet.trim();
+  if (!EVM_WALLET.test(normalizedAgent)) throw new Error("Agent wallet isolation check requires a valid BSC EVM agent wallet.");
+  const contextAddress = context.address?.trim() ?? "";
+  if (!EVM_WALLET.test(contextAddress) || contextAddress.toLowerCase() !== normalizedAgent.toLowerCase()) {
+    throw new Error("Agent wallet context does not match the requesting user agent wallet.");
+  }
+  return assertAgentWalletOwnership(context, ownerWallet);
+}
+
 export function assertAgentWalletOwnership(
   context: AgentWalletContext,
   ownerWallet: string

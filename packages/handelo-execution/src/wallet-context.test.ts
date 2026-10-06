@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertAgentWalletIsolation,
   assertAgentWalletOwnership,
   canAgentPermission,
   createAgentWalletContext,
@@ -101,4 +102,13 @@ test("agent ownership is bound to the requesting personal wallet", () => {
     ),
     /not available/
   );
+});
+
+
+test("agent wallet isolation rejects cross-user reuse of the same agent address", () => {
+  const userA = createAgentWalletContext("USER", { address: "0x2222222222222222222222222222222222222222", network: "BSC" }, "0x1111111111111111111111111111111111111111", 10);
+  const userB = createAgentWalletContext("USER", { address: "0x2222222222222222222222222222222222222222", network: "BSC" }, "0x3333333333333333333333333333333333333333", 10);
+  assert.strictEqual(assertAgentWalletIsolation(userA, "0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"), userA);
+  assert.throws(() => assertAgentWalletIsolation(userA, "0x3333333333333333333333333333333333333333", "0x2222222222222222222222222222222222222222"), /does not match/);
+  assert.throws(() => assertAgentWalletIsolation(userB, "0x3333333333333333333333333333333333333333", "0x1111111111111111111111111111111111111111"), /does not match/);
 });

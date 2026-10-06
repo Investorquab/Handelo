@@ -1,5 +1,5 @@
 import type { AgentWalletContext } from "@handelo/core";
-import { canAgentPermission } from "./wallet-context.js";
+import { assertAgentWalletIsolation, canAgentPermission } from "./wallet-context.js";
 import type {
   WalletProviderAdapter,
   WalletProviderCapabilities,
@@ -43,12 +43,7 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     if (!context.connected || context.network !== "BSC" || context.status !== "ACTIVE") {
       throw new Error("Wallet session creation requires a connected active BSC agent wallet context.");
     }
-    const ownerMatches = context.ownerWallet?.trim().toLowerCase() === validatedGrant.ownerWallet.toLowerCase();
-    const contextAddress = context.address?.trim().toLowerCase();
-    const agentMatches = contextAddress === validatedGrant.agentWallet.toLowerCase();
-    if (!ownerMatches || !agentMatches) {
-      throw new Error("Wallet session grant does not match the connected BNB wallet context.");
-    }
+    assertAgentWalletIsolation(context, validatedGrant.ownerWallet, validatedGrant.agentWallet);
     if (!context.policy.revocable) {
       throw new Error("Agent wallet policy is not revocable; autonomous session creation is blocked.");
     }

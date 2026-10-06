@@ -57,7 +57,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Define security boundaries
 - [x] Map BNB Agent Studio/provider options
 - [x] Validate documented BSC mainnet wallet-provider APIs
-- [ ] Validate per-user agent-wallet isolation
+- [x] Validate per-user agent-wallet isolation — session admission now binds both owner and agent addresses to the current USER-mode context, with cross-user reuse tests
 - [ ] Validate funding from personal wallet — Binance `wallet send` cannot satisfy this direction; a personal-wallet signing/provider flow remains required
 - [x] Define provider-backed withdrawal boundary — outbound `wallet send` is bound to the verified personal owner and explicit approval; live withdrawal remains unvalidated
 - [x] Define funding authorization boundary — explicit owner approval, owner/agent context binding, BSC-only checks, and personal-balance fail-closed validation; live provider transfer remains unvalidated
