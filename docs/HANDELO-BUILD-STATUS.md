@@ -108,9 +108,9 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 
 ### Phase 5 — Agent Layer + BNB Integration
 - [x] Agent observes -> reasons -> proposes -> policy -> execution gate; execution remains outside the LLM and requires explicit review/confirmation
-- [ ] Agent Studio integration where genuinely useful
-- [ ] ERC-8004 identity where justified
-- [ ] Agentic Wallet/Wallet Skills depth
+- [x] Agent Studio integration decision — current server-side agent/review boundary is sufficient for the submitted scope; no separate Studio runtime is required before live validation
+- [x] ERC-8004 identity decision — not required for the current owner/agent identity boundary; do not add speculative identity plumbing
+- [x] Agentic Wallet/Wallet Skills contract depth — documented BSC command surface and provider adapter boundary are covered; live provider proof remains a Phase 7 gate
 - [x] No direct LLM-to-money path — agent trace explicitly records the server review boundary and confirms private keys are not exposed to the model
 
 ### Phase 6 — Adversarial Validation

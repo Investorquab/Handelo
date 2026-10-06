@@ -78,3 +78,27 @@ The funding authorization remains provider-independent and pre-chain. After expl
 - Binance Agentic Wallet skill: https://github.com/binance/binance-skills-hub/tree/main/skills/binance-web3/binance-agentic-wallet
 - BNB Agent Studio: https://www.bnbchain.org/en/bnb-agent-studio
 - Altana in BNB Agent Studio: https://www.bnbchain.org/en/blog/altana-in-bnb-agent-studio-agents-with-limits-you-set
+
+
+## Final pre-live engineering boundary
+
+The codebase deliberately separates code-complete wallet boundaries from provider/live evidence.
+
+Code-complete:
+- owner/agent context binding and per-user isolation;
+- permission intersection, expiry and revocation checks;
+- explicit funding authorization;
+- personal-wallet signing request construction and receipt polling;
+- withdrawal authorization;
+- deterministic agent-wallet lifecycle;
+- Demo Mode rejection before live provider execution;
+- documented Binance Agentic Wallet BSC command contract.
+
+Still requires live validation:
+- provider-backed agent-wallet creation;
+- real personal-wallet to agent-wallet funding transaction;
+- mined on-chain funding confirmation against the created agent wallet;
+- provider-backed withdrawal;
+- live provider/session behavior and any Agent Studio runtime behavior.
+
+Handelo must not mark those live gates complete from mocks, unit tests, documentation, or a successful CI run.
