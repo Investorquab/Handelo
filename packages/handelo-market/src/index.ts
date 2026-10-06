@@ -213,7 +213,7 @@ export interface RepresentationComparison {
 
 export function compareRepresentations(assets: RwaAsset[]): RepresentationComparison[] {
   const groups = new Map<string, RwaAsset[]>();
-  for (const asset of normalizeAssets(assets)) {
+  for (const asset of assets) {
     const ticker = asset.underlyingTicker.trim().toUpperCase();
     const tokenPrice = Number(asset.tokenPrice);
     const referencePrice = Number(asset.referencePrice);
