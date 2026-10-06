@@ -118,6 +118,28 @@ export function normalizeUserMessage(message: string): string {
   return normalized;
 }
 
+export function reconcileExplicitTradeIntent(message: string, intent: UserIntent): UserIntent {
+  const normalized = message.toLowerCase();
+  const explicitAction =
+    /\bsell\b|\bshort\b/.test(normalized)
+      ? "sell"
+      : /\bbuy\b|\bpurchase\b/.test(normalized)
+        ? "buy"
+        : /\binvest(?:ing|ment)?\b|\bput\s+\$?\d/.test(normalized)
+          ? "invest"
+          : null;
+  const amountMatch = normalized.match(/\$\s*(\d+(?:\.\d+)?)|\b(\d+(?:\.\d+)?)\s*(?:usd|us dollars?|dollars?)\b/);
+  const explicitAmount = amountMatch ? Number(amountMatch[1] ?? amountMatch[2]) : null;
+
+  if (!explicitAction && explicitAmount === null) return intent;
+
+  return {
+    ...intent,
+    action: explicitAction && intent.action === "research" ? explicitAction : intent.action,
+    amountUsd: explicitAmount !== null && intent.amountUsd === null ? explicitAmount : intent.amountUsd
+  };
+}
+
 export function validateUserIntent(value: unknown): UserIntent {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("LLM returned an invalid intent.");
   const intent = value as Record<string, unknown>;
@@ -202,11 +224,11 @@ export class HandeloAgent {
     const intent = await this.llm.generateJson<UserIntent>({
       schemaName: "handelo_intent",
       schema: INTENT_SCHEMA,
-      system: "You are Handelo's intent parser. Extract the user's investment intent without inventing a ticker or amount. If they did not name a stock, ticker is null. Amount is USD when explicitly stated. If the user explicitly describes DCA, recurring, conditional, or rebalancing behavior, extract strategyType, frequency, and condition; otherwise return null for those fields.",
+      system: "You are Handelo's intent parser. Extract the user's investment intent without inventing a ticker or amount. If they did not name a stock, ticker is null. Amount is USD when explicitly stated. If the user explicitly asks to buy, purchase, sell, short, or invest, classify the action as buy, sell, or invest even if they also ask for a review or explanation before execution; do not downgrade an explicit transaction request to research. If the user explicitly describes DCA, recurring, conditional, or rebalancing behavior, extract strategyType, frequency, and condition; otherwise return null for those fields.",
       user: normalizedMessage
     });
 
-    const parsedIntent = validateUserIntent(intent);
+    const parsedIntent = reconcileExplicitTradeIntent(normalizedMessage, validateUserIntent(intent));
 
     let market: MarketBrief | null = null;
     let marketInsight: ReturnType<typeof toMarketInsight> | null = null;

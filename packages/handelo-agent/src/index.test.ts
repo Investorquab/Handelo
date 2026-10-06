@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { HandeloAgent, normalizeUserMessage, validateAgentResponse, validateUserIntent } from "./index.js";
+import { HandeloAgent, normalizeUserMessage, reconcileExplicitTradeIntent, validateAgentResponse, validateUserIntent } from "./index.js";
 import type { LlmClient } from "@handelo/llm";
 import type { HandeloMarketClient } from "@handelo/market";
 
@@ -50,6 +50,46 @@ test("Handelo contains unresolved market errors without inventing market context
   assert.match(result.answer,/couldn't resolve/i);
 });
 
+
+test("explicit trade language is not downgraded to research and explicit USD amount is recovered", () => {
+  const parsed = validateUserIntent({
+    action: "research",
+    ticker: "NVDAB",
+    amountUsd: null,
+    horizon: null,
+    riskTolerance: "unknown",
+    strategyType: null,
+    frequency: null,
+    condition: null,
+    basketAssets: [],
+    basketName: null
+  });
+  const reconciled = reconcileExplicitTradeIntent(
+    "I want to invest $5 in NVDAB. Review the opportunity before any trade is executed.",
+    parsed
+  );
+  assert.equal(reconciled.action, "invest");
+  assert.equal(reconciled.ticker, "NVDAB");
+  assert.equal(reconciled.amountUsd, 5);
+});
+
+test("explicit sell language wins over research classification", () => {
+  const parsed = validateUserIntent({
+    action: "research",
+    ticker: "NVDAB",
+    amountUsd: null,
+    horizon: null,
+    riskTolerance: "unknown",
+    strategyType: null,
+    frequency: null,
+    condition: null,
+    basketAssets: [],
+    basketName: null
+  });
+  const reconciled = reconcileExplicitTradeIntent("Review before I sell $7 of NVDAB.", parsed);
+  assert.equal(reconciled.action, "sell");
+  assert.equal(reconciled.amountUsd, 7);
+});
 
 test("structured intent validation rejects malformed LLM output", () => {
   assert.throws(
