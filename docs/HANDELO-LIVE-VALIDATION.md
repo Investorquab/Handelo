@@ -133,3 +133,7 @@ The Binance token-audit endpoint can report a supported token with no detailed a
 The safety boundary remains fail-closed for `isSupported=false` and for explicit high-risk results (risk level >= 4). A supported token with no detailed result still requires all other Handelo review gates to pass before a review token can be issued or execution can occur.
 
 This interpretation is based on the live provider response captured during Phase 7 validation; it is not evidence that a real transaction is safe or that execution succeeded.
+
+## Phase 4 engineering closure — liquidity, slippage and price impact
+
+The Phase 4 liquidity gate is complete in code. Market intelligence exposes deterministic 24h volume/market-cap turnover and liquidity activity classification; execution review uses provider quotes for slippage/price-impact measurement and route/execution-quality telemetry. These signals inform review but do not bypass policy, portfolio risk, wallet security or execution verification gates.

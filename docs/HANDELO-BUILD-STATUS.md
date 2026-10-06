@@ -99,7 +99,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Target allocation/rebalance intelligence
 - [x] Cross-representation intelligence
 - [x] Market-hours intelligence
-- [ ] Liquidity/slippage/price-impact intelligence
+- [x] Liquidity/slippage/price-impact intelligence
   - [x] Liquidity activity telemetry from 24h volume and market-cap turnover
   - [x] Quote-backed slippage and price-impact measurement
 - [x] Route/execution-quality analysis (quote telemetry; execution remains policy/security gated)
