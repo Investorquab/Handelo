@@ -137,7 +137,7 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
 
   await assert.rejects(
     adapter.createSession(validGrant()),
-    /does not match the connected BNB wallet context/
+    /does not match the requesting personal wallet/
   );
   assert.equal(providerCalls, 0);
 });
