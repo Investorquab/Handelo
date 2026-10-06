@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution,markRetryableStrategyFailure} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -336,7 +336,7 @@ test("retry helper increments attempt and returns a failed run to risk check", (
     type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
   }));
   let record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
-  record = failStrategyExecution(record, "2026-10-05T12:01:00.000Z", "temporary");
+  record = markRetryableStrategyFailure(record, "2026-10-05T12:01:00.000Z", "temporary");
   const retried = retryStrategyExecution(record, "2026-10-05T12:02:00.000Z");
   assert.equal(retried.status, "RISK_CHECK");
   assert.equal(retried.attempt, 2);
