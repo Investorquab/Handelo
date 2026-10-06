@@ -22,6 +22,7 @@ Last updated: 2026-10-06
 - [x] Persistent AI Analyst / Chat
 - [x] Deterministic strategy construction and previews
 - [x] Portfolio context and deterministic portfolio risk
+- [x] Live portfolio state reconciliation from BSC token balances
 - [x] Risk Governor and transaction review boundary
 - [x] Agentic Wallet execution boundary and server-side rechecks
 - [x] Strategy Intelligence / thematic basket previews
@@ -82,7 +83,7 @@ Last updated: 2026-10-06
 - [ ] Strategy runtime tests
 
 ### Phase 4 — Portfolio + Market Intelligence 2.0
-- [ ] Real portfolio state reconciliation
+- [x] Real portfolio state reconciliation
 - [ ] Cost basis/P&L
 - [ ] Strategy attribution
 - [ ] Target allocation/rebalance

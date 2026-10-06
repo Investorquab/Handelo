@@ -97,6 +97,8 @@ export interface PortfolioSnapshot {
   balanceUsd: number | null;
   positions: PortfolioPosition[];
   totalValueUsd: number | null;
+  source?: "BSC_TOKEN_BALANCES" | "LOCAL";
+  asOf?: string | null;
 }
 
 export interface RiskResult {

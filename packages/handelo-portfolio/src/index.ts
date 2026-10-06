@@ -3,7 +3,7 @@ import { HandeloMarketClient, marketClientFromEnv, type RwaAsset } from "@handel
 export interface PortfolioPosition{
   ticker:string;tokenSymbol:string;contract:string;balance:string;estimatedValueUsd:number|null;tokenPrice:string;provider:string;
 }
-export interface PortfolioSnapshot{wallet:string;positions:PortfolioPosition[];totalEstimatedValueUsd:number|null;}
+export interface PortfolioSnapshot{wallet:string;positions:PortfolioPosition[];totalEstimatedValueUsd:number|null;source:"BSC_TOKEN_BALANCES";asOf:string;}
 
 function normalizeAssets(assets:RwaAsset[]):RwaAsset[]{
   const seen=new Set<string>();
@@ -44,6 +44,6 @@ export class HandeloPortfolio{
       if(BigInt(rawBalance)>0n) positions.push(position(asset,rawBalance));
     }
     const values=positions.map(p=>p.estimatedValueUsd).filter((v):v is number=>v!==null);
-    return {wallet,positions,totalEstimatedValueUsd:values.length===positions.length?values.reduce((a,b)=>a+b,0):null};
+    return {wallet,positions,totalEstimatedValueUsd:values.length===positions.length?values.reduce((a,b)=>a+b,0):null,source:"BSC_TOKEN_BALANCES",asOf:new Date().toISOString()};
   }
 }

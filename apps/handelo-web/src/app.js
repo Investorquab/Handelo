@@ -181,7 +181,13 @@ async function refreshWorkspaceContext() {
     const portfolioResponse = await fetch(API_BASE + "/api/portfolio?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const portfolio = await portfolioResponse.json();
     if (workspaceWalletBalance) workspaceWalletBalance.textContent = money(portfolio?.totalValueUsd ?? portfolio?.balanceUsd);
-    if (workspacePortfolio && Array.isArray(portfolio?.positions)) workspacePortfolio.innerHTML = portfolio.positions.slice(0,4).map(position => `<div class="workspace-position"><span>${escapeHtml(position.tokenSymbol || position.asset)}</span><b>${position.allocationPercent == null ? "—" : position.allocationPercent.toFixed(1) + "%"}</b></div>`).join("") || '<div class="workspace-empty">No positions yet.</div>';
+    if (workspacePortfolio && Array.isArray(portfolio?.positions)) {
+      const reconciliation = portfolio?.source === "BSC_TOKEN_BALANCES"
+        ? "LIVE BSC SNAPSHOT · " + (formatMarketTime(portfolio?.asOf) === "—" ? "time unavailable" : formatMarketTime(portfolio?.asOf))
+        : "PORTFOLIO";
+      workspacePortfolio.innerHTML = '<div class="workspace-gap-section-label">' + escapeHtml(reconciliation) + '</div>' +
+        (portfolio.positions.slice(0,4).map(position => `<div class="workspace-position"><span>${escapeHtml(position.tokenSymbol || position.asset)}</span><b>${position.allocationPercent == null ? "—" : position.allocationPercent.toFixed(1) + "%"}</b></div>`).join("") || '<div class="workspace-empty">No positions yet.</div>');
+    }
     const historyResponse = await fetch(API_BASE + "/api/history?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const history = await historyResponse.json();
     if (workspaceActivity && Array.isArray(history?.transactions)) workspaceActivity.innerHTML = history.transactions.slice(0,3).map(tx => {
