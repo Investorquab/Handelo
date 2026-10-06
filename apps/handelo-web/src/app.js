@@ -102,14 +102,9 @@ function renderWorkspaceMarket(market) {
   workspaceMarket.innerHTML = `<div class="workspace-ticker"><strong>${escapeHtml(market.ticker)}</strong><span>${escapeHtml(market.tokenSymbol)}</span></div><div class="workspace-price">${money(market.tokenPrice)}</div><div class="workspace-price-compare" aria-label="Current on-chain versus reference price comparison"><div class="workspace-price-row"><span>REFERENCE</span><div class="workspace-price-track"><i style="width:${referenceWidth}%"></i></div><b>${money(market.referencePrice)}</b></div><div class="workspace-price-row"><span>ON-CHAIN</span><div class="workspace-price-track"><i style="width:${tokenWidth}%"></i></div><b>${money(market.tokenPrice)}</b></div></div><div class="workspace-market-grid"><div><small>GAP</small><b class="${gap === null ? "" : gap >= 0 ? "positive" : "negative"}">${gapText}</b></div><div><small>STATUS</small><b>${escapeHtml(market.marketStatus || "—")}</b></div><div><small>PROVIDER</small><b>${escapeHtml(market.provider || "BSC")}</b></div><div><small>REPRESENTATION</small><b>${escapeHtml(market.tokenSymbol || "—")}</b></div></div>`;
 }
 
-function renderWorkspaceGapRadar(markets) {
+function renderWorkspaceGapRadar(markets, representations = []) {
   if (!workspaceGapRadar) return;
-  if (!Array.isArray(markets) || !markets.length) {
-    workspaceGapRadar.innerHTML = '<div class="workspace-empty">No measurable gaps available.</div>';
-    workspaceGapRadar.setAttribute("aria-busy", "false");
-    return;
-  }
-  workspaceGapRadar.innerHTML = markets.slice(0, 5).map((market) => {
+  const marketRows = Array.isArray(markets) ? markets.slice(0, 5).map((market) => {
     const gap = Number(market.divergencePercent);
     const gapText = Number.isFinite(gap) ? (gap >= 0 ? "+" : "") + gap.toFixed(2) + "%" : "—";
     const gapClass = gap > 0 ? "positive" : gap < 0 ? "negative" : "";
@@ -117,7 +112,25 @@ function renderWorkspaceGapRadar(markets) {
     const status = market.marketStatus || "UNKNOWN";
     const volume = market.liquidityContext || "Liquidity context unavailable";
     return '<div class="workspace-gap-row" role="group" aria-label="' + escapeHtml(label + " status " + status) + '"><span><strong>' + escapeHtml(market.underlyingTicker || "—") + '</strong><small>' + escapeHtml(market.tokenSymbol || "—") + " · " + escapeHtml(market.provider || "BSC") + " · " + escapeHtml(status) + '</small><small>' + escapeHtml(volume) + '</small></span><b class="' + gapClass + '">' + gapText + '</b></div>';
-  }).join("");
+  }).join("") : "";
+
+  const comparisonRows = Array.isArray(representations) ? representations.slice(0, 3).map((comparison) => {
+    const spread = Number(comparison.spreadPercent);
+    const spreadText = Number.isFinite(spread) ? spread.toFixed(2) + "%" : "—";
+    const lowest = comparison.lowestPriceToken || "—";
+    const highest = comparison.highestPriceToken || "—";
+    const label = (comparison.underlyingTicker || "—") + " cross-representation spread " + spreadText;
+    return '<div class="workspace-gap-row" role="group" aria-label="' + escapeHtml(label) + '"><span><strong>' + escapeHtml(comparison.underlyingTicker || "—") + '</strong><small>LOWEST ' + escapeHtml(lowest) + ' · HIGHEST ' + escapeHtml(highest) + '</small><small>CROSS-REPRESENTATION SPREAD</small></span><b>' + escapeHtml(spreadText) + '</b></div>';
+  }).join("") : "";
+
+  const comparisonHeader = comparisonRows
+    ? '<div class="workspace-gap-section-label">CROSS-REPRESENTATION</div>' + comparisonRows
+    : "";
+  const empty = !marketRows && !comparisonRows
+    ? '<div class="workspace-empty">No measurable gaps available.</div>'
+    : "";
+
+  workspaceGapRadar.innerHTML = marketRows + comparisonHeader + comparisonRows + empty;
   workspaceGapRadar.setAttribute("aria-busy", "false");
 }
 
@@ -138,7 +151,7 @@ async function refreshWorkspaceContext() {
     const gapResponse = await fetch(API_BASE + "/api/gap-radar?limit=5", {cache:"no-store"});
     const gapData = await gapResponse.json();
     if (gapResponse.ok && Array.isArray(gapData.markets)) {
-      renderWorkspaceGapRadar(gapData.markets);
+      renderWorkspaceGapRadar(gapData.markets, gapData.representations);
       if (workspaceGapRadarStatus) workspaceGapRadarStatus.textContent = "LIVE";
     } else {
       if (workspaceGapRadarStatus) workspaceGapRadarStatus.textContent = "UNAVAILABLE";

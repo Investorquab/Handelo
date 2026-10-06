@@ -1,7 +1,7 @@
 # Handelo Build Status
 
 Status: ACTIVE
-Last updated: 2026-10-05
+Last updated: 2026-10-06
 
 ## Operating rules
 
@@ -85,7 +85,7 @@ Last updated: 2026-10-05
 - [ ] Cost basis/P&L
 - [ ] Strategy attribution
 - [ ] Target allocation/rebalance
-- [ ] Cross-representation intelligence
+- [x] Cross-representation intelligence
 - [ ] Market-hours intelligence
 - [ ] Liquidity/slippage/price-impact intelligence
 - [ ] Route/execution-quality analysis

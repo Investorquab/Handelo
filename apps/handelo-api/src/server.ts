@@ -4,13 +4,14 @@ import { promisify } from "node:util";
 import { HandeloAgent } from "@handelo/agent";
 import { portfolioSnapshot } from "./portfolio.js";
 import { BAW_COMMAND, BAW_SHELL, BinanceAgenticWalletAdapter } from "@handelo/execution";
-import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError, rankGapRadarAssets, toMarketInsight } from "@handelo/market";
+import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError } from "@handelo/market";
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
 import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
 import { listPersistedStrategyExecutions } from "./strategy-runtime.js";
+import { buildGapRadar } from "./market-intelligence.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
@@ -193,9 +194,8 @@ const server = createServer(async (req, res) => {
     const requestedLimit = Number(new URL(req.url, "http://localhost").searchParams.get("limit") ?? "8");
     const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), 25) : 8;
     try {
-      const assets = rankGapRadarAssets(await getMarket().tokens());
       return json(res, 200, {
-        markets: assets.slice(0, limit).map(toMarketInsight),
+        ...buildGapRadar(await getMarket().tokens(), limit),
         generatedAt: new Date().toISOString()
       });
     } catch (error) {

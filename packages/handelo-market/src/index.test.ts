@@ -297,3 +297,16 @@ test("compareRepresentations detects cross-provider price spread for the same st
   assert.equal(result[0].spreadPercent, 5);
   assert.equal(result[0].representations[0].divergencePercent, -4);
 });
+
+
+test("compareRepresentations ignores invalid prices and unrelated assets", () => {
+  const invalid = asset({ tokenSymbol: "BAD", tokenPrice: "not-a-number" });
+  const unrelated = asset({
+    tokenSymbol: "MSFTx",
+    underlyingTicker: "MSFT",
+    tokenPrice: "100",
+    referencePrice: "100"
+  });
+  const result = compareRepresentations([invalid, unrelated]);
+  assert.deepEqual(result, []);
+});
