@@ -12,7 +12,8 @@ const dependencies = {
   store: {
     claim: async <T>(record: T) => record,
     get: async () => null,
-    update: async <T>(record: T) => record
+    update: async <T>(record: T) => record,
+    list: async () => []
   },
   riskCheck: async () => true,
   execute: async () => {}
@@ -53,6 +54,51 @@ test("strategy worker starts and stops idempotently", async () => {
   worker.stop();
   assert.equal(cleared, 1);
   assert.equal(worker.isRunning(), false);
+});
+
+test("strategy worker recovers stale in-flight executions before scheduling", async () => {
+  const records = new Map<string, any>();
+  const stale = {
+    runId: "run-stale",
+    strategyId: "strategy-stale",
+    status: "EXECUTING",
+    triggeredAt: "2026-10-05T11:00:00.000Z",
+    startedAt: "2026-10-05T11:01:00.000Z",
+    finishedAt: null,
+    attempt: 1,
+    executionKey: "strategy-stale:2026-10-05T11:00:00.000Z",
+    error: null
+  };
+  records.set(stale.executionKey, stale);
+
+  const store = {
+    claim: async (record: any) => {
+      records.set(record.executionKey, record);
+      return record;
+    },
+    get: async (executionKey: string) => records.get(executionKey) ?? null,
+    update: async (record: any) => {
+      records.set(record.executionKey, record);
+      return record;
+    },
+    list: async () => [...records.values()]
+  };
+
+  const worker = createPersistedStrategyWorker({
+    ...dependencies,
+    store,
+    now: () => "2026-10-05T12:00:00.000Z",
+    recoveryAfterMs: 1_000,
+    marketOpen: false
+  });
+
+  const result = await worker.tick();
+  assert.equal(result.evaluated, 0);
+  assert.equal(records.get(stale.executionKey)?.status, "FAILED");
+  assert.equal(
+    records.get(stale.executionKey)?.error,
+    "Recovered after worker restart; the previous execution was left in-flight."
+  );
 });
 
 test("strategy worker shares an in-flight tick instead of overlapping scheduler runs", async () => {
