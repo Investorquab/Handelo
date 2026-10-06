@@ -686,3 +686,34 @@ test("timeout and rejection errors are fail-closed and non-retryable", () => {
   assert.equal(new StrategyExecutionTimeoutError(1000).retryable, false);
   assert.equal(new StrategyExecutionRejectedError("provider rejected").retryable, false);
 });
+
+
+test("strategy runtime does not retry an execution timeout", async () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+  }));
+  const records = new Map<string, StrategyExecutionRecord>();
+  const store = {
+    claim: async (record: StrategyExecutionRecord) => { records.set(record.executionKey, record); return record; },
+    get: async (key: string) => records.get(key) ?? null,
+    update: async (record: StrategyExecutionRecord) => { records.set(record.executionKey, record); return record; },
+    list: async () => [...records.values()]
+  };
+  const result = await runTriggeredStrategy(
+    strategy,
+    { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+    {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      maxAttempts: 3,
+      executionTimeoutMs: 1000,
+      riskCheck: async () => true,
+      execute: async () => { throw new StrategyExecutionTimeoutError(1000); }
+    }
+  );
+  assert.equal(result.status, "FAILED");
+  if (result.status === "FAILED") {
+    assert.equal(result.record.attempt, 1);
+    assert.equal(result.record.retryable, false);
+  }
+});
