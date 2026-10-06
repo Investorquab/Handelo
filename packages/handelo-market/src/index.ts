@@ -242,6 +242,7 @@ export function compareRepresentations(assets: RwaAsset[]): RepresentationCompar
 
       const lowest = representations[0];
       const highest = representations[representations.length - 1];
+      if (!lowest || !highest) throw new Error("Representation comparison requires at least two valid prices.");
       return {
         underlyingTicker,
         representations,
