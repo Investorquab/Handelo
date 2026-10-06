@@ -75,7 +75,8 @@ test("strategy execution lifecycle allows the deterministic happy path", () => {
   assert.equal(transitionStrategyExecution("ACTIVE", "TRIGGERED"), "TRIGGERED");
   assert.equal(transitionStrategyExecution("TRIGGERED", "RISK_CHECK"), "RISK_CHECK");
   assert.equal(transitionStrategyExecution("RISK_CHECK", "EXECUTING"), "EXECUTING");
-  assert.equal(transitionStrategyExecution("EXECUTING", "FINISHED"), "FINISHED");
+  assert.equal(transitionStrategyExecution("EXECUTING", "VERIFYING"), "VERIFYING");
+  assert.equal(transitionStrategyExecution("VERIFYING", "FINISHED"), "FINISHED");
 });
 
 test("strategy execution lifecycle rejects unsafe transitions", () => {
@@ -177,6 +178,8 @@ test("execution record follows risk-check, execute, and finish lifecycle", () =>
   record = { ...record, status: transitionStrategyExecution(record.status, "RISK_CHECK") };
   record = beginStrategyExecution(record, "2026-10-05T12:00:05.000Z");
   assert.equal(record.status, "EXECUTING");
+  record = { ...record, status: transitionStrategyExecution(record.status, "VERIFYING") };
+  assert.equal(record.status, "VERIFYING");
   record = finishStrategyExecution(record, "2026-10-05T12:00:10.000Z");
   assert.equal(record.status, "FINISHED");
   assert.equal(record.finishedAt, "2026-10-05T12:00:10.000Z");
