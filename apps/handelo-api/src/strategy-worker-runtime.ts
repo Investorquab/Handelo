@@ -1,7 +1,7 @@
 import { evaluatePortfolioStrategyRisk, type StrategyDefinition } from "@handelo/core";
 import { executionGrantFromStrategy, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
 import { BinanceAgenticWalletAdapter } from "@handelo/execution";
-import type { RwaAsset, MarketClient } from "@handelo/market";
+import { marketClientFromEnv, type RwaAsset } from "@handelo/market";
 import { portfolioSnapshot } from "./portfolio.js";
 
 export const SUPPORTED_AUTONOMOUS_STRATEGIES = ["DCA", "RECURRING"] as const;
@@ -21,7 +21,7 @@ function premiumPercent(asset: RwaAsset): number | null {
 export interface HandeloStrategyWorkerDependencies {
   walletAddress: string;
   executionWallet: BinanceAgenticWalletAdapter;
-  market: Pick<MarketClient, "find">;
+  market: Pick<ReturnType<typeof marketClientFromEnv>, "find">;
   store: StrategyExecutionStore;
 }
 
@@ -48,7 +48,7 @@ export function createHandeloStrategyWorkerDependencies(
         marketOpen: asset.statusInfo.openState,
         premiumPct: premiumPercent(asset)
       });
-      if (policy.decision !== "PASS") return false;
+      if (policy.decision !== "READY") return false;
 
       const portfolio = await portfolioSnapshot(dependencies.walletAddress);
       const risk = evaluatePortfolioStrategyRisk(
