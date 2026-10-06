@@ -62,8 +62,8 @@ test("strategy worker shares an in-flight tick instead of overlapping scheduler 
   const previousPath = process.env.HANDELO_STRATEGY_STORE_PATH;
   process.env.HANDELO_STRATEGY_STORE_PATH = strategyPath;
 
-  let releaseRisk: (() => void) | null = null;
   let riskStarted = false;
+  let releaseRisk!: () => void;
   const riskGate = new Promise<void>(resolve => {
     releaseRisk = resolve;
   });
@@ -109,7 +109,7 @@ test("strategy worker shares an in-flight tick instead of overlapping scheduler 
     const second = worker.tick();
 
     assert.strictEqual(first, second);
-    releaseRisk?.();
+    releaseRisk();
 
     const result = await first;
     assert.equal(result.finished, 1);
