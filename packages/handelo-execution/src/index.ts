@@ -64,6 +64,15 @@ export const TOKEN_AUDIT_HEADERS={
   "user-agent":"binance-web3/1.4 (Skill)"
 } as const;
 
+export function assertTokenAuditSafe(audit: TokenAudit): void {
+  if (!audit.hasResult || !audit.isSupported) {
+    throw new Error("Token security audit data is unavailable for the requested token; execution is blocked.");
+  }
+  if (typeof audit.riskLevel === "number" && audit.riskLevel >= 4) {
+    throw new Error(`Token security audit returned ${audit.riskLevelEnum ?? "HIGH"} risk (level ${audit.riskLevel}); execution is blocked.`);
+  }
+}
+
 export async function auditToken(chainId:string,contractAddress:string):Promise<TokenAudit>{
   const response=await fetch("https://web3.binance.com/bapi/defi/v1/public/wallet-direct/security/token/audit",{
     method:"POST",
@@ -96,13 +105,7 @@ export class BinanceAgenticWalletAdapter{
     if(!confirmed) throw new Error("Execution requires explicit user confirmation.");
 
     const audit=await auditToken(request.binanceChainId,request.toToken);
-    if(!audit.hasResult||!audit.isSupported){
-      throw new Error("Token security audit data is unavailable for the requested token; execution is blocked.");
-    }
-
-    if(typeof audit.riskLevel === "number" && audit.riskLevel >= 4){
-      throw new Error(`Token security audit returned ${audit.riskLevelEnum ?? "HIGH"} risk (level ${audit.riskLevel}); execution is blocked.`);
-    }
+    assertTokenAuditSafe(audit);
 
     const wallet = await baw<{status:"CONNECTED"|"UNCONNECTED"|"CREATING"}>(["wallet","status"]);
     if(wallet.status !== "CONNECTED"){

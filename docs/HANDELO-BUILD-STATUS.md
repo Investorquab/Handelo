@@ -123,7 +123,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Execution timeout/rejection — bounded timeout gate; unknown execution outcome is not blindly retried
 - [x] API/network failure — transient portfolio/market/quote transport failures are retryable before broadcast; uncertain execution transport failures fail closed and are never blindly retried
 - [x] Malformed LLM output — agent intent/response validators enforce declared fields, required intent fields, types/enums, size limits, and fail closed before malformed provider data reaches policy or execution
-- [ ] Security-audit failure
+- [x] Security-audit failure — execution now has a dedicated fail-closed audit guard that blocks unavailable/unsupported audit results and high-risk tokens before wallet execution
 - [ ] Recovery/idempotency
 
 ### Phase 7 — Local and Live Validation

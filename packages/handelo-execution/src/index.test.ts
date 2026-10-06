@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BAW_COMMAND, BAW_SHELL, TOKEN_AUDIT_HEADERS, normalizeTokenAudit } from "./index.js";
+import { BAW_COMMAND, BAW_SHELL, TOKEN_AUDIT_HEADERS, assertTokenAuditSafe, normalizeTokenAudit } from "./index.js";
 
 test("uses the Windows baw command shim when running on Windows", () => {
   assert.equal(BAW_COMMAND, process.platform === "win32" ? "baw.cmd" : "baw");
@@ -42,4 +42,26 @@ test("preserves supported audit details", () => {
     riskItems: []
   };
   assert.deepEqual(normalizeTokenAudit(audit), audit);
+});
+
+
+test("security audit blocks missing or unsupported audit data before execution", () => {
+  assert.throws(
+    () => assertTokenAuditSafe({ hasResult: false, isSupported: false }),
+    /audit data is unavailable/,
+  );
+  assert.throws(
+    () => assertTokenAuditSafe({ hasResult: true, isSupported: false, riskLevel: 1 }),
+    /audit data is unavailable/,
+  );
+});
+
+test("security audit blocks high-risk tokens before execution", () => {
+  assert.throws(
+    () => assertTokenAuditSafe({ hasResult: true, isSupported: true, riskLevel: 4, riskLevelEnum: "HIGH" }),
+    /HIGH risk/,
+  );
+  assert.doesNotThrow(
+    () => assertTokenAuditSafe({ hasResult: true, isSupported: true, riskLevel: 3, riskLevelEnum: "MEDIUM" }),
+  );
 });
