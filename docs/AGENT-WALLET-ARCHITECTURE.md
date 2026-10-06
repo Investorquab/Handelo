@@ -99,6 +99,18 @@ Do not imply that wallet connection alone authorizes Handelo to spend.
 - Revocation must be testable.
 - Restart/recovery must not create duplicate execution.
 
+## Session admission boundary
+
+Before Handelo asks a BNB wallet provider to create an autonomous execution session, the runtime must prove all of the following from the current wallet context:
+
+- the context is an AGENT role in USER mode;
+- the context is connected and on BSC;
+- the agent context status is ACTIVE;
+- the context owner wallet matches the validated personal-wallet owner in the session grant;
+- the context agent address matches the validated agent address in the session grant.
+
+A mismatch or unavailable context must fail closed before the provider's session-creation method is invoked. This is an admission check only; it does not prove that funding, scoped permissions, withdrawal, revocation or mainnet execution are implemented.
+
 ## Required architecture investigation before autonomous runtime
 
 Validate with current BNB/Agent Studio primitives:

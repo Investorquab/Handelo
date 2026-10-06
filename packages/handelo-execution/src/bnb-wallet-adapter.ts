@@ -36,6 +36,12 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     }
     const validatedGrant = validateWalletSessionGrant(grant);
     const context = await this.getContext();
+    if (context.role !== "AGENT" || context.mode !== "USER") {
+      throw new Error("Wallet session creation requires an active USER-mode agent wallet context.");
+    }
+    if (!context.connected || context.network !== "BSC" || context.status !== "ACTIVE") {
+      throw new Error("Wallet session creation requires a connected active BSC agent wallet context.");
+    }
     const ownerMatches = context.ownerWallet?.trim().toLowerCase() === validatedGrant.ownerWallet.toLowerCase();
     const contextAddress = context.address?.trim().toLowerCase();
     const agentMatches = contextAddress === validatedGrant.agentWallet.toLowerCase();

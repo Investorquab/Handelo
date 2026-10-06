@@ -135,6 +135,55 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
   assert.equal(providerCalls, 0);
 });
 
+
+
+test("BNB adapter refuses session creation from a non-user or non-agent context", async () => {
+  for (const invalidContext of [
+    { ...context(), mode: "DEMO" as const },
+    { ...context(), role: "PERSONAL" as const }
+  ]) {
+    let providerCalls = 0;
+    const adapter = new BnbWalletAdapter({
+      capabilities: async () => complete,
+      getContext: async () => invalidContext,
+      createSession: async () => {
+        providerCalls += 1;
+        return { sessionId: "should-not-run" };
+      }
+    });
+
+    await assert.rejects(
+      adapter.createSession(validGrant()),
+      /requires an active USER-mode agent wallet context/
+    );
+    assert.equal(providerCalls, 0);
+  }
+});
+
+test("BNB adapter refuses disconnected, non-BSC, and inactive contexts", async () => {
+  for (const invalidContext of [
+    { ...context(), connected: false },
+    { ...context(), network: "ETHEREUM" as never },
+    { ...context(), status: "REVOKED" as const }
+  ]) {
+    let providerCalls = 0;
+    const adapter = new BnbWalletAdapter({
+      capabilities: async () => complete,
+      getContext: async () => invalidContext,
+      createSession: async () => {
+        providerCalls += 1;
+        return { sessionId: "should-not-run" };
+      }
+    });
+
+    await assert.rejects(
+      adapter.createSession(validGrant()),
+      /requires a connected active BSC agent wallet context/
+    );
+    assert.equal(providerCalls, 0);
+  }
+});
+
 test("BNB adapter forwards the validated normalized grant to the provider", async () => {
   const received: { grant?: WalletSessionGrant } = {};
   const adapter = new BnbWalletAdapter({

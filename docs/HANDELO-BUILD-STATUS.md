@@ -118,7 +118,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [ ] Runtime restart
 - [ ] Duplicate trigger
 - [x] Stale quote/data — review token binds quote price and execution rejects material fresh-quote drift
-- [ ] Wrong wallet
+- [x] Wrong wallet — BNB session creation now rejects owner/address mismatches and non-user/non-agent, disconnected, non-BSC, or inactive contexts before provider invocation
 - [ ] Insufficient balance
 - [x] Execution timeout/rejection — bounded timeout gate; unknown execution outcome is not blindly retried
 - [ ] API/network failure
