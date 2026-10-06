@@ -1,4 +1,5 @@
 import type { AgentWalletContext } from "@handelo/core";
+import { canAgentPermission } from "./wallet-context.js";
 import type {
   WalletProviderAdapter,
   WalletProviderCapabilities,
@@ -50,6 +51,18 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     }
     if (!context.policy.revocable) {
       throw new Error("Agent wallet policy is not revocable; autonomous session creation is blocked.");
+    }
+    if (
+      context.policy.expiresAt !== undefined &&
+      context.policy.expiresAt !== null &&
+      (!Number.isFinite(Date.parse(context.policy.expiresAt)) || Date.parse(context.policy.expiresAt) <= Date.now())
+    ) {
+      throw new Error("Agent wallet policy expiry must be a valid future timestamp.");
+    }
+    for (const permission of validatedGrant.permissions) {
+      if (!canAgentPermission(context, permission)) {
+        throw new Error(`Agent wallet policy does not authorize permission "${permission}" for this session.`);
+      }
     }
     const effectiveGrant = intersectWalletPolicies(context.policy, validatedGrant);
     return this.runtime.createSession(effectiveGrant);
