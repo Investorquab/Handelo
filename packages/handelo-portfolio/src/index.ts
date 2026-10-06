@@ -1,7 +1,7 @@
 import { HandeloMarketClient, marketClientFromEnv, type RwaAsset } from "@handelo/market";
 
 export interface PortfolioPosition{
-  ticker:string;tokenSymbol:string;contract:string;balance:string;estimatedValueUsd:number|null;tokenPrice:string;provider:string;
+  ticker:string;tokenSymbol:string;contract:string;balance:string;estimatedValueUsd:number|null;tokenPrice:string;provider:string;decimals:number;
 }
 export interface PortfolioSnapshot{wallet:string;positions:PortfolioPosition[];totalEstimatedValueUsd:number|null;balanceUsd:number|null;source:"BSC_TOKEN_BALANCES";asOf:string;}
 
@@ -52,7 +52,7 @@ export function portfolioAssets(assets:RwaAsset[]):RwaAsset[]{ return normalizeA
 function position(asset:RwaAsset,balance:string):PortfolioPosition{
   const units=Number(balance)/10**Number(asset.decimals);
   const price=Number(asset.tokenPrice);
-  return {ticker:asset.underlyingTicker,tokenSymbol:asset.tokenSymbol,contract:asset.tokenContractAddress,balance,estimatedValueUsd:Number.isFinite(units*price)?units*price:null,tokenPrice:asset.tokenPrice,provider:asset.platformId};
+  return {ticker:asset.underlyingTicker,tokenSymbol:asset.tokenSymbol,contract:asset.tokenContractAddress,balance,estimatedValueUsd:Number.isFinite(units*price)?units*price:null,tokenPrice:asset.tokenPrice,provider:asset.platformId,decimals:Number(asset.decimals)};
 }
 
 export function calculatePortfolioPnl(
@@ -71,7 +71,7 @@ export function calculatePortfolioPnl(
   }
 
   const result = positions.map(position => {
-    const quantity = Number(position.balance) / 10 ** 18;
+    const quantity = Number(position.balance) / 10 ** position.decimals;
     if (!Number.isFinite(quantity) || quantity < 0) throw new Error("Portfolio position balance cannot be converted to a finite quantity.");
     const currentPriceUsd = Number(position.tokenPrice);
     if (!Number.isFinite(currentPriceUsd) || currentPriceUsd < 0) throw new Error("Portfolio position price must be a finite non-negative number.");

@@ -27,7 +27,7 @@ test("portfolio snapshot reconciles live token balances and records provenance",
   assert.equal(snapshot.source,"BSC_TOKEN_BALANCES"); assert.ok(snapshot.asOf); assert.ok(!Number.isNaN(Date.parse(snapshot.asOf)));
 });
 test("portfolio P&L calculates unrealized gain from explicit cost-basis lots",()=>{
-  const result=calculatePortfolioPnl([{ticker:"NVDA",tokenSymbol:"NVDA",contract:"0x1111111111111111111111111111111111111111",balance:"2000000000000000000",estimatedValueUsd:360,tokenPrice:"180",provider:"demo"}],[
+  const result=calculatePortfolioPnl([{ticker:"NVDA",tokenSymbol:"NVDA",contract:"0x1111111111111111111111111111111111111111",balance:"2000000000000000000",estimatedValueUsd:360,tokenPrice:"180",provider:"demo",decimals:18}],[
     {asset:"NVDA",quantity:1,unitCostUsd:150,acquiredAt:"2026-10-01T00:00:00.000Z"},
     {asset:"NVDA",quantity:1,unitCostUsd:160,acquiredAt:"2026-10-02T00:00:00.000Z"}
   ]);
