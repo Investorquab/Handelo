@@ -42,6 +42,13 @@ test("API startup does not require the LLM key before a chat request", () => {
 });
 
 
+test("portfolio rebalance preview is deterministic and never schedules execution", () => {
+  assert.match(source,/POST.*\/api\/portfolio\/rebalance-preview/);
+  assert.match(source,/createRebalancePreview\(await portfolioSnapshot\(walletAddress\)/);
+  assert.match(source,/executionScheduled: false/);
+  assert.match(source,/targetAllocation must be an object/);
+});
+
 test("API startup does not require market provider credentials before market requests", () => {
   assert.match(source, /let market: ReturnType<typeof marketClientFromEnv> \| null = null/);
   assert.match(source, /function getMarket\(\): ReturnType<typeof marketClientFromEnv>/);

@@ -247,6 +247,23 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "POST" && req.url === "/api/portfolio/rebalance-preview") {
+    try {
+      const body = parseJsonBody<{ wallet?: unknown; targetAllocation?: unknown }>(await readRequestBody(req));
+      const walletAddress = String(body.wallet ?? "").trim();
+      if (!isEvmAddress(walletAddress)) return json(res, 400, { error: "A valid wallet is required." });
+      if (!body.targetAllocation || typeof body.targetAllocation !== "object" || Array.isArray(body.targetAllocation)) {
+        return json(res, 400, { error: "targetAllocation must be an object of asset percentages." });
+      }
+      const { createRebalancePreview } = await import("@handelo/core");
+      const preview = createRebalancePreview(await portfolioSnapshot(walletAddress), body.targetAllocation as Record<string, number>);
+      return json(res, 200, { preview, executionScheduled: false });
+    } catch (error) {
+      const status = requestBodyErrorStatus(error);
+      return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
   if (req.method === "GET" && req.url?.startsWith("/api/portfolio")) {
     const walletAddress =
       new URL(req.url, "http://localhost").searchParams.get("wallet") ??

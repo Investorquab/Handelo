@@ -86,7 +86,7 @@ Last updated: 2026-10-06
 - [x] Real portfolio state reconciliation
 - [ ] Cost basis/P&L
 - [ ] Strategy attribution
-- [ ] Target allocation/rebalance
+- [x] Target allocation/rebalance intelligence
 - [x] Cross-representation intelligence
 - [x] Market-hours intelligence
 - [ ] Liquidity/slippage/price-impact intelligence

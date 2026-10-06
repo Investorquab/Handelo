@@ -1,11 +1,35 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {calculateDivergencePercent, createRiskResult, evaluatePortfolioStrategyRisk, type PortfolioSnapshot} from "./index.js";
+import {calculateDivergencePercent, createRebalancePreview, createRiskResult, evaluatePortfolioStrategyRisk, type PortfolioSnapshot} from "./index.js";
 
 test("calculates reference vs on-chain divergence",()=>{
   assert.equal(calculateDivergencePercent(110,100),10);
   assert.equal(calculateDivergencePercent(90,100),-10);
   assert.equal(calculateDivergencePercent(100,0),null);
+});
+
+test("rebalance preview produces deterministic buy and sell actions",()=>{
+  const portfolio: PortfolioSnapshot = {
+    wallet:"0x1111111111111111111111111111111111111111",
+    balanceUsd:null,
+    totalValueUsd:1000,
+    positions:[
+      {asset:"NVDA",tokenSymbol:"NVDA",allocationPercent:70,valueUsd:700},
+      {asset:"AAPL",tokenSymbol:"AAPL",allocationPercent:30,valueUsd:300}
+    ]
+  };
+  const preview=createRebalancePreview(portfolio,{NVDA:50,AAPL:30,MSFT:20});
+  assert.equal(preview.actions[0]?.asset,"NVDA");
+  assert.equal(preview.actions[0]?.direction,"SELL");
+  assert.equal(preview.actions[0]?.amountUsd,200);
+  assert.equal(preview.actions[1]?.asset,"MSFT");
+  assert.equal(preview.actions[1]?.direction,"BUY");
+  assert.equal(preview.actions[1]?.amountUsd,200);
+});
+
+test("rebalance preview rejects targets that do not total 100%",()=>{
+  const portfolio: PortfolioSnapshot = {wallet:"0x1111111111111111111111111111111111111111",balanceUsd:null,totalValueUsd:1000,positions:[]};
+  assert.throws(()=>createRebalancePreview(portfolio,{NVDA:60}),/must total 100%/);
 });
 
 test("risk governor blocks an oversized transaction",()=>{

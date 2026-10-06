@@ -101,6 +101,56 @@ export interface PortfolioSnapshot {
   asOf?: string | null;
 }
 
+export interface RebalanceAction {
+  asset: string;
+  currentAllocationPercent: number;
+  targetAllocationPercent: number;
+  deltaPercent: number;
+  amountUsd: number;
+  direction: "BUY" | "SELL" | "HOLD";
+}
+
+export interface RebalancePreview {
+  wallet: string;
+  totalValueUsd: number;
+  targetAllocation: Record<string, number>;
+  actions: RebalanceAction[];
+}
+
+export function createRebalancePreview(portfolio: PortfolioSnapshot, targetAllocation: Record<string, number>): RebalancePreview {
+  const entries = Object.entries(targetAllocation).map(([asset, percent]) => [asset.trim(), Number(percent)] as const);
+  if (!entries.length || entries.some(([asset, percent]) => !asset || !Number.isFinite(percent) || percent < 0)) {
+    throw new Error("Target allocation must contain named assets with non-negative percentages.");
+  }
+  const totalTarget = entries.reduce((sum, [, percent]) => sum + percent, 0);
+  if (Math.abs(totalTarget - 100) > 0.01) throw new Error("Target allocation must total 100%.");
+  const totalValueUsd = Number(portfolio.totalValueUsd);
+  if (!Number.isFinite(totalValueUsd) || totalValueUsd <= 0) throw new Error("A positive live portfolio value is required for rebalance preview.");
+  const current = new Map<string, { label: string; percent: number }>();
+  for (const position of portfolio.positions) {
+    const key = (position.tokenSymbol || position.asset).trim().toLowerCase();
+    const percent = Number(position.allocationPercent);
+    if (!key || !Number.isFinite(percent)) continue;
+    current.set(key, { label: position.tokenSymbol || position.asset, percent });
+  }
+  const targets = new Map(entries.map(([asset, percent]) => [asset.toLowerCase(), { label: asset, percent }]));
+  const keys = new Set([...current.keys(), ...targets.keys()]);
+  const actions = [...keys].map(key => {
+    const currentPercent = current.get(key)?.percent ?? 0;
+    const targetPercent = targets.get(key)?.percent ?? 0;
+    const deltaPercent = targetPercent - currentPercent;
+    return {
+      asset: targets.get(key)?.label ?? current.get(key)?.label ?? key,
+      currentAllocationPercent: currentPercent,
+      targetAllocationPercent: targetPercent,
+      deltaPercent,
+      amountUsd: Math.abs(deltaPercent) / 100 * totalValueUsd,
+      direction: deltaPercent > 0.01 ? "BUY" : deltaPercent < -0.01 ? "SELL" : "HOLD"
+    } satisfies RebalanceAction;
+  }).sort((a,b)=>Math.abs(b.deltaPercent)-Math.abs(a.deltaPercent));
+  return {wallet:portfolio.wallet,totalValueUsd,targetAllocation:Object.fromEntries(entries),actions};
+}
+
 export interface RiskResult {
   decision: RiskDecision;
   reasons: string[];

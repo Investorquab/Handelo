@@ -365,6 +365,30 @@ function addStrategyPreview(strategy) {
   conversation.appendChild(node);
   const button = node.querySelector("[data-activate]");
   const normalizedWallet = workspaceWalletAddressValue;
+  if (strategy.type === "REBALANCE" && strategy.targetAllocation && normalizedWallet) {
+    fetch(API_BASE + "/api/portfolio/rebalance-preview", {
+      method: "POST",
+      headers: {"content-type":"application/json"},
+      body: JSON.stringify({wallet: normalizedWallet, targetAllocation: strategy.targetAllocation})
+    }).then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Rebalance preview failed.");
+      const actions = data?.preview?.actions || [];
+      const summary = actions.filter(action => action.direction !== "HOLD")
+        .map(action => action.direction + " " + action.asset + " " + action.amountUsd.toFixed(2) + " USD")
+        .join(" · ");
+      const target = node.querySelector("[data-strategy-risk]");
+      if (target) {
+        target.className = "strategy-risk-result pass";
+        target.innerHTML = '<span>REBALANCE PREVIEW · LIVE PORTFOLIO</span><strong>' +
+          escapeHtml(summary || "Portfolio already matches the target allocation.") + '</strong>';
+      }
+    }).catch(() => {
+      const target = node.querySelector("[data-strategy-risk]");
+      if (target) target.innerHTML = "<span>REBALANCE PREVIEW</span><strong>Preview unavailable; no rebalance has been scheduled.</strong>";
+    });
+  }
+
   if (normalizedWallet && Number.isFinite(amount) && amount > 0) {
     fetch(API_BASE + "/api/strategy/risk", {
       method: "POST",

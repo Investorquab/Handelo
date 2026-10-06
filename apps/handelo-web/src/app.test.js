@@ -117,6 +117,13 @@ test("workspace market context includes a truthful current price comparison", ()
   assert.match(source, /referencePrice \/ scale/);
 });
 
+test("rebalance strategies request a deterministic live portfolio preview", () => {
+  assert.match(source,/\/api\/portfolio\/rebalance-preview/);
+  assert.match(source,/strategy\.targetAllocation/);
+  assert.match(source,/executionScheduled: false/);
+  assert.match(source,/no rebalance has been scheduled/);
+});
+
 test("workspace portfolio exposes live BSC reconciliation provenance", () => {
   assert.match(source, /portfolio\?\.source === "BSC_TOKEN_BALANCES"/);
   assert.match(source, /LIVE BSC SNAPSHOT/);
