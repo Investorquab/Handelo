@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HandeloMarketClient, MarketResolutionError, isExecutableMarketAsset, normalizeTransactionLimit, normalizeTransactions, rankGapRadarAssets, toMarketInsight, type RwaAsset, type WalletTransaction } from "./index.js";
+import { HandeloMarketClient, MarketResolutionError, compareRepresentations, isExecutableMarketAsset, normalizeTransactionLimit, normalizeTransactions, rankGapRadarAssets, toMarketInsight, type RwaAsset, type WalletTransaction } from "./index.js";
 
 const asset = (overrides: Partial<RwaAsset> = {}): RwaAsset => ({
   binanceChainId: "56",
@@ -270,4 +270,30 @@ test("market resolution errors expose actionable categories",async()=>{
     ()=>market.findAll("UNKNOWN"),
     (error:unknown)=>error instanceof MarketResolutionError && error.kind==="NOT_FOUND"
   );
+});
+
+
+test("compareRepresentations detects cross-provider price spread for the same stock", () => {
+  const ondo = asset({
+    platformId: "ondo",
+    tokenSymbol: "NVDAon",
+    tokenContractAddress: "0x0000000000000000000000000000000000000011",
+    tokenPrice: "120",
+    referencePrice: "125"
+  });
+  const xstocks = asset({
+    platformId: "xstocks",
+    tokenSymbol: "NVDAx",
+    tokenContractAddress: "0x0000000000000000000000000000000000000012",
+    tokenPrice: "126",
+    referencePrice: "125"
+  });
+
+  const result = compareRepresentations([ondo, xstocks]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].underlyingTicker, "NVDA");
+  assert.equal(result[0].lowestPriceToken, "NVDAon");
+  assert.equal(result[0].highestPriceToken, "NVDAx");
+  assert.equal(result[0].spreadPercent, 5);
+  assert.equal(result[0].representations[0].divergencePercent, -4);
 });

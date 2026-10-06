@@ -195,3 +195,59 @@ export function rankGapRadarAssets(assets:RwaAsset[]):RwaAsset[]{
 export function marketClientFromEnv(){
   return new HandeloMarketClient(process.env.BINANCE_WEB3_API_KEY?.trim()??"",process.env.BINANCE_WEB3_SECRET_KEY?.trim()??"");
 }
+
+
+export interface RepresentationComparison {
+  underlyingTicker: string;
+  representations: Array<{
+    platformId: string;
+    tokenSymbol: string;
+    tokenPrice: number;
+    referencePrice: number;
+    divergencePercent: number;
+  }>;
+  lowestPriceToken: string;
+  highestPriceToken: string;
+  spreadPercent: number;
+}
+
+export function compareRepresentations(assets: RwaAsset[]): RepresentationComparison[] {
+  const groups = new Map<string, RwaAsset[]>();
+  for (const asset of normalizeAssets(assets)) {
+    const ticker = asset.underlyingTicker.trim().toUpperCase();
+    const tokenPrice = Number(asset.tokenPrice);
+    const referencePrice = Number(asset.referencePrice);
+    if (!ticker || !Number.isFinite(tokenPrice) || tokenPrice <= 0 || !Number.isFinite(referencePrice) || referencePrice <= 0) continue;
+    const group = groups.get(ticker) ?? [];
+    group.push(asset);
+    groups.set(ticker, group);
+  }
+
+  return [...groups.entries()]
+    .filter(([, group]) => group.length >= 2)
+    .map(([underlyingTicker, group]) => {
+      const representations = group
+        .map(item => {
+          const tokenPrice = Number(item.tokenPrice);
+          const referencePrice = Number(item.referencePrice);
+          return {
+            platformId: item.platformId,
+            tokenSymbol: item.tokenSymbol,
+            tokenPrice,
+            referencePrice,
+            divergencePercent: ((tokenPrice - referencePrice) / referencePrice) * 100
+          };
+        })
+        .sort((a, b) => a.tokenPrice - b.tokenPrice);
+
+      const lowest = representations[0];
+      const highest = representations[representations.length - 1];
+      return {
+        underlyingTicker,
+        representations,
+        lowestPriceToken: lowest.tokenSymbol,
+        highestPriceToken: highest.tokenSymbol,
+        spreadPercent: ((highest.tokenPrice - lowest.tokenPrice) / lowest.tokenPrice) * 100
+      };
+    });
+}
