@@ -91,7 +91,13 @@ test("autonomous worker blocks execution when cash balance cannot fund the strat
         statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
       })
     },
-    store: {} as never
+    store: {} as never,
+    portfolioSnapshot: async () => ({
+      wallet: "0x1111111111111111111111111111111111111111",
+      balanceUsd: 20,
+      totalValueUsd: 100,
+      positions: []
+    })
   });
   await assert.rejects(
     dependencies.execute({ ...base, amountUsd: 19 }, {} as never),
