@@ -94,7 +94,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 
 ### Phase 4 — Portfolio + Market Intelligence 2.0
 - [x] Real portfolio state reconciliation
-- [ ] Cost basis/P&L
+- [x] Cost basis/P&L — deterministic unrealized P&L from explicit acquisition lots; no cost basis is invented when lot data is absent
 - [x] Strategy attribution from persisted execution outcomes
 - [x] Target allocation/rebalance intelligence
 - [x] Cross-representation intelligence
