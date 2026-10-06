@@ -350,3 +350,48 @@ export function createTransactionPreview(input: {
     executionState: "PENDING"
   };
 }
+
+
+export interface QuoteQuality {
+  fromCoinAmount: number;
+  toCoinAmount: number;
+  impliedPrice: number | null;
+  onChainPrice: number | null;
+  referencePrice: number | null;
+  quoteVsOnChainPercent: number | null;
+  quoteVsReferencePercent: number | null;
+  requestedSlippagePercent: number | null;
+}
+
+export function createQuoteQuality(input: {
+  fromCoinAmount: string | number;
+  toCoinAmount: string | number;
+  onChainPrice?: number | null;
+  referencePrice?: number | null;
+  requestedSlippagePercent?: number | null;
+}): QuoteQuality {
+  const fromCoinAmount = Number(input.fromCoinAmount);
+  const toCoinAmount = Number(input.toCoinAmount);
+  const onChainPrice = Number(input.onChainPrice);
+  const referencePrice = Number(input.referencePrice);
+  const impliedPrice = Number.isFinite(fromCoinAmount) && fromCoinAmount > 0 && Number.isFinite(toCoinAmount) && toCoinAmount > 0
+    ? fromCoinAmount / toCoinAmount
+    : null;
+  const quoteVsOnChainPercent = impliedPrice !== null && Number.isFinite(onChainPrice) && onChainPrice > 0
+    ? ((impliedPrice - onChainPrice) / onChainPrice) * 100
+    : null;
+  const quoteVsReferencePercent = impliedPrice !== null && Number.isFinite(referencePrice) && referencePrice > 0
+    ? ((impliedPrice - referencePrice) / referencePrice) * 100
+    : null;
+  const requestedSlippagePercent = Number(input.requestedSlippagePercent);
+  return {
+    fromCoinAmount,
+    toCoinAmount,
+    impliedPrice,
+    onChainPrice: Number.isFinite(onChainPrice) && onChainPrice > 0 ? onChainPrice : null,
+    referencePrice: Number.isFinite(referencePrice) && referencePrice > 0 ? referencePrice : null,
+    quoteVsOnChainPercent,
+    quoteVsReferencePercent,
+    requestedSlippagePercent: Number.isFinite(requestedSlippagePercent) && requestedSlippagePercent >= 0 ? requestedSlippagePercent : null
+  };
+}

@@ -240,3 +240,11 @@ test("workspace strategy context exposes persisted execution attribution", () =>
   assert.match(source, /finishedCount.*executionCount/);
   assert.match(source, /successfulPlannedUsd/);
 });
+
+
+test("transaction review renders quote-backed execution quality metrics", () => {
+  assert.match(source, /data\.quoteQuality/);
+  assert.match(source, /QUOTE QUALITY/);
+  assert.match(source, /quoteVsOnChainPercent/);
+  assert.match(source, /quoteVsReferencePercent/);
+});

@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { HandeloAgent } from "@handelo/agent";
 import { portfolioSnapshot } from "./portfolio.js";
+import { createQuoteQuality } from "@handelo/core";
 import { BAW_COMMAND, BAW_SHELL, BinanceAgenticWalletAdapter } from "@handelo/execution";
 import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError } from "@handelo/market";
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
@@ -524,6 +525,16 @@ const server = createServer(async (req, res) => {
         }
       }
 
+      const quoteQuality = quote && typeof quote === "object" && "fromCoinAmount" in quote && "toCoinAmount" in quote
+        ? createQuoteQuality({
+            fromCoinAmount: String((quote as { fromCoinAmount: unknown }).fromCoinAmount),
+            toCoinAmount: String((quote as { toCoinAmount: unknown }).toCoinAmount),
+            onChainPrice: Number(asset.tokenPrice),
+            referencePrice: Number(asset.referencePrice),
+            requestedSlippagePercent: Number((quote as { slippage?: unknown }).slippage)
+          })
+        : null;
+
       return json(res, 200, {
         asset: {
           ticker: asset.underlyingTicker,
@@ -543,6 +554,7 @@ const server = createServer(async (req, res) => {
         securityAuditError,
         executionBlocked,
         quote,
+        quoteQuality,
         quoteError,
         quoteToken: fromToken || null,
         reviewToken: quote && riskDecision === "PASS" ? createReviewToken({

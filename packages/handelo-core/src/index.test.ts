@@ -122,3 +122,19 @@ test("agent policy can represent bounded permissions without private keys", () =
   assert.equal(policy.allowedAssets?.includes("NVDAB"), true);
   assert.equal(policy.maxDailySpendUsd, 100);
 });
+
+
+test("quote quality compares an Agentic Wallet quote with live market prices", () => {
+  const quality = createQuoteQuality({ fromCoinAmount: "100", toCoinAmount: "0.8", onChainPrice: 120, referencePrice: 125, requestedSlippagePercent: 1 });
+  assert.equal(quality.impliedPrice, 125);
+  assert.equal(quality.quoteVsOnChainPercent, 4.166666666666667);
+  assert.equal(quality.quoteVsReferencePercent, 0);
+  assert.equal(quality.requestedSlippagePercent, 1);
+});
+
+test("quote quality returns unavailable price deltas for invalid quote amounts", () => {
+  const quality = createQuoteQuality({ fromCoinAmount: "100", toCoinAmount: "0", onChainPrice: 120, referencePrice: 125 });
+  assert.equal(quality.impliedPrice, null);
+  assert.equal(quality.quoteVsOnChainPercent, null);
+  assert.equal(quality.quoteVsReferencePercent, null);
+});

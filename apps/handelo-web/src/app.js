@@ -509,6 +509,10 @@ function addReviewCard(data, amountUsd) {
       <strong>${quoteLine}</strong>
     </div>
     <div class="review-quote">
+      <span>QUOTE QUALITY</span>
+      <strong>${quoteQuality ? `IMPLIED ${money(quoteQuality.impliedPrice)} · VS ON-CHAIN ${quoteQuality.quoteVsOnChainPercent == null ? "—" : (quoteQuality.quoteVsOnChainPercent >= 0 ? "+" : "") + quoteQuality.quoteVsOnChainPercent.toFixed(2) + "%"} · VS REFERENCE ${quoteQuality.quoteVsReferencePercent == null ? "—" : (quoteQuality.quoteVsReferencePercent >= 0 ? "+" : "") + quoteQuality.quoteVsReferencePercent.toFixed(2) + "%"}` : "Quote quality unavailable."}</strong>
+    </div>
+    <div class="review-quote">
       <span>SECURITY</span>
       <strong>${escapeHtml(securityLabel)}${security?.riskLevel !== undefined ? ` · LEVEL ${escapeHtml(security.riskLevel)}` : ""}</strong>
     </div>

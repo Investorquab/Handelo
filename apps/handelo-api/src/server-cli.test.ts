@@ -70,3 +70,10 @@ test("execution never returns fabricated success state", () => {
   assert.match(source, /const result = await wallet\.execute/);
   assert.doesNotMatch(source, /txHash:\s*["']0x[0-9a-fA-F]{64}["']/);
 });
+
+
+test("review response exposes quote quality analysis without enabling execution", () => {
+  assert.match(source, /createQuoteQuality/);
+  assert.match(source, /quoteQuality/);
+  assert.match(source, /executionBlocked/);
+});
