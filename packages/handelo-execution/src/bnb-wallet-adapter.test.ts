@@ -153,6 +153,7 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   });
 
   assert.equal(result.sessionId, "session-valid");
-  assert.equal(received?.ownerWallet, "0x1111111111111111111111111111111111111111");
-  assert.deepEqual(received?.allowedAssets, ["NVDAB"]);
+  assert.ok(received);
+  assert.equal(received.ownerWallet, "0x1111111111111111111111111111111111111111");
+  assert.deepEqual(received.allowedAssets, ["NVDAB"]);
 });
