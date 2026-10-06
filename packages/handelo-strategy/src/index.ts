@@ -313,6 +313,10 @@ export class StrategyExecutionRegistry {
     return this.records.get(executionKey) ?? null;
   }
 
+  list(): StrategyExecutionRecord[] {
+    return [...this.records.values()];
+  }
+
   size(): number {
     return this.records.size;
   }
@@ -322,6 +326,7 @@ export interface StrategyExecutionStore {
   claim(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord>;
   get(executionKey: string): Promise<StrategyExecutionRecord | null>;
   update(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord>;
+  list(): Promise<StrategyExecutionRecord[]>;
 }
 
 export class FileStrategyExecutionStore implements StrategyExecutionStore {
@@ -359,6 +364,10 @@ export class FileStrategyExecutionStore implements StrategyExecutionStore {
   async get(executionKey: string): Promise<StrategyExecutionRecord | null> {
     const records = await this.read();
     return records.find(record => record.executionKey === executionKey) ?? null;
+  }
+
+  async list(): Promise<StrategyExecutionRecord[]> {
+    return this.read();
   }
 
   async update(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord> {
@@ -410,6 +419,42 @@ export function scheduleNextStrategyExecution(
   if (!strategy.nextExecutionAt) return strategy;
   const next = nextExecutionAtForFrequency(strategy.frequency ?? "", completedAt);
   return next ? { ...strategy, nextExecutionAt: next } : strategy;
+}
+
+export interface StrategyRecoveryResult {
+  recovered: number;
+  records: StrategyExecutionRecord[];
+}
+
+export async function recoverStaleStrategyExecutions(
+  store: StrategyExecutionStore,
+  now: string,
+  staleAfterMs = 300_000
+): Promise<StrategyRecoveryResult> {
+  if (!validTimestamp(now)) throw new Error("Strategy recovery requires a valid current timestamp.");
+  if (!Number.isInteger(staleAfterMs) || staleAfterMs < 1_000) {
+    throw new Error("Strategy recovery stale threshold must be at least 1000ms.");
+  }
+
+  const nowMs = Date.parse(now);
+  const recovered: StrategyExecutionRecord[] = [];
+
+  for (const record of await store.list()) {
+    if (record.status !== "RISK_CHECK" && record.status !== "EXECUTING") continue;
+    const anchor = record.startedAt ?? record.triggeredAt;
+    const ageMs = nowMs - Date.parse(anchor);
+    if (!Number.isFinite(ageMs) || ageMs < staleAfterMs) continue;
+
+    const failed = failStrategyExecution(
+      record,
+      now,
+      "Recovered after worker restart; the previous execution was left in-flight."
+    );
+    await store.update(failed);
+    recovered.push(failed);
+  }
+
+  return { recovered: recovered.length, records: recovered };
 }
 
 export interface StrategyRuntimeDependencies {
