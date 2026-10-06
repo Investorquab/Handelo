@@ -28,8 +28,7 @@ test("preserves a supported LOW audit even when Binance has no detailed result",
     hasResult: false,
     isSupported: true,
     riskLevel: -1,
-    riskLevelEnum: "LOW",
-    riskItems: []
+    riskLevelEnum: "LOW"
   });
   assert.doesNotThrow(() => assertTokenAuditSafe(normalized));
 });
