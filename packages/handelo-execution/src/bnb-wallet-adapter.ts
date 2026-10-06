@@ -34,7 +34,8 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     if (!autonomousExecutionProviderReady(capabilities)) {
       throw new Error("BNB wallet provider has not passed the autonomous execution capability gate.");
     }
-    const validatedGrant = validateWalletSessionGrant(grant);\n    return this.runtime.createSession(validatedGrant);
+    const validatedGrant = validateWalletSessionGrant(grant);
+    return this.runtime.createSession(validatedGrant);
   }
 
   async revokeSession(sessionId: string): Promise<void> {
