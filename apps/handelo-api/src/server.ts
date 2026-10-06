@@ -14,6 +14,7 @@ import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
 import { listPersistedStrategyExecutions, listStrategyAttribution } from "./strategy-runtime.js";
 import { buildGapRadar } from "./market-intelligence.js";
+import { normalizeWalletGuardrails } from "./wallet-guardrails.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
@@ -167,6 +168,37 @@ const server = createServer(async (req, res) => {
     try {
       const status = await walletStatus();
       return json(res, 200, status);
+    } catch (error) {
+      return json(res, 503, { status: "UNAVAILABLE", error: walletServiceError(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url === "/api/wallet/guardrails") {
+    try {
+      const status = await walletStatus();
+      if (status.status !== "CONNECTED") {
+        return json(res, 200, normalizeWalletGuardrails({ status: status.status }));
+      }
+
+      const [addressPayload, chains, settings, quota, txLock] = await Promise.all([
+        bawJson<{ addresses?: Array<{ binanceChainId?: string; address?: string }> }>(["wallet", "address"]),
+        bawJson<Array<{ binanceChainId?: string; name?: string }>>(["wallet", "chains"]),
+        bawJson<Record<string, unknown>>(["wallet", "settings"]),
+        bawJson<Record<string, unknown>>(["wallet", "left-quota"]),
+        bawJson<{ status?: string }>(["wallet", "tx-lock", "--binanceChainId", "56"])
+      ]);
+      const address = addressPayload.addresses
+        ?.find((entry) => entry.binanceChainId === "56")
+        ?.address?.trim() ?? null;
+
+      return json(res, 200, normalizeWalletGuardrails({
+        status: status.status,
+        address,
+        chains,
+        settings,
+        quota,
+        txLock: txLock.status
+      }));
     } catch (error) {
       return json(res, 503, { status: "UNAVAILABLE", error: walletServiceError(error) });
     }

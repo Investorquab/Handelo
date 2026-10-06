@@ -589,3 +589,12 @@ button{cursor:pointer}
 .workspace-earnings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.045)}
 .workspace-earnings-row:last-child{border-bottom:0}
 .workspace-earnings-row span{min-width:0}.workspace-earnings-row strong{display:block;font:10px var(--mono);color:#ddd7cd}.workspace-earnings-row small{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:8px var(--mono);color:var(--faint)}.workspace-earnings-row b{font:10px var(--mono);font-weight:400;white-space:nowrap}
+
+.wallet-center{margin-top:12px}
+.wallet-center-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wallet-center-grid>div{padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.025)}
+.wallet-center-grid small{display:block;font-size:9px;letter-spacing:.08em;opacity:.62;margin-bottom:4px}
+.wallet-center-grid b{font-size:12px}
+.wallet-center-status{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.wallet-center-status span{font-size:9px;letter-spacing:.08em;opacity:.62}
+.wallet-center-note{display:block;margin-top:10px;line-height:1.45;opacity:.62}

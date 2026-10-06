@@ -36,10 +36,39 @@ const workspaceRiskState = document.querySelector("#workspaceRiskState");
 const workspaceRiskBar = document.querySelector("#workspaceRiskBar");
 const workspaceRiskCopy = document.querySelector("#workspaceRiskCopy");
 const workspaceWalletAction = document.querySelector("#workspaceWalletAction");
+const workspaceWalletCenter = document.querySelector("#workspaceWalletCenter");
 const workspaceEarningsContent = document.querySelector("#workspaceEarningsContent");
 const workspaceEarningsStatus = document.querySelector("#workspaceEarningsStatus");
 const workspacePortfolioRefresh = document.querySelector("#workspacePortfolioRefresh");
 const workspaceHistoryRefresh = document.querySelector("#workspaceHistoryRefresh");
+
+function renderWorkspaceWalletCenter(guardrails) {
+  if (!workspaceWalletCenter) return;
+  if (!guardrails || typeof guardrails !== "object") {
+    workspaceWalletCenter.innerHTML = '<div class="workspace-empty">Wallet guardrails are unavailable.</div>';
+    return;
+  }
+  if (guardrails.status !== "CONNECTED") {
+    workspaceWalletCenter.innerHTML = '<div class="wallet-center-status"><span>STATUS</span><b>' + escapeHtml(guardrails.status || "UNAVAILABLE") + '</b></div><small>Connect the Binance Agentic Wallet to inspect live execution guardrails.</small>';
+    return;
+  }
+  const bsc = guardrails.bscSupported === true ? "SUPPORTED" : guardrails.bscSupported === false ? "NOT SUPPORTED" : "UNKNOWN";
+  const txLock = guardrails.txLock || "UNKNOWN";
+  const daily = guardrails.dailyLimitUsd == null ? "—" : money(guardrails.dailyLimitUsd);
+  const left = guardrails.dailyQuotaLeftUsd == null ? "—" : money(guardrails.dailyQuotaLeftUsd);
+  const handling = guardrails.abnormalTxnHandling || "—";
+  const allTokens = guardrails.tradeAllTokens == null ? "—" : guardrails.tradeAllTokens ? "ALL" : "SCOPED";
+  workspaceWalletCenter.innerHTML =
+    '<div class="wallet-center-grid">' +
+      '<div><small>BSC</small><b>' + escapeHtml(bsc) + '</b></div>' +
+      '<div><small>TX LOCK</small><b>' + escapeHtml(txLock) + '</b></div>' +
+      '<div><small>DAILY LIMIT</small><b>' + escapeHtml(daily) + '</b></div>' +
+      '<div><small>QUOTA LEFT</small><b>' + escapeHtml(left) + '</b></div>' +
+      '<div><small>RISK HANDLING</small><b>' + escapeHtml(handling) + '</b></div>' +
+      '<div><small>TOKEN SCOPE</small><b>' + escapeHtml(allTokens) + '</b></div>' +
+    '</div>' +
+    '<small class="wallet-center-note">Provider guardrails are read-only here. Handelo does not claim wallet permission, funding, withdrawal, or revocation until the selected provider flow is validated.</small>';
+}
 
 function renderWorkspaceRisk(risk) {
   if (!workspaceRiskState || !workspaceRiskCopy || !workspaceRiskBar) return;
@@ -246,10 +275,19 @@ async function refreshWorkspaceContext() {
       workspaceWalletAddressValue = "";
       if (workspaceWalletBalance) workspaceWalletBalance.textContent = "—";
       if (workspaceWalletAddress) workspaceWalletAddress.textContent = "WALLET NOT CONNECTED";
+      renderWorkspaceWalletCenter({ status: "UNCONNECTED" });
       return;
     }
     workspaceWalletAddressValue = address.address;
     if (workspaceWalletAddress) workspaceWalletAddress.textContent = address.address.slice(0,6) + "…" + address.address.slice(-4);
+    try {
+      const guardrailsResponse = await fetch(API_BASE + "/api/wallet/guardrails", {cache:"no-store"});
+      const guardrails = await guardrailsResponse.json();
+      if (guardrailsResponse.ok) renderWorkspaceWalletCenter(guardrails);
+      else renderWorkspaceError(workspaceWalletCenter, guardrails?.error || "Wallet guardrails are unavailable.");
+    } catch {
+      renderWorkspaceError(workspaceWalletCenter, "Could not reach the wallet guardrail service.");
+    }
     const strategiesResponse = await fetch(API_BASE + "/api/strategies?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const strategiesData = await strategiesResponse.json();
     const attributionResponse = await fetch(API_BASE + "/api/strategies/attribution?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});

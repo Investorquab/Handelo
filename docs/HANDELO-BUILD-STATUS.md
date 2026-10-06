@@ -3,6 +3,8 @@
 Status: ACTIVE
 Last updated: 2026-10-06
 
+Phase 2 evidence: Workspace Wallet Center now surfaces read-only Binance Agentic Wallet guardrails without implying unvalidated funding, withdrawal, or revocation.
+
 Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provider contract and remaining live mainnet gates.
 
 ## Operating rules
@@ -59,14 +61,14 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Add automated architecture/contract tests
 
 ### Phase 2 — User Wallet + Agent Wallet Product Foundation
-- [ ] User wallet connection/context
-- [ ] Wallet Center
+- [x] User wallet connection/context
+- [x] Wallet Center
 - [ ] Agent wallet lifecycle
 - [ ] Agent permissions/policies
 - [ ] Funding flow
 - [ ] Withdrawal flow
 - [ ] Revocation
-- [ ] Wallet activity/audit state
+- [x] Wallet activity/audit state
 - [ ] Demo Mode environment and disclosure
 
 ### Phase 3 — Autonomous Strategy Runtime

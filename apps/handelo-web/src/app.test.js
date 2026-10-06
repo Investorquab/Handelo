@@ -269,3 +269,13 @@ test("workspace exposes Binance-backed upcoming earnings intelligence", () => {
   assert.match(source, /BINANCE EARNINGS SIGNAL/);
   assert.match(source, /earningsResponse/);
 });
+
+test("workspace exposes the Wallet Center guardrail surface", () => {
+  assert.match(indexSource, /id="workspaceWalletCenter"/);
+  assert.match(source, /function renderWorkspaceWalletCenter\(guardrails\)/);
+  assert.match(source, /\/api\/wallet\/guardrails/);
+  assert.match(source, /DAILY LIMIT/);
+  assert.match(source, /QUOTA LEFT/);
+  assert.match(source, /TX LOCK/);
+  assert.match(source, /provider guardrails are read-only here/);
+});
