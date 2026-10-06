@@ -3,6 +3,8 @@
 Status: ACTIVE
 Last updated: 2026-10-06
 
+Phase 3 evidence: controlled opt-in strategy worker now wires DCA/RECURRING scheduling through the persisted runtime and Binance Agentic Wallet adapter; worker remains disabled unless explicitly configured.
+
 Phase 2 evidence: Workspace Wallet Center now surfaces read-only Binance Agentic Wallet guardrails without implying unvalidated funding, withdrawal, or revocation.
 
 Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provider contract and remaining live mainnet gates.
@@ -74,17 +76,17 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 ### Phase 3 — Autonomous Strategy Runtime
 - [ ] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN
 - [ ] Deterministic scheduler
-- [ ] DCA execution
-- [ ] Recurring execution
+- [x] DCA execution
+- [x] Recurring execution
 - [ ] Conditional triggers
 - [ ] Rebalance execution
 - [ ] Pause/resume/edit/cancel
 - [ ] Retry/failure recovery
 - [ ] Restart recovery
 - [ ] Idempotency/duplicate-execution protection
-- [ ] Execution history
-- [ ] Next-run and last-run state
-- [ ] Strategy runtime tests
+- [x] Execution history
+- [x] Next-run and last-run state
+- [x] Strategy runtime tests
 
 ### Phase 4 — Portfolio + Market Intelligence 2.0
 - [x] Real portfolio state reconciliation

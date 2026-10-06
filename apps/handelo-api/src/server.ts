@@ -14,6 +14,8 @@ import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
 import { listPersistedStrategyExecutions, listStrategyAttribution } from "./strategy-runtime.js";
 import { buildGapRadar } from "./market-intelligence.js";
+import { createPersistedStrategyWorker } from "./strategy-worker.js";
+import { createHandeloStrategyWorkerDependencies } from "./strategy-worker-runtime.js";
 import { normalizeWalletGuardrails } from "./wallet-guardrails.js";
 
 const port = Number(process.env.PORT ?? "8787");
@@ -36,6 +38,8 @@ const strategyExecutionStore = new FileStrategyExecutionStore(
 const DEFAULT_BSC_QUOTE_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
 const CORS_ORIGIN = process.env.HANDELO_CORS_ORIGIN?.trim() || "*";
 const CLIENT_API_KEY = process.env.HANDELO_CLIENT_API_KEY?.trim() || "";
+const strategyWorkerWallet = process.env.HANDELO_STRATEGY_WORKER_WALLET?.trim() || "";
+let strategyWorker: ReturnType<typeof createPersistedStrategyWorker> | null = null;
 function isEvmAddress(value: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(value.trim());
 }
@@ -352,6 +356,16 @@ const server = createServer(async (req, res) => {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
     }
+  }
+
+  if (req.method === "GET" && req.url === "/api/strategies/worker") {
+    return json(res, 200, {
+      enabled: strategyWorker !== null,
+      running: strategyWorker?.isRunning() ?? false,
+      wallet: strategyWorker ? strategyWorkerWallet : null,
+      supportedTypes: ["DCA", "RECURRING"],
+      disclosure: "Autonomous strategy execution is disabled unless explicitly enabled with a configured worker wallet."
+    });
   }
 
   if (req.method === "GET" && req.url?.startsWith("/api/strategies/attribution")) {
@@ -908,5 +922,21 @@ const server = createServer(async (req, res) => {
     return json(res, status ?? 500, { error: errorMessage(error) });
   }
 });
+
+if (
+  process.env.HANDELO_STRATEGY_WORKER_ENABLED === "true" &&
+  isEvmAddress(strategyWorkerWallet)
+) {
+  strategyWorker = createPersistedStrategyWorker(
+    createHandeloStrategyWorkerDependencies({
+      walletAddress: strategyWorkerWallet,
+      executionWallet: wallet,
+      market: getMarket(),
+      store: strategyExecutionStore
+    })
+  );
+  strategyWorker.start();
+  console.log("Handelo strategy worker enabled for the configured controlled wallet.");
+}
 
 server.listen(port, () => console.log(`Handelo API listening on http://localhost:${port}`));
