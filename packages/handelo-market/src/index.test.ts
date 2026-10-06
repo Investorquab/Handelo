@@ -251,11 +251,18 @@ test("executable market validation rejects malformed price or contract", () => {
 
 
 test("market insight exposes reference gap and market status",()=>{
-  const insight=toMarketInsight(asset({tokenPrice:"110",referencePrice:"100"}));
+  const insight=toMarketInsight(asset({
+    tokenPrice:"110",
+    referencePrice:"100",
+    statusInfo:{openState:false,marketStatus:"CLOSED",reasonCode:"MARKET_CLOSED",reasonMsg:"The market is closed.",nextOpenTime:Date.parse("2026-10-06T13:30:00Z"),nextCloseTime:Date.parse("2026-10-06T20:00:00Z")}
+  }));
   assert.equal(insight.onChainPrice,110);
   assert.equal(insight.referencePrice,100);
   assert.equal(insight.divergencePercent,10);
-  assert.equal(insight.marketStatus,"OPEN");
+  assert.equal(insight.marketStatus,"CLOSED");
+  assert.equal(insight.nextOpenAt,"2026-10-06T13:30:00.000Z");
+  assert.equal(insight.nextCloseAt,"2026-10-06T20:00:00.000Z");
+  assert.equal(insight.marketStatusReason,"The market is closed.");
 });
 
 test("gap radar ranks assets by absolute divergence",()=>{

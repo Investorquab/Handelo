@@ -99,7 +99,7 @@ function renderWorkspaceMarket(market) {
   const scale = hasComparison ? Math.max(tokenPrice, referencePrice) : 0;
   const referenceWidth = hasComparison ? Math.max((referencePrice / scale) * 100, 4) : 0;
   const tokenWidth = hasComparison ? Math.max((tokenPrice / scale) * 100, 4) : 0;
-  workspaceMarket.innerHTML = `<div class="workspace-ticker"><strong>${escapeHtml(market.ticker)}</strong><span>${escapeHtml(market.tokenSymbol)}</span></div><div class="workspace-price">${money(market.tokenPrice)}</div><div class="workspace-price-compare" aria-label="Current on-chain versus reference price comparison"><div class="workspace-price-row"><span>REFERENCE</span><div class="workspace-price-track"><i style="width:${referenceWidth}%"></i></div><b>${money(market.referencePrice)}</b></div><div class="workspace-price-row"><span>ON-CHAIN</span><div class="workspace-price-track"><i style="width:${tokenWidth}%"></i></div><b>${money(market.tokenPrice)}</b></div></div><div class="workspace-market-grid"><div><small>GAP</small><b class="${gap === null ? "" : gap >= 0 ? "positive" : "negative"}">${gapText}</b></div><div><small>STATUS</small><b>${escapeHtml(market.marketStatus || "—")}</b></div><div><small>PROVIDER</small><b>${escapeHtml(market.provider || "BSC")}</b></div><div><small>REPRESENTATION</small><b>${escapeHtml(market.tokenSymbol || "—")}</b></div></div>`;
+  workspaceMarket.innerHTML = `<div class="workspace-ticker"><strong>${escapeHtml(market.ticker)}</strong><span>${escapeHtml(market.tokenSymbol)}</span></div><div class="workspace-price">${money(market.tokenPrice)}</div><div class="workspace-price-compare" aria-label="Current on-chain versus reference price comparison"><div class="workspace-price-row"><span>REFERENCE</span><div class="workspace-price-track"><i style="width:${referenceWidth}%"></i></div><b>${money(market.referencePrice)}</b></div><div class="workspace-price-row"><span>ON-CHAIN</span><div class="workspace-price-track"><i style="width:${tokenWidth}%"></i></div><b>${money(market.tokenPrice)}</b></div></div><div class="workspace-market-grid"><div><small>GAP</small><b class="${gap === null ? "" : gap >= 0 ? "positive" : "negative"}">${gapText}</b></div><div><small>STATUS</small><b>${escapeHtml(market.marketStatus || "—")}</b></div><div><small>PROVIDER</small><b>${escapeHtml(market.provider || "BSC")}</b></div><div><small>REPRESENTATION</small><b>${escapeHtml(market.tokenSymbol || "—")}</b></div></div><div class="context-schedule"><span>${market.marketOpen ? "NEXT CLOSE" : "NEXT OPEN"}</span><strong>${escapeHtml(marketSchedule(market))}</strong></div>${market.marketStatusReason ? `<div class="context-reason">${escapeHtml(market.marketStatusReason)}</div>` : ""}`;
 }
 
 function renderWorkspaceGapRadar(markets, representations = []) {
@@ -111,7 +111,9 @@ function renderWorkspaceGapRadar(markets, representations = []) {
     const label = (market.underlyingTicker || "—") + " " + (market.tokenSymbol || "—") + " gap " + gapText;
     const status = market.marketStatus || "UNKNOWN";
     const volume = market.liquidityContext || "Liquidity context unavailable";
-    return '<div class="workspace-gap-row" role="group" aria-label="' + escapeHtml(label + " status " + status) + '"><span><strong>' + escapeHtml(market.underlyingTicker || "—") + '</strong><small>' + escapeHtml(market.tokenSymbol || "—") + " · " + escapeHtml(market.provider || "BSC") + " · " + escapeHtml(status) + '</small><small>' + escapeHtml(volume) + '</small></span><b class="' + gapClass + '">' + gapText + '</b></div>';
+    const schedule = marketSchedule(normalizeMarketRecord(market));
+    const reason = market.marketStatusReason || "";
+    return '<div class="workspace-gap-row" role="group" aria-label="' + escapeHtml(label + " status " + status) + '"><span><strong>' + escapeHtml(market.underlyingTicker || "—") + '</strong><small>' + escapeHtml(market.tokenSymbol || "—") + " · " + escapeHtml(market.provider || "BSC") + " · " + escapeHtml(status) + '</small><small>' + escapeHtml(schedule) + '</small><small>' + escapeHtml(volume) + (reason ? " · " + escapeHtml(reason) : "") + '</small></span><b class="' + gapClass + '">' + gapText + '</b></div>';
   }).join("") : "";
 
   const comparisonRows = Array.isArray(representations) ? representations.slice(0, 3).map((comparison) => {
@@ -683,7 +685,10 @@ function renderCandidates(container, candidates, intent) {
 }
 
 function formatMarketTime(value) {
-  const timestamp = Number(value);
+  const numericTimestamp = Number(value);
+  const timestamp = Number.isFinite(numericTimestamp) && numericTimestamp > 0
+    ? numericTimestamp
+    : Date.parse(String(value || ""));
   if (!Number.isFinite(timestamp) || timestamp <= 0) return "—";
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return "—";
@@ -984,8 +989,9 @@ function normalizeMarketRecord(market) {
     premiumPct,
     marketOpen: Boolean(statusInfo.openState ?? market?.marketOpen),
     marketStatus: statusInfo.marketStatus ?? market?.marketStatus ?? null,
-    nextOpenTime: statusInfo.nextOpenTime ?? market?.nextOpenTime ?? null,
-    nextCloseTime: statusInfo.nextCloseTime ?? market?.nextCloseTime ?? null
+    nextOpenTime: statusInfo.nextOpenTime ?? market?.nextOpenTime ?? market?.nextOpenAt ?? null,
+    nextCloseTime: statusInfo.nextCloseTime ?? market?.nextCloseTime ?? market?.nextCloseAt ?? null,
+    marketStatusReason: statusInfo.reasonMsg ?? statusInfo.reasonCode ?? market?.marketStatusReason ?? null
   };
 }
 

@@ -174,6 +174,10 @@ export function toMarketInsight(asset:RwaAsset):MarketInsight{
     nextOpenAt:asset.statusInfo?.nextOpenTime
       ?new Date(asset.statusInfo.nextOpenTime).toISOString()
       :null,
+    nextCloseAt:asset.statusInfo?.nextCloseTime
+      ?new Date(asset.statusInfo.nextCloseTime).toISOString()
+      :null,
+    marketStatusReason:asset.statusInfo?.reasonMsg || asset.statusInfo?.reasonCode || null,
     liquidityContext:asset.volume24H
       ?`24h volume ${asset.volume24H}`
       :null

@@ -61,6 +61,8 @@ export interface MarketInsight {
   divergencePercent: number | null;
   marketStatus: MarketStatus;
   nextOpenAt?: string | null;
+  nextCloseAt?: string | null;
+  marketStatusReason?: string | null;
   liquidityContext?: string | null;
 }
 

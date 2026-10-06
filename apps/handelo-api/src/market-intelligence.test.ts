@@ -65,4 +65,6 @@ test("buildGapRadar returns ranked gaps and cross-representation comparisons", (
   assert.equal(result.representations[0]?.lowestPriceToken, "NVDAon");
   assert.equal(result.representations[0]?.highestPriceToken, "NVDAx");
   assert.equal(result.representations[0]?.spreadPercent, 5);
+  assert.equal(result.markets[0]?.marketStatus, "OPEN");
+  assert.equal(result.markets[0]?.nextCloseAt, null);
 });

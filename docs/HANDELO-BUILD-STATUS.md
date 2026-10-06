@@ -18,6 +18,7 @@ Last updated: 2026-10-06
 - [x] Product specification and two-page architecture
 - [x] Shared market, strategy, portfolio, risk, transaction and Chat contracts
 - [x] Market Intelligence / Gap Radar
+- [x] Market-hours intelligence from Binance RWA status data
 - [x] Persistent AI Analyst / Chat
 - [x] Deterministic strategy construction and previews
 - [x] Portfolio context and deterministic portfolio risk
@@ -86,7 +87,7 @@ Last updated: 2026-10-06
 - [ ] Strategy attribution
 - [ ] Target allocation/rebalance
 - [x] Cross-representation intelligence
-- [ ] Market-hours intelligence
+- [x] Market-hours intelligence
 - [ ] Liquidity/slippage/price-impact intelligence
 - [ ] Route/execution-quality analysis
 - [ ] Event/earnings intelligence

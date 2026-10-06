@@ -201,7 +201,8 @@ test("workspace market and radar failures clear loading state", () => {
 });
 
 
-test("market radar exposes live status and liquidity context",()=>{assert.match(source,/market\.marketStatus/);assert.match(source,/market\.liquidityContext/);assert.match(source,/label \+ " status " \+ status/);});
+test("market radar exposes live status, market hours, reason and liquidity context",()=>{assert.match(source,/market\.marketStatus/);assert.match(source,/market\.liquidityContext/);assert.match(source,/market\.marketStatusReason/);assert.match(source,/marketSchedule\(normalizeMarketRecord\(market\)\)/);assert.match(source,/formatMarketTime/);assert.match(source,/label \+ " status " \+ status/);});
+test("market-hour timestamps accept normalized ISO insight values",()=>{assert.match(source,/Date\.parse\(String\(value \|\| ""\)\)/);assert.match(source,/nextCloseAt/);assert.match(source,/nextOpenAt/);});
 test("workspace activity exposes truthful transaction time and safe explorer links",()=>{assert.match(source,/new Date\(tx\.txTime\)\.toLocaleString/);assert.match(source,/https:\/\/bscscan\.com\/tx\//);assert.match(source,/noopener noreferrer/);});
 
 
