@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { authorizeAgentWalletWithdrawal } from "./wallet-withdrawal.js";
+import type { AgentWalletContext } from "@handelo/core";
+const owner="0x1111111111111111111111111111111111111111"; const agent="0x2222222222222222222222222222222222222222"; const token="0x55d398326f99059fF775485246999027B3197955";
+function context(overrides:Partial<AgentWalletContext>={}):AgentWalletContext{return {mode:"USER",role:"AGENT",address:agent,network:"BSC",connected:true,balanceUsd:20,ownerWallet:owner,policy:{permissions:["DCA"],revocable:true},status:"ACTIVE",...overrides};}
+function request(overrides:Partial<Parameters<typeof authorizeAgentWalletWithdrawal>[1]>={}){return {agentWallet:agent,personalWallet:owner,amount:"5",tokenAddress:token,userApproved:true,approvalReference:"withdraw-001",...overrides};}
+test("authorizes withdrawal only back to the verified personal owner",()=>{const r=authorizeAgentWalletWithdrawal(context(),request());assert.equal(r.from,agent);assert.equal(r.to,owner);assert.equal(r.onChain,false);assert.equal(r.requiresProviderExecution,true);});
+test("requires explicit approval and audit reference",()=>{assert.throws(()=>authorizeAgentWalletWithdrawal(context(),request({userApproved:false})),/explicit user approval/);assert.throws(()=>authorizeAgentWalletWithdrawal(context(),request({approvalReference:" "})),/approval reference/);});
+test("rejects wrong owner or agent",()=>{assert.throws(()=>authorizeAgentWalletWithdrawal(context(),request({personalWallet:"0x3333333333333333333333333333333333333333"})),/does not match/);assert.throws(()=>authorizeAgentWalletWithdrawal(context(),request({agentWallet:"0x3333333333333333333333333333333333333333"})),/does not match/);});
+test("fails closed for invalid wallet state and amount",()=>{for(const c of [context({mode:"DEMO"}),context({connected:false}),context({status:"REVOKED"}),context({network:"ETHEREUM"} as unknown as Partial<AgentWalletContext>)])assert.throws(()=>authorizeAgentWalletWithdrawal(c,request()),/requires (USER-mode agent wallet context|a connected active BSC agent wallet)/);for(const amount of ["0","-1","NaN","Infinity",""])assert.throws(()=>authorizeAgentWalletWithdrawal(context(),request({amount})),/finite positive/);});

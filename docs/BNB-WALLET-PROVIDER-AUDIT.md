@@ -25,6 +25,7 @@ Handelo uses these surfaces as follows:
 | Quote | baw market-order quote | Implemented |
 | Execution | baw market-order swap | Implemented behind policy/security/confirmation gates |
 | Token transfer | baw wallet send | Implemented as an explicit-confirmation BSC outbound transfer primitive; live confirmation remains pending |
+| Withdrawal | baw wallet send | Implemented with a verified personal-owner destination and explicit approval boundary; live withdrawal remains unvalidated |
 | Verification | baw market-order list | Implemented order polling |
 | Token security | Binance Web3 token audit | Implemented before execution |
 

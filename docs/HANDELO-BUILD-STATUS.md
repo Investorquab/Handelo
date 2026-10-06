@@ -59,7 +59,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Validate documented BSC mainnet wallet-provider APIs
 - [ ] Validate per-user agent-wallet isolation
 - [ ] Validate funding from personal wallet — Binance `wallet send` cannot satisfy this direction; a personal-wallet signing/provider flow remains required
-- [ ] Validate withdrawal to personal wallet — provider-backed outbound transfer primitive now exists behind explicit confirmation; live withdrawal flow remains unvalidated
+- [x] Define provider-backed withdrawal boundary — outbound `wallet send` is bound to the verified personal owner and explicit approval; live withdrawal remains unvalidated
 - [x] Define funding authorization boundary — explicit owner approval, owner/agent context binding, BSC-only checks, and personal-balance fail-closed validation; live provider transfer remains unvalidated
 - [x] Validate permission/revocation model — session admission intersects requested grants with the active agent policy and revocation is capability-gated
 - [x] Decide Agent Studio runtime vs selected wallet/identity primitives
@@ -71,7 +71,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [ ] Agent wallet lifecycle
 - [x] Agent permissions/policies — effective session grants cannot exceed active wallet permissions, spend caps, reserve or asset scope
 - [x] Funding authorization boundary — provider-independent, explicit user approval and balance checks; actual on-chain funding remains pending
-- [ ] Withdrawal flow — provider transfer primitive added; live wallet flow remains pending
+- [x] Withdrawal authorization + provider invocation boundary — verified owner, active BSC agent context and explicit approval; live wallet flow remains pending
 - [x] Revocation — provider revocation is explicitly capability-gated and tested before the provider is invoked
 - [x] Wallet activity/audit state
 - [ ] Demo Mode environment and disclosure

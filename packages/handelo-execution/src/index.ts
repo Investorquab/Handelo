@@ -115,6 +115,11 @@ export async function auditToken(chainId:string,contractAddress:string):Promise<
 }
 
 export class BinanceAgenticWalletAdapter{
+  async withdraw(request: import("./wallet-withdrawal.js").AgentWalletWithdrawalRequest, context: import("@handelo/core").AgentWalletContext): Promise<WalletSendResult> {
+    const authorization = (await import("./wallet-withdrawal.js")).authorizeAgentWalletWithdrawal(context, request);
+    return this.sendToken({recipient: authorization.to, amount: authorization.amount, tokenAddress: authorization.tokenAddress, binanceChainId: "56"}, request.userApproved);
+  }
+
   async sendToken(request:WalletSendRequest,confirmed:boolean):Promise<WalletSendResult>{
     if(!confirmed) throw new Error("Token transfer requires explicit user confirmation.");
     const wallet = await baw<{status:"CONNECTED"|"UNCONNECTED"|"CREATING"}>(["wallet","status"]);
@@ -187,3 +192,4 @@ export * from "./wallet-provider.js";
 export * from "./bnb-wallet-adapter.js";
 export * from "./bnb-agentic-wallet-contract.js";
 export * from "./wallet-funding.js";
+export * from "./wallet-withdrawal.js";
