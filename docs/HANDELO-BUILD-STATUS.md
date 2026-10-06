@@ -58,7 +58,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Map BNB Agent Studio/provider options
 - [x] Validate documented BSC mainnet wallet-provider APIs
 - [x] Validate per-user agent-wallet isolation — session admission now binds both owner and agent addresses to the current USER-mode context, with cross-user reuse tests
-- [ ] Validate funding from personal wallet — the personal-wallet EIP-1193 signing boundary now builds a BSC ERC-20 transfer request and verifies chain/account before `eth_sendTransaction`; live wallet confirmation and on-chain validation remain pending
+- [ ] Validate funding from personal wallet — the personal-wallet EIP-1193 signing boundary builds a BSC ERC-20 transfer, verifies chain/account, and now polls `eth_getTransactionReceipt` fail-closed; live wallet confirmation and on-chain validation remain pending
 - [x] Define provider-backed withdrawal boundary — outbound `wallet send` is bound to the verified personal owner and explicit approval; live withdrawal remains unvalidated
 - [x] Define funding authorization boundary — explicit owner approval, owner/agent context binding, BSC-only checks, and personal-balance fail-closed validation; live provider transfer remains unvalidated
 - [x] Validate permission/revocation model — session admission intersects requested grants with the active agent policy and revocation is capability-gated

@@ -70,7 +70,7 @@ These are intentionally not marked complete by documentation alone.
 
 ## Personal-wallet funding boundary
 
-The funding authorization remains provider-independent and pre-chain. After explicit approval, `buildPersonalWalletFundingTransaction` constructs the ERC-20 `transfer(agentWallet, amount)` request for BSC, and `sendPersonalWalletFunding` requires chain ID `0x38`, verifies the connected personal account matches the approved owner, then delegates the signature to the injected EIP-1193 provider. A returned transaction hash is accepted only when it has the expected hex shape; Handelo does not treat this as proof of confirmation or settlement.
+The funding authorization remains provider-independent and pre-chain. After explicit approval, `buildPersonalWalletFundingTransaction` constructs the ERC-20 `transfer(agentWallet, amount)` request for BSC, and `sendPersonalWalletFunding` requires chain ID `0x38`, verifies the connected personal account matches the approved owner, then delegates the signature to the injected EIP-1193 provider. A returned transaction hash is accepted only when it has the expected hex shape. `waitForPersonalWalletFundingReceipt` separately polls `eth_getTransactionReceipt` and only reports `CONFIRMED` for a successful mined receipt; submission, confirmation, and final settlement remain distinct.
 
 ## Evidence references
 

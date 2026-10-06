@@ -1,6 +1,7 @@
 import type { AgentWalletContext } from "@handelo/core";
 
 const EVM_WALLET = /^0x[a-fA-F0-9]{40}$/;
+const TX_HASH = /^0x[0-9a-fA-F]+$/;
 const BSC_CHAIN_ID = "0x38";
 const ERC20_TRANSFER_SELECTOR = "a9059cbb";
 
@@ -32,10 +33,19 @@ export interface PersonalWalletFundingTransaction {
 }
 
 export interface PersonalWalletProvider {
-  request(args: {
-    method: string;
-    params?: unknown[];
-  }): Promise<unknown>;
+  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
+}
+
+export interface PersonalWalletFundingReceipt {
+  transactionHash: string;
+  status: "CONFIRMED";
+  blockNumber: string;
+}
+
+export interface FundingReceiptWaitOptions {
+  maxAttempts?: number;
+  pollIntervalMs?: number;
+  sleep?: (milliseconds: number) => Promise<void>;
 }
 
 function assertWalletAddress(label: string, address: string): void {
@@ -181,8 +191,67 @@ export async function sendPersonalWalletFunding(
     }]
   });
 
-  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]+$/.test(txHash)) {
+  if (typeof txHash !== "string" || !TX_HASH.test(txHash)) {
     throw new Error("Personal wallet provider returned an invalid funding transaction hash.");
   }
   return txHash;
+}
+
+export async function waitForPersonalWalletFundingReceipt(
+  provider: PersonalWalletProvider,
+  transactionHash: string,
+  options: FundingReceiptWaitOptions = {}
+): Promise<PersonalWalletFundingReceipt> {
+  if (!TX_HASH.test(transactionHash.trim())) {
+    throw new Error("Funding transaction hash is invalid.");
+  }
+
+  const maxAttempts = options.maxAttempts ?? 20;
+  const pollIntervalMs = options.pollIntervalMs ?? 3000;
+  const sleep = options.sleep ?? ((milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds)));
+
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+    throw new Error("Funding receipt max attempts must be a positive integer.");
+  }
+  if (!Number.isFinite(pollIntervalMs) || pollIntervalMs < 0) {
+    throw new Error("Funding receipt poll interval must be a non-negative number.");
+  }
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const receipt = await provider.request({
+      method: "eth_getTransactionReceipt",
+      params: [transactionHash.trim()]
+    });
+
+    if (receipt && typeof receipt === "object") {
+      const candidate = receipt as { transactionHash?: unknown; status?: unknown; blockNumber?: unknown };
+      if (
+        typeof candidate.status === "string" &&
+        typeof candidate.blockNumber === "string" &&
+        candidate.status === "0x1" &&
+        candidate.blockNumber !== "0x0"
+      ) {
+        const receiptHash =
+          typeof candidate.transactionHash === "string" && TX_HASH.test(candidate.transactionHash)
+            ? candidate.transactionHash
+            : transactionHash.trim();
+
+        return {
+          transactionHash: receiptHash,
+          status: "CONFIRMED",
+          blockNumber: candidate.blockNumber
+        };
+      }
+
+      if (candidate.status === "0x0") {
+        throw new Error("Personal wallet funding transaction was mined but failed.");
+      }
+    }
+
+    if (attempt + 1 < maxAttempts) {
+      await sleep(pollIntervalMs);
+    }
+  }
+
+  throw new Error("Personal wallet funding transaction receipt was not confirmed within the polling window.");
 }
