@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, getStoredStrategy } from "./strategy-store.js";
-import { runPersistedStrategyScheduler } from "./strategy-runtime.js";
+import { listPersistedStrategyExecutions, runPersistedStrategyScheduler } from "./strategy-runtime.js";
 
 test("persisted scheduler updates the stored strategy after a successful run", async () => {
   const dir = await mkdtemp(join(tmpdir(), "handelo-persisted-runtime-"));
@@ -47,6 +47,50 @@ test("persisted scheduler updates the stored strategy after a successful run", a
 
     const persisted = JSON.parse(await readFile(strategyPath, "utf8")) as Array<{id:string; nextExecutionAt?:string}>;
     assert.equal(persisted.find(item => item.id === strategy.id)?.nextExecutionAt, "2026-10-06T12:00:00.000Z");
+  } finally {
+    delete process.env.HANDELO_STRATEGY_STORE_PATH;
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("persisted execution history is isolated to the requested wallet", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "handelo-history-runtime-"));
+  const strategyPath = join(dir, "strategies.json");
+  const executionPath = join(dir, "runs.json");
+  process.env.HANDELO_STRATEGY_STORE_PATH = strategyPath;
+
+  try {
+    const walletA = "0x3333333333333333333333333333333333333333";
+    const walletB = "0x4444444444444444444444444444444444444444";
+    const store = new FileStrategyExecutionStore(executionPath);
+
+    const strategyA = {
+      id: "history-a",
+      type: "DCA" as const,
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily",
+      constraints: {},
+      nextExecutionAt: null,
+      status: "DRAFT" as const
+    };
+    const strategyB = { ...strategyA, id: "history-b", asset: "NVDAon" };
+
+    await activateStoredStrategy(walletA, strategyA);
+    await activateStoredStrategy(walletB, strategyB);
+
+    const activeA = await getStoredStrategy(walletA, strategyA.id);
+    const activeB = await getStoredStrategy(walletB, strategyB.id);
+    assert.ok(activeA);
+    assert.ok(activeB);
+
+    const { createStrategyExecutionRecord } = await import("@handelo/strategy");
+    await store.claim(createStrategyExecutionRecord(activeA!, "2026-10-05T12:00:00.000Z"));
+    await store.claim(createStrategyExecutionRecord(activeB!, "2026-10-05T13:00:00.000Z"));
+
+    const history = await listPersistedStrategyExecutions(walletA, store);
+    assert.equal(history.length, 1);
+    assert.equal(history[0]?.strategyId, strategyA.id);
   } finally {
     delete process.env.HANDELO_STRATEGY_STORE_PATH;
     await rm(dir, { recursive: true, force: true });
