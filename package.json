@@ -1,0 +1,5 @@
+{
+  "name":"handelo","private":true,"version":"0.2.0","packageManager":"pnpm@10.15.0",
+  "scripts":{"check":"pnpm -r check","test":"pnpm -r test","dev":"pnpm --filter @handelo/api dev","handelo":"pnpm --filter @handelo/api dev"},
+  "devDependencies":{"@types/node":"^22.18.0"}
+}
