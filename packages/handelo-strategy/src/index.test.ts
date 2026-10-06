@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -341,6 +341,56 @@ test("retry helper increments attempt and returns a failed run to risk check", (
   assert.equal(retried.status, "RISK_CHECK");
   assert.equal(retried.attempt, 2);
   assert.equal(retried.error, null);
+});
+
+test("scheduler recovers a persisted retryable failure after worker restart", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-restart-retry-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+    }));
+    const trigger = { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" };
+
+    const first = await runTriggeredStrategy(strategy, trigger, {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      maxAttempts: 1,
+      riskCheck: async () => true,
+      execute: async () => {
+        throw new RetryableStrategyExecutionError("temporary network timeout");
+      }
+    });
+
+    assert.equal(first.status, "FAILED");
+    if (first.status === "FAILED") {
+      assert.equal(first.record.retryable, true);
+      assert.equal(first.record.attempt, 1);
+    }
+
+    let executions = 0;
+    const recovered = await runStrategyScheduler({
+      store,
+      now: () => "2026-10-05T12:01:00.000Z",
+      marketOpen: true,
+      maxAttempts: 2,
+      listActiveStrategies: async () => [strategy],
+      riskCheck: async () => true,
+      execute: async () => { executions += 1; }
+    });
+
+    assert.equal(recovered.finished, 1);
+    assert.equal(executions, 1);
+    const records = await store.list();
+    assert.equal(records.length, 1);
+    assert.equal(records[0]?.status, "FINISHED");
+    assert.equal(records[0]?.attempt, 2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("runtime worker performs risk check before execution and persists completion", async () => {
