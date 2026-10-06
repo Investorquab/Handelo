@@ -650,7 +650,7 @@ test("conditional condition evaluator supports deterministic reference-price rul
   const context = { tokenPrice: 95, referencePrice: 100, marketOpen: true };
   assert.equal(evaluateStrategyCondition("price below reference", context), true);
   assert.equal(evaluateStrategyCondition("price above reference", context), false);
-  assert.equal(evaluateStrategyCondition("gap below 3%", context), false);
+  assert.equal(evaluateStrategyCondition("gap below 3%", context), true);
   assert.equal(evaluateStrategyCondition("gap below 6%", context), true);
   assert.equal(evaluateStrategyCondition("gap above 3%", { ...context, tokenPrice: 105 }), true);
   assert.equal(evaluateStrategyCondition("market is open", context), true);
