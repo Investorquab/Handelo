@@ -24,7 +24,12 @@ test("workspace keeps market, wallet, portfolio, strategy, risk, and activity co
   }
 });
 
-test("workspace Gap Radar renders cross-representation rows once", () => {\n  assert.match(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ empty;/);\n  assert.doesNotMatch(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ comparisonRows \+ empty;/);\n});\n\ntest("workspace context refreshes from live market, gap radar, and wallet APIs", () => {
+test("workspace Gap Radar renders cross-representation rows once", () => {
+  assert.match(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ empty;/);
+  assert.doesNotMatch(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ comparisonRows \+ empty;/);
+});
+
+test("workspace context refreshes from live market, gap radar, and wallet APIs", () => {
   assert.match(source, /API_BASE \+ "\/api\/markets"/);
   assert.match(source, /API_BASE \+ "\/api\/gap-radar\?limit=5/);
   assert.match(source, /function renderWorkspaceGapRadar\(markets, representations = \[\]\)/);
