@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyCondition,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution,retryPersistedStrategyExecution,markRetryableStrategyFailure} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyCondition,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,StrategyExecutionTimeoutError,StrategyExecutionRejectedError,retryStrategyExecution,retryPersistedStrategyExecution,markRetryableStrategyFailure} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -666,4 +666,30 @@ test("rebalance execution grants are scoped to target assets", () => {
   }));
   const grant = executionGrantFromStrategy(strategy);
   assert.deepEqual(grant.allowedAssets.sort(), ["AAPLX", "NVDAB"]);
+});
+
+
+test("retry eligibility uses the injected clock and increments the attempt", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+  }));
+  const record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+  const failed = markRetryableStrategyFailure(
+    { ...record, status: "EXECUTING", startedAt: "2026-10-05T12:00:01.000Z" },
+    "2026-10-05T12:00:02.000Z",
+    "temporary provider failure"
+  );
+  assert.equal(
+    retryStrategyExecution(failed, "2026-10-05T12:00:03.000Z").attempt,
+    2
+  );
+  assert.throws(
+    () => retryStrategyExecution(failed, "2026-10-05T11:59:00.000Z"),
+    /not due yet/
+  );
+});
+
+test("execution timeout and rejection are explicitly non-retryable", () => {
+  assert.equal(new StrategyExecutionTimeoutError(1000).retryable, false);
+  assert.equal(new StrategyExecutionRejectedError("provider rejected").retryable, false);
 });

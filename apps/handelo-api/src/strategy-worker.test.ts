@@ -168,3 +168,71 @@ test("strategy worker shares an in-flight tick instead of overlapping scheduler 
     void executionPath;
   }
 });
+
+
+test("strategy worker records retryable failures and retries within the attempt budget", async () => {
+  const records = new Map<string, any>();
+  let executions = 0;
+  let riskChecks = 0;
+  const store = {
+    claim: async (record: any) => { records.set(record.executionKey, record); return record; },
+    get: async (key: string) => records.get(key) ?? null,
+    update: async (record: any) => { records.set(record.executionKey, record); return record; },
+    list: async () => [...records.values()]
+  };
+  const strategy = createDraftStrategy({
+    type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily",
+    nextExecutionAt: "2026-10-05T11:00:00.000Z"
+  });
+  const active = { ...strategy, status: "ACTIVE" as const };
+  const { runTriggeredStrategy, RetryableStrategyExecutionError } = await import("@handelo/strategy");
+  const result = await runTriggeredStrategy(
+    active,
+    { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+    {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      maxAttempts: 2,
+      riskCheck: async () => { riskChecks += 1; return true; },
+      execute: async () => {
+        executions += 1;
+        if (executions === 1) throw new RetryableStrategyExecutionError("temporary failure");
+      }
+    }
+  );
+  assert.equal(result.status, "FINISHED");
+  if (result.status === "FINISHED") assert.equal(result.record.attempt, 2);
+  assert.equal(executions, 2);
+  assert.equal(riskChecks, 2);
+});
+
+test("strategy worker does not retry an execution timeout", async () => {
+  const { runTriggeredStrategy, StrategyExecutionTimeoutError } = await import("@handelo/strategy");
+  const records = new Map<string, any>();
+  const store = {
+    claim: async (record: any) => { records.set(record.executionKey, record); return record; },
+    get: async (key: string) => records.get(key) ?? null,
+    update: async (record: any) => { records.set(record.executionKey, record); return record; },
+    list: async () => [...records.values()]
+  };
+  const strategy = createDraftStrategy({
+    type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+  });
+  const result = await runTriggeredStrategy(
+    { ...strategy, status: "ACTIVE" as const },
+    { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+    {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      maxAttempts: 3,
+      executionTimeoutMs: 1000,
+      riskCheck: async () => true,
+      execute: async () => {
+        await new Promise(resolve => setTimeout(resolve, 20));
+        throw new StrategyExecutionTimeoutError(1000);
+      }
+    }
+  );
+  assert.equal(result.status, "FAILED");
+  if (result.status === "FAILED") assert.equal(result.record.retryable, false);
+});
