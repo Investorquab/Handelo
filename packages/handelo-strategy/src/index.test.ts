@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions,RetryableStrategyExecutionError,retryStrategyExecution} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -258,6 +258,89 @@ test("stale in-flight executions are recovered after restart", async () => {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("retryable execution failures retry through a fresh risk check and finish", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-retry-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+    }));
+    let risks = 0;
+    let executions = 0;
+
+    const result = await runTriggeredStrategy(
+      strategy,
+      { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+      {
+        store,
+        now: () => "2026-10-05T12:00:05.000Z",
+        maxAttempts: 2,
+        riskCheck: async () => { risks += 1; return true; },
+        execute: async () => {
+          executions += 1;
+          if (executions === 1) throw new RetryableStrategyExecutionError("temporary provider timeout");
+        }
+      }
+    );
+
+    assert.equal(result.status, "FINISHED");
+    if (result.status === "FINISHED") assert.equal(result.record.attempt, 2);
+    assert.equal(risks, 2);
+    assert.equal(executions, 2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("non-retryable execution failures stop without a second attempt", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-no-retry-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+    }));
+    let executions = 0;
+
+    const result = await runTriggeredStrategy(
+      strategy,
+      { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" },
+      {
+        store,
+        now: () => "2026-10-05T12:00:05.000Z",
+        maxAttempts: 3,
+        riskCheck: async () => true,
+        execute: async () => {
+          executions += 1;
+          throw new Error("security audit unavailable");
+        }
+      }
+    );
+
+    assert.equal(result.status, "FAILED");
+    assert.equal(executions, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("retry helper increments attempt and returns a failed run to risk check", () => {
+  const strategy = activateStrategy(createDraftStrategy({
+    type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+  }));
+  let record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+  record = failStrategyExecution(record, "2026-10-05T12:01:00.000Z", "temporary");
+  const retried = retryStrategyExecution(record, "2026-10-05T12:02:00.000Z");
+  assert.equal(retried.status, "RISK_CHECK");
+  assert.equal(retried.attempt, 2);
+  assert.equal(retried.error, null);
 });
 
 test("runtime worker performs risk check before execution and persists completion", async () => {
