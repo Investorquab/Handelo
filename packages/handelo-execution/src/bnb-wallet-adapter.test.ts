@@ -72,3 +72,83 @@ test("BNB adapter requires an explicit runtime revocation implementation", async
     /session revocation/
   );
 });
+
+
+test("BNB adapter rejects an invalid wallet grant before invoking the provider", async () => {
+  let providerCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => {
+      throw new Error("not reached");
+    },
+    createSession: async () => {
+      providerCalls += 1;
+      return { sessionId: "should-not-run" };
+    }
+  });
+
+  await assert.rejects(
+    adapter.createSession({
+      ownerWallet: "not-an-address",
+      agentWallet: "0x2222222222222222222222222222222222222222",
+      network: "BSC",
+      permissions: ["DCA"],
+      revocable: true
+    }),
+    /Owner wallet must be a valid EVM wallet address/
+  );
+  assert.equal(providerCalls, 0);
+});
+
+test("BNB adapter rejects non-revocable grants before provider invocation", async () => {
+  let providerCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => {
+      throw new Error("not reached");
+    },
+    createSession: async () => {
+      providerCalls += 1;
+      return { sessionId: "should-not-run" };
+    }
+  });
+
+  await assert.rejects(
+    adapter.createSession({
+      ownerWallet: "0x1111111111111111111111111111111111111111",
+      agentWallet: "0x2222222222222222222222222222222222222222",
+      network: "BSC",
+      permissions: ["DCA"],
+      revocable: false
+    }),
+    /must be revocable/
+  );
+  assert.equal(providerCalls, 0);
+});
+
+test("BNB adapter forwards the validated normalized grant to the provider", async () => {
+  let received: any = null;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => {
+      throw new Error("not reached");
+    },
+    createSession: async grant => {
+      received = grant;
+      return { sessionId: "session-valid" };
+    }
+  });
+
+  const result = await adapter.createSession({
+    ownerWallet: " 0x1111111111111111111111111111111111111111 ",
+    agentWallet: "0x2222222222222222222222222222222222222222",
+    network: "BSC",
+    permissions: ["DCA"],
+    allowedAssets: ["NVDAB"],
+    revocable: true
+  });
+
+  assert.equal(result.sessionId, "session-valid");
+  assert.equal(received.ownerWallet, "0x1111111111111111111111111111111111111111");
+  assert.deepEqual(received.allowedAssets, ["NVDAB"]);
+});

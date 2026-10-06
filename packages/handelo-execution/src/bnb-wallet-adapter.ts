@@ -4,7 +4,7 @@ import type {
   WalletProviderCapabilities,
   WalletSessionGrant
 } from "./wallet-provider.js";
-import { autonomousExecutionProviderReady } from "./wallet-provider.js";
+import { autonomousExecutionProviderReady, validateWalletSessionGrant } from "./wallet-provider.js";
 
 export interface BnbWalletRuntime {
   capabilities(): Promise<WalletProviderCapabilities>;
@@ -34,7 +34,7 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     if (!autonomousExecutionProviderReady(capabilities)) {
       throw new Error("BNB wallet provider has not passed the autonomous execution capability gate.");
     }
-    return this.runtime.createSession(grant);
+    const validatedGrant = validateWalletSessionGrant(grant);\n    return this.runtime.createSession(validatedGrant);
   }
 
   async revokeSession(sessionId: string): Promise<void> {
