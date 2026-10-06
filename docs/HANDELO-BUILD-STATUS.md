@@ -111,12 +111,12 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] No direct LLM-to-money path — agent trace explicitly records the server review boundary and confirms private keys are not exposed to the model
 
 ### Phase 6 — Adversarial Validation
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] End-to-end tests
-- [ ] Deliberate failure tests
-- [ ] Runtime restart
-- [ ] Duplicate trigger
+- [x] Unit tests
+- [x] Integration tests
+- [x] End-to-end tests
+- [x] Deliberate failure tests
+- [x] Runtime restart — persisted in-flight executions are recovered on worker startup/tick and stale executions fail closed before a new scheduler pass
+- [x] Duplicate trigger — persisted execution-key claims reject repeated triggers, including concurrent file-store claims
 - [x] Stale quote/data — review token binds quote price and execution rejects material fresh-quote drift
 - [x] Wrong wallet — BNB session creation now rejects owner/address mismatches and non-user/non-agent, disconnected, non-BSC, or inactive contexts before provider invocation
 - [x] Insufficient balance — live portfolio snapshots now reconcile the configured quote-token cash balance; strategy risk and execution re-check spend against available cash plus the minimum reserve before provider invocation
@@ -124,7 +124,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] API/network failure — transient portfolio/market/quote transport failures are retryable before broadcast; uncertain execution transport failures fail closed and are never blindly retried
 - [x] Malformed LLM output — agent intent/response validators enforce declared fields, required intent fields, types/enums, size limits, and fail closed before malformed provider data reaches policy or execution
 - [x] Security-audit failure — execution now has a dedicated fail-closed audit guard that blocks unavailable/unsupported audit results and high-risk tokens before wallet execution
-- [ ] Recovery/idempotency
+- [x] Recovery/idempotency — persisted retryable failures resume through a fresh risk check; stale in-flight runs fail closed; duplicate execution keys are atomically admitted once
 
 ### Phase 7 — Local and Live Validation
 - [ ] Pull latest main locally

@@ -476,6 +476,47 @@ export interface StrategyExecutionStore {
 export class FileStrategyExecutionStore implements StrategyExecutionStore {
   constructor(private readonly filePath: string) {}
 
+  private lockPath(): string {
+    return this.filePath + ".lock";
+  }
+
+  private async withWriteLock<T>(operation: () => Promise<T>): Promise<T> {
+    const { mkdir, rm, stat } = await import("node:fs/promises");
+    const lockPath = this.lockPath();
+    const maxWaitMs = 2_000;
+    const staleAfterMs = 30_000;
+    const startedAt = Date.now();
+
+    while (true) {
+      try {
+        await mkdir(lockPath);
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        try {
+          const ageMs = Date.now() - (await stat(lockPath)).mtimeMs;
+          if (ageMs >= staleAfterMs) {
+            await rm(lockPath, { recursive: true, force: true });
+            continue;
+          }
+        } catch (statError) {
+          if ((statError as NodeJS.ErrnoException).code !== "ENOENT") throw statError;
+          continue;
+        }
+        if (Date.now() - startedAt >= maxWaitMs) {
+          throw new Error("Strategy execution store is busy; duplicate execution claim was not admitted.");
+        }
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+
+    try {
+      return await operation();
+    } finally {
+      await rm(lockPath, { recursive: true, force: true });
+    }
+  }
+
   private async read(): Promise<StrategyExecutionRecord[]> {
     const { readFile } = await import("node:fs/promises");
     try {
@@ -496,13 +537,15 @@ export class FileStrategyExecutionStore implements StrategyExecutionStore {
   }
 
   async claim(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord> {
-    const records = await this.read();
-    if (records.some(existing => existing.executionKey === record.executionKey)) {
-      throw new Error("Strategy execution key has already been claimed.");
-    }
-    records.push(record);
-    await this.write(records);
-    return record;
+    return this.withWriteLock(async () => {
+      const records = await this.read();
+      if (records.some(existing => existing.executionKey === record.executionKey)) {
+        throw new Error("Strategy execution key has already been claimed.");
+      }
+      records.push(record);
+      await this.write(records);
+      return record;
+    });
   }
 
   async get(executionKey: string): Promise<StrategyExecutionRecord | null> {
@@ -515,12 +558,14 @@ export class FileStrategyExecutionStore implements StrategyExecutionStore {
   }
 
   async update(record: StrategyExecutionRecord): Promise<StrategyExecutionRecord> {
-    const records = await this.read();
-    const index = records.findIndex(existing => existing.executionKey === record.executionKey);
-    if (index === -1) throw new Error("Strategy execution record does not exist.");
-    records[index] = record;
-    await this.write(records);
-    return record;
+    return this.withWriteLock(async () => {
+      const records = await this.read();
+      const index = records.findIndex(existing => existing.executionKey === record.executionKey);
+      if (index === -1) throw new Error("Strategy execution record does not exist.");
+      records[index] = record;
+      await this.write(records);
+      return record;
+    });
   }
 }
 

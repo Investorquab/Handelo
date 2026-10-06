@@ -693,3 +693,34 @@ test("execution timeout and rejection are explicitly non-retryable", () => {
   assert.equal(new StrategyExecutionTimeoutError(1000).retryable, false);
   assert.equal(new StrategyExecutionRejectedError("provider rejected").retryable, false);
 });
+
+
+test("file execution store admits only one concurrent claim for the same execution key", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-concurrent-claim-"));
+  try {
+    const file = join(dir, "runs.json");
+    const firstStore = new FileStrategyExecutionStore(file);
+    const secondStore = new FileStrategyExecutionStore(file);
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily"
+    }));
+    const record = createStrategyExecutionRecord(strategy, "2026-10-05T12:00:00.000Z");
+
+    const results = await Promise.allSettled([
+      firstStore.claim(record),
+      secondStore.claim(record)
+    ]);
+
+    assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+    assert.equal(results.filter(result => result.status === "rejected").length, 1);
+    const persisted = await firstStore.list();
+    assert.equal(persisted.length, 1);
+    assert.equal(persisted[0]?.executionKey, record.executionKey);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
