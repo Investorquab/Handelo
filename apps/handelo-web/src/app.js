@@ -471,6 +471,7 @@ function addReviewCard(data, amountUsd) {
   const policy = data.policy || {};
   const market = data.asset || {};
   const quote = data.quote;
+  const quoteQuality = data.quoteQuality || null;
   const security = data.securityAudit || null;
   const portfolioRisk = data.portfolioRisk || null;
   const securityBlocked = data.executionBlocked === true;
