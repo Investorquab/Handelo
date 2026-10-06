@@ -220,6 +220,8 @@ export interface StrategyExecutionRecord {
   attempt: number;
   executionKey: string;
   error?: string | null;
+  retryable?: boolean;
+  nextRetryAt?: string | null;
 }
 
 export function createExecutionKey(
@@ -249,7 +251,9 @@ export function createStrategyExecutionRecord(
     finishedAt: null,
     attempt: 1,
     executionKey: createExecutionKey(strategy.id, triggerAt),
-    error: null
+    error: null,
+    retryable: false,
+    nextRetryAt: null
   };
 }
 
@@ -294,8 +298,11 @@ export function retryStrategyExecution(
   record: StrategyExecutionRecord,
   now: string
 ): StrategyExecutionRecord {
-  if (record.status !== "FAILED") {
-    throw new Error("Only failed strategy runs can be retried.");
+  if (record.status !== "FAILED" || record.retryable !== true) {
+    throw new Error("Only retryable failed strategy runs can be retried.");
+  }
+  if (record.nextRetryAt && Date.parse(record.nextRetryAt) > Date.now()) {
+    throw new Error("Strategy retry is not due yet.");
   }
   return {
     ...record,
@@ -303,7 +310,9 @@ export function retryStrategyExecution(
     attempt: record.attempt + 1,
     startedAt: null,
     finishedAt: null,
-    error: null
+    error: null,
+    retryable: false,
+    nextRetryAt: null
   };
 }
 
@@ -319,7 +328,28 @@ export function failStrategyExecution(
     ...record,
     status: transitionStrategyExecution(record.status, "FAILED"),
     finishedAt: new Date(now).toISOString(),
-    error: error.trim() || "Strategy execution failed."
+    error: error.trim() || "Strategy execution failed.",
+    retryable: false,
+    nextRetryAt: null
+  };
+}
+
+export function markRetryableStrategyFailure(
+  record: StrategyExecutionRecord,
+  now: string,
+  error: string
+): StrategyExecutionRecord {
+  if (record.status !== "TRIGGERED" && record.status !== "RISK_CHECK" && record.status !== "EXECUTING") {
+    throw new Error("Only in-flight strategy runs can be marked retryable.");
+  }
+  if (!validTimestamp(now)) throw new Error("Retry timestamp is invalid.");
+  return {
+    ...record,
+    status: transitionStrategyExecution(record.status, "FAILED"),
+    finishedAt: new Date(now).toISOString(),
+    error: error.trim() || "Retryable strategy execution failure.",
+    retryable: true,
+    nextRetryAt: new Date(now).toISOString()
   };
 }
 
@@ -555,7 +585,7 @@ export async function runTriggeredStrategy(
       const retryable = error instanceof RetryableStrategyExecutionError;
 
       if (retryable && current.attempt < maxAttempts) {
-        current = failStrategyExecution(current, now(), message);
+        current = markRetryableStrategyFailure(current, now(), message);
         await dependencies.store.update(current);
         current = retryStrategyExecution(current, now());
         await dependencies.store.update(current);
