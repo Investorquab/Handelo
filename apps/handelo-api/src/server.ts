@@ -8,7 +8,7 @@ import { toMarketInsight } from "@handelo/market";
 import { BAW_COMMAND, BAW_SHELL, BinanceAgenticWalletAdapter } from "@handelo/execution";
 import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError } from "@handelo/market";
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
-import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
+import { consumeReviewToken, createReviewToken, quoteDriftWithinTolerance, readVerifiedReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
 import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
@@ -600,7 +600,8 @@ const server = createServer(async (req, res) => {
           fromToken,
           contract: asset.tokenContractAddress,
           slippage,
-          wallet: walletAddress
+          wallet: walletAddress,
+          reviewedQuotePrice: quoteQuality?.impliedPrice ?? null
         }) : null
       });
     } catch (error) {
@@ -712,13 +713,15 @@ const server = createServer(async (req, res) => {
       if (slippageResult.error) return json(res, 400, { error: slippageResult.error });
       const slippage = slippageResult.value;
 
+      const reviewedToken = readVerifiedReviewToken(reviewToken);
       if (!verifyReviewToken(reviewToken, {
         ticker: asset.underlyingTicker,
         amountUsd: amount,
         fromToken,
         contract: asset.tokenContractAddress,
         slippage,
-        wallet: walletAddress
+        wallet: walletAddress,
+        reviewedQuotePrice: reviewedToken?.reviewedQuotePrice ?? null
       })) {
         return json(res, 409, { error: "This transaction no longer matches the reviewed trade or the review has expired. Start a new review." });
       }
@@ -799,6 +802,23 @@ const server = createServer(async (req, res) => {
         binanceChainId: "56",
         slippage: typeof body.slippage === "string" ? body.slippage : undefined
       });
+
+      const reviewedQuotePrice = reviewedToken?.reviewedQuotePrice ?? null;
+      const freshQuoteQuality = createQuoteQuality({
+        fromCoinAmount: String(reviewedQuote.fromCoinAmount),
+        toCoinAmount: String(reviewedQuote.toCoinAmount),
+        onChainPrice: tokenPrice,
+        referencePrice,
+        requestedSlippagePercent: slippage === undefined ? null : Number(slippage)
+      });
+      if (!quoteDriftWithinTolerance(reviewedQuotePrice, freshQuoteQuality.impliedPrice, slippage)) {
+        return json(res, 409, {
+          error: "The fresh execution quote moved materially from the reviewed quote. Start a new review before executing.",
+          reviewedQuotePrice,
+          freshQuotePrice: freshQuoteQuality.impliedPrice,
+          quoteDriftTolerancePercent: slippage === undefined ? 1 : Number(slippage)
+        });
+      }
 
       if (!consumeReviewToken(reviewToken)) {
         return json(res, 409, { error: "This reviewed transaction has already been used. Start a new review before executing again." });

@@ -110,7 +110,7 @@ Last updated: 2026-10-06
 - [ ] Deliberate failure tests
 - [ ] Runtime restart
 - [ ] Duplicate trigger
-- [ ] Stale quote/data
+- [x] Stale quote/data — review token binds quote price and execution rejects material fresh-quote drift
 - [ ] Wrong wallet
 - [ ] Insufficient balance
 - [ ] Execution timeout/rejection

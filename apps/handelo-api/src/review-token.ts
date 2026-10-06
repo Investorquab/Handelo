@@ -7,10 +7,22 @@ export interface ReviewTokenInput {
   contract: string;
   slippage?: string;
   wallet: string;
+  reviewedQuotePrice?: number | null;
 }
 
 const REVIEW_TOKEN_TTL_MS = 5 * 60 * 1000;
 const consumedReviewTokens = new Map<string, number>();
+
+export interface VerifiedReviewToken {
+  ticker: string;
+  amountUsd: number;
+  fromToken: string;
+  contract: string;
+  slippage?: string;
+  wallet: string;
+  reviewedQuotePrice?: number | null;
+  exp: number;
+}
 
 function secret() {
   return process.env.HANDELO_REVIEW_TOKEN_SECRET ?? "handelo-local-review-secret";
@@ -22,27 +34,45 @@ export function createReviewToken(input: ReviewTokenInput, now = Date.now()) {
   return `${payload}.${signature}`;
 }
 
-export function verifyReviewToken(token: string, input: ReviewTokenInput, now = Date.now()) {
+export function readVerifiedReviewToken(token: string, now = Date.now()): VerifiedReviewToken | null {
   const [payload, signature] = token.split(".");
-  if (!payload || !signature) return false;
+  if (!payload || !signature) return null;
 
   const expected = createHmac("sha256", secret()).update(payload).digest("base64url");
   const actualBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);
-  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) return false;
+  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) return null;
 
   try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as ReviewTokenInput & { exp?: number };
-    return parsed.exp !== undefined && parsed.exp > now
-      && parsed.ticker === input.ticker
-      && parsed.amountUsd === input.amountUsd
-      && parsed.fromToken.toLowerCase() === input.fromToken.toLowerCase()
-      && parsed.contract.toLowerCase() === input.contract.toLowerCase()
-      && parsed.slippage === input.slippage
-      && parsed.wallet.toLowerCase() === input.wallet.toLowerCase();
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as VerifiedReviewToken;
+    return parsed.exp !== undefined && parsed.exp > now ? parsed : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function verifyReviewToken(token: string, input: ReviewTokenInput, now = Date.now()) {
+  const parsed = readVerifiedReviewToken(token, now);
+  if (!parsed) return false;
+  return parsed.ticker === input.ticker
+    && parsed.amountUsd === input.amountUsd
+    && parsed.fromToken.toLowerCase() === input.fromToken.toLowerCase()
+    && parsed.contract.toLowerCase() === input.contract.toLowerCase()
+    && parsed.slippage === input.slippage
+    && parsed.wallet.toLowerCase() === input.wallet.toLowerCase()
+    && parsed.reviewedQuotePrice === input.reviewedQuotePrice;
+}
+
+export function quoteDriftWithinTolerance(
+  reviewedQuotePrice: number | null | undefined,
+  freshQuotePrice: number | null | undefined,
+  slippage?: string,
+): boolean {
+  if (reviewedQuotePrice == null || freshQuotePrice == null) return false;
+  if (!Number.isFinite(reviewedQuotePrice) || reviewedQuotePrice <= 0 || !Number.isFinite(freshQuotePrice) || freshQuotePrice <= 0) return false;
+  const tolerance = slippage === undefined ? 1 : Number(slippage);
+  if (!Number.isFinite(tolerance) || tolerance < 0 || tolerance > 100) return false;
+  return Math.abs((freshQuotePrice - reviewedQuotePrice) / reviewedQuotePrice) * 100 <= tolerance;
 }
 
 export function consumeReviewToken(token: string, now = Date.now()) {
