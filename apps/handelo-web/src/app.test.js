@@ -232,3 +232,11 @@ test("workspace loads and activates persisted strategies through the API", () =>
   assert.match(source, /Review &amp; Activate/);
   assert.match(source, /No transaction or schedule was created automatically/);
 });
+
+
+test("workspace strategy context exposes persisted execution attribution", () => {
+  assert.match(source, /\/api\/strategies\/attribution\?wallet=/);
+  assert.match(source, /function renderWorkspaceStrategies\(strategies = \[\], attribution = \[\]\)/);
+  assert.match(source, /finishedCount.*executionCount/);
+  assert.match(source, /successfulPlannedUsd/);
+});

@@ -85,7 +85,7 @@ Last updated: 2026-10-06
 ### Phase 4 — Portfolio + Market Intelligence 2.0
 - [x] Real portfolio state reconciliation
 - [ ] Cost basis/P&L
-- [ ] Strategy attribution
+- [x] Strategy attribution from persisted execution outcomes
 - [x] Target allocation/rebalance intelligence
 - [x] Cross-representation intelligence
 - [x] Market-hours intelligence

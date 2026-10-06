@@ -55,19 +55,23 @@ function renderWorkspaceRisk(risk) {
   workspaceRiskCopy.textContent = blocked ? risk.reasons?.[0] || "Portfolio risk controls blocked this action." : "Portfolio risk checks passed for the reviewed action.";
 }
 
-function renderWorkspaceStrategies(strategies = []) {
+function renderWorkspaceStrategies(strategies = [], attribution = []) {
   if (!workspaceStrategies) return;
   if (!Array.isArray(strategies) || !strategies.length) {
     workspaceStrategies.innerHTML = '<div class="workspace-empty">No active strategies yet. Draft strategies can be reviewed and activated from Chat.</div>';
     return;
   }
-  workspaceStrategies.innerHTML = strategies.map(strategy =>
-    '<div class="workspace-position workspace-strategy"><span><strong>' +
-    escapeHtml(strategy.type || "STRATEGY") + '</strong><small>' +
-    escapeHtml(strategy.asset || "—") + ' · ' +
-    escapeHtml(strategy.frequency || strategy.condition || "Rule-based") +
-    '</small></span><b>ACTIVE</b></div>'
-  ).join("");
+  const byId = new Map((Array.isArray(attribution) ? attribution : []).map(item => [item.strategyId, item]));
+  workspaceStrategies.innerHTML = strategies.map(strategy => {
+    const stats = byId.get(strategy.id);
+    const runs = stats ? String(stats.finishedCount) + "/" + String(stats.executionCount) + " runs finished" : "No recorded runs";
+    const planned = stats?.successfulPlannedUsd == null ? "" : " · " + money(stats.successfulPlannedUsd) + " attributed";
+    return '<div class="workspace-position workspace-strategy"><span><strong>' +
+      escapeHtml(strategy.type || "STRATEGY") + '</strong><small>' +
+      escapeHtml(strategy.asset || "—") + ' · ' +
+      escapeHtml(strategy.frequency || strategy.condition || "Rule-based") +
+      '</small><small>' + escapeHtml(runs + planned) + '</small></span><b>ACTIVE</b></div>';
+  }).join("");
 }
 
 
@@ -176,7 +180,9 @@ async function refreshWorkspaceContext() {
     if (workspaceWalletAddress) workspaceWalletAddress.textContent = address.address.slice(0,6) + "…" + address.address.slice(-4);
     const strategiesResponse = await fetch(API_BASE + "/api/strategies?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const strategiesData = await strategiesResponse.json();
-    if (strategiesResponse.ok) renderWorkspaceStrategies(strategiesData.strategies || []);
+    const attributionResponse = await fetch(API_BASE + "/api/strategies/attribution?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
+    const attributionData = await attributionResponse.json();
+    if (strategiesResponse.ok) renderWorkspaceStrategies(strategiesData.strategies || [], attributionResponse.ok ? attributionData.attribution || [] : []);
     else renderWorkspaceStrategies([]);
     const portfolioResponse = await fetch(API_BASE + "/api/portfolio?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const portfolio = await portfolioResponse.json();

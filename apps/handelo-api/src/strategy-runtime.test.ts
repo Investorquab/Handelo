@@ -96,3 +96,34 @@ test("persisted execution history is isolated to the requested wallet", async ()
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test("strategy attribution joins persisted execution outcomes to the requested wallet", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "handelo-attribution-runtime-"));
+  const strategyPath = join(dir, "strategies.json");
+  const executionPath = join(dir, "runs.json");
+  process.env.HANDELO_STRATEGY_STORE_PATH = strategyPath;
+  try {
+    const wallet = "0x5555555555555555555555555555555555555555";
+    const strategy = { id: "attribution-test", type: "DCA" as const, asset: "NVDAB", amountUsd: 25, frequency: "Weekly", constraints: {}, nextExecutionAt: "2026-10-12T12:00:00.000Z", status: "DRAFT" as const };
+    await activateStoredStrategy(wallet, strategy);
+    const active = await getStoredStrategy(wallet, strategy.id);
+    assert.ok(active);
+    const store = new FileStrategyExecutionStore(executionPath);
+    const { createStrategyExecutionRecord } = await import("@handelo/strategy");
+    const record = createStrategyExecutionRecord(active!, "2026-10-05T12:00:00.000Z");
+    await store.claim(record);
+    await store.update(record.runId, { status: "FINISHED", finishedAt: "2026-10-05T12:00:03.000Z" });
+    const { listStrategyAttribution } = await import("./strategy-runtime.js");
+    const result = await listStrategyAttribution(wallet, store);
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.executionCount, 1);
+    assert.equal(result[0]?.finishedCount, 1);
+    assert.equal(result[0]?.successfulPlannedUsd, 25);
+    assert.equal(result[0]?.lastExecutionAt, "2026-10-05T12:00:03.000Z");
+    assert.equal(result[0]?.nextExecutionAt, "2026-10-12T12:00:00.000Z");
+  } finally {
+    delete process.env.HANDELO_STRATEGY_STORE_PATH;
+    await rm(dir, { recursive: true, force: true });
+  }
+});

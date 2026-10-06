@@ -10,7 +10,7 @@ import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./revi
 import { walletServiceError } from "./wallet-errors.js";
 import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
-import { listPersistedStrategyExecutions } from "./strategy-runtime.js";
+import { listPersistedStrategyExecutions, listStrategyAttribution } from "./strategy-runtime.js";
 import { buildGapRadar } from "./market-intelligence.js";
 
 const port = Number(process.env.PORT ?? "8787");
@@ -281,6 +281,16 @@ const server = createServer(async (req, res) => {
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/strategies/attribution")) {
+    const walletAddress = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() ?? "";
+    if (!isEvmAddress(walletAddress)) return json(res, 400, { error: "A valid wallet is required." });
+    try {
+      return json(res, 200, { wallet: walletAddress, attribution: await listStrategyAttribution(walletAddress, strategyExecutionStore) });
+    } catch (error) {
+      return json(res, 500, { error: errorMessage(error) });
     }
   }
 

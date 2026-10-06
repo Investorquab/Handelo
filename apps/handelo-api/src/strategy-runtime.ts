@@ -34,6 +34,48 @@ export async function listPersistedStrategyExecutions(
     .sort((a, b) => Date.parse(b.triggeredAt) - Date.parse(a.triggeredAt));
 }
 
+export interface StrategyAttribution {
+  strategyId: string;
+  type: StrategyDefinition["type"];
+  asset: string;
+  status: StrategyDefinition["status"];
+  frequency?: string;
+  amountUsd?: number;
+  executionCount: number;
+  finishedCount: number;
+  failedCount: number;
+  lastExecutionAt: string | null;
+  nextExecutionAt: string | null;
+  successfulPlannedUsd: number | null;
+}
+
+export async function listStrategyAttribution(
+  wallet: string,
+  store: StrategyExecutionStore
+): Promise<StrategyAttribution[]> {
+  const strategies = await listStrategies(wallet);
+  const records = await listPersistedStrategyExecutions(wallet, store);
+  return strategies.map(strategy => {
+    const strategyRecords = records.filter(record => record.strategyId === strategy.id);
+    const finishedCount = strategyRecords.filter(record => record.status === "FINISHED").length;
+    const failedCount = strategyRecords.filter(record => record.status === "FAILED").length;
+    return {
+      strategyId: strategy.id,
+      type: strategy.type,
+      asset: strategy.asset,
+      status: strategy.status,
+      frequency: strategy.frequency,
+      amountUsd: strategy.amountUsd,
+      executionCount: strategyRecords.length,
+      finishedCount,
+      failedCount,
+      lastExecutionAt: strategyRecords[0]?.finishedAt ?? strategyRecords[0]?.triggeredAt ?? null,
+      nextExecutionAt: strategy.nextExecutionAt ?? null,
+      successfulPlannedUsd: strategy.amountUsd === undefined ? null : strategy.amountUsd * finishedCount
+    };
+  });
+}
+
 export async function runPersistedStrategyScheduler(
   dependencies: PersistedStrategySchedulerDependencies
 ): Promise<StrategySchedulerResult> {
