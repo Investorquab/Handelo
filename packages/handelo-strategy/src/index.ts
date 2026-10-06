@@ -319,8 +319,8 @@ export function finishStrategyExecution(
   record: StrategyExecutionRecord,
   now: string
 ): StrategyExecutionRecord {
-  if (record.status !== "EXECUTING") {
-    throw new Error("Only executing strategy runs can finish.");
+  if (record.status !== "VERIFYING") {
+    throw new Error("Only verified strategy runs can finish.");
   }
   return {
     ...record,

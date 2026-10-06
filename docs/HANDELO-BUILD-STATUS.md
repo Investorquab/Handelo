@@ -78,7 +78,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Personal-wallet funding signing boundary — approved owner-to-agent BSC ERC-20 transfer requests are built and provider chain/account checks fail closed; no on-chain success is claimed
 
 ### Phase 3 — Autonomous Strategy Runtime
-- [ ] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN
+- [x] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN — execution runtime now persists an explicit VERIFYING gate and fails closed when post-execution verification rejects the provider outcome
 - [ ] Deterministic scheduler
 - [x] DCA execution
 - [x] Recurring execution

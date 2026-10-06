@@ -724,3 +724,53 @@ test("file execution store admits only one concurrent claim for the same executi
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test("execution lifecycle requires an explicit verification phase before finishing", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-verification-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({ type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily" }));
+    const result = await runTriggeredStrategy(strategy, { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" }, {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      riskCheck: async () => true,
+      execute: async () => undefined,
+      verify: async (_strategy, record) => {
+        assert.equal(record.status, "VERIFYING");
+        return true;
+      }
+    });
+    assert.equal(result.status, "FINISHED");
+    assert.equal(result.record.status, "FINISHED");
+    assert.equal((await store.list())[0]?.status, "FINISHED");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("execution fails closed when verification rejects the provider outcome", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-verification-fail-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({ type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily" }));
+    const result = await runTriggeredStrategy(strategy, { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" }, {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      riskCheck: async () => true,
+      execute: async () => undefined,
+      verify: async () => false
+    });
+    assert.equal(result.status, "FAILED");
+    assert.equal(result.record.status, "FAILED");
+    assert.match(result.record.error ?? "", /verification failed/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
