@@ -90,6 +90,8 @@ Last updated: 2026-10-06
 - [x] Cross-representation intelligence
 - [x] Market-hours intelligence
 - [ ] Liquidity/slippage/price-impact intelligence
+  - [x] Liquidity activity telemetry from 24h volume and market-cap turnover
+  - [ ] Quote-backed slippage and price-impact measurement
 - [ ] Route/execution-quality analysis
 - [ ] Event/earnings intelligence
 - [ ] First-stock onboarding

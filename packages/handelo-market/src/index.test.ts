@@ -263,6 +263,16 @@ test("market insight exposes reference gap and market status",()=>{
   assert.equal(insight.nextOpenAt,"2026-10-06T13:30:00.000Z");
   assert.equal(insight.nextCloseAt,"2026-10-06T20:00:00.000Z");
   assert.equal(insight.marketStatusReason,"The market is closed.");
+  assert.equal(insight.volume24h,1000);
+  assert.equal(insight.turnover24hPercent,0.1);
+  assert.equal(insight.liquidityActivity,"LOW");
+});
+
+test("market insight classifies liquidity activity from volume-to-market-cap turnover",()=>{
+  assert.equal(toMarketInsight(asset({volume24H:"200000",marketCap:"1000000"})).liquidityActivity,"HIGH");
+  assert.equal(toMarketInsight(asset({volume24H:"30000",marketCap:"1000000"})).liquidityActivity,"MEDIUM");
+  assert.equal(toMarketInsight(asset({volume24H:"100",marketCap:"1000000"})).liquidityActivity,"LOW");
+  assert.equal(toMarketInsight(asset({volume24H:"bad",marketCap:"1000000"})).liquidityActivity,"UNKNOWN");
 });
 
 test("gap radar ranks assets by absolute divergence",()=>{

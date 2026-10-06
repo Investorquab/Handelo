@@ -154,6 +154,18 @@ export class HandeloMarketClient {
 
 export function toMarketInsight(asset:RwaAsset):MarketInsight{
   const onChainPrice=Number(asset.tokenPrice);
+  const volume24h=Number(asset.volume24H);
+  const marketCap=Number(asset.marketCap);
+  const validVolume=Number.isFinite(volume24h)&&volume24h>=0;
+  const validMarketCap=Number.isFinite(marketCap)&&marketCap>0;
+  const turnover24hPercent=validVolume&&validMarketCap?(volume24h/marketCap)*100:null;
+  const liquidityActivity=turnover24hPercent===null
+    ?"UNKNOWN"
+    :turnover24hPercent>=10
+      ?"HIGH"
+      :turnover24hPercent>=2
+        ?"MEDIUM"
+        :"LOW";
   const referencePrice=Number(asset.referencePrice);
   const validOnChain=Number.isFinite(onChainPrice)&&onChainPrice>=0;
   const validReference=Number.isFinite(referencePrice)&&referencePrice>0;
@@ -178,9 +190,12 @@ export function toMarketInsight(asset:RwaAsset):MarketInsight{
       ?new Date(asset.statusInfo.nextCloseTime).toISOString()
       :null,
     marketStatusReason:asset.statusInfo?.reasonMsg || asset.statusInfo?.reasonCode || null,
-    liquidityContext:asset.volume24H
-      ?`24h volume ${asset.volume24H}`
-      :null
+    liquidityContext:validVolume
+      ?`24h volume ${volume24h.toLocaleString("en-US")} · ${liquidityActivity} activity`
+      :null,
+    volume24h:validVolume?volume24h:null,
+    turnover24hPercent,
+    liquidityActivity
   };
 }
 

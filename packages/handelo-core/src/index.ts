@@ -64,6 +64,9 @@ export interface MarketInsight {
   nextCloseAt?: string | null;
   marketStatusReason?: string | null;
   liquidityContext?: string | null;
+  volume24h?: number | null;
+  turnover24hPercent?: number | null;
+  liquidityActivity?: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 }
 
 export interface StrategyConstraints {
