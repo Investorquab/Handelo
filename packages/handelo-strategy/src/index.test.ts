@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution} from "./index.js";
+import {activateStrategy,canTransitionStrategyExecution,createDraftStrategy,executionGrantFromStrategy,transitionStrategyExecution,validateStrategyInput,evaluateStrategyTrigger,createStrategyExecutionRecord,runTriggeredStrategy,runStrategyScheduler,StrategyExecutionRegistry,FileStrategyExecutionStore,beginStrategyExecution,finishStrategyExecution,failStrategyExecution,nextExecutionAtForFrequency,scheduleNextStrategyExecution,recoverStaleStrategyExecutions} from "./index.js";
 
 test("requires frequency for DCA",()=>{
   assert.deepEqual(
@@ -219,6 +219,42 @@ test("file execution store persists claims and updates", async () => {
     assert.equal((await store.get(record.executionKey))?.status, "RISK_CHECK");
 
     await assert.rejects(() => store.claim(record), /already been claimed/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("stale in-flight executions are recovered after restart", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = await mkdtemp(join(tmpdir(), "handelo-recovery-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({
+      type: "DCA",
+      asset: "NVDAB",
+      amountUsd: 10,
+      frequency: "Daily"
+    }));
+    let record = createStrategyExecutionRecord(strategy, "2026-10-05T11:00:00.000Z");
+    record = { ...record, status: "RISK_CHECK", startedAt: null };
+    await store.claim(record);
+
+    const result = await recoverStaleStrategyExecutions(
+      store,
+      "2026-10-05T12:00:00.000Z",
+      1_000
+    );
+
+    assert.equal(result.recovered, 1);
+    assert.equal(result.records[0]?.status, "FAILED");
+    assert.equal(
+      result.records[0]?.error,
+      "Recovered after worker restart; the previous execution was left in-flight."
+    );
+    assert.equal((await store.get(record.executionKey))?.status, "FAILED");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
