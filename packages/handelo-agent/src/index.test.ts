@@ -97,10 +97,15 @@ test("agent decision trace records the operating stages without claiming executi
   };
   const market = { findAll: async () => [asset] } as unknown as HandeloMarketClient;
   const result = await new HandeloAgent({llmClient:llm,marketClient:market}).run("Buy $20 of NVDA.");
-  assert.deepEqual(result.trace.stages.map(stage => stage.stage), ["OBSERVED","REASONED","PROPOSED","POLICY_CHECKED"]);
+  assert.deepEqual(result.trace.stages.map(stage => stage.stage), ["OBSERVED","REASONED","PROPOSED","POLICY_CHECKED","EXECUTION_GATED"]);
   assert.equal(result.trace.stages.find(stage => stage.stage === "OBSERVED")?.status, "COMPLETE");
   assert.equal(result.trace.stages.find(stage => stage.stage === "POLICY_CHECKED")?.status, "COMPLETE");
   assert.equal(result.trace.executionReady, true);
+  assert.equal(result.trace.executionPlan.status, "AWAITING_HUMAN_APPROVAL");
+  assert.equal(result.trace.executionPlan.executionPath, "/api/review");
+  assert.equal(result.trace.executionPlan.requiresExplicitConfirmation, true);
+  assert.equal(result.trace.executionPlan.privateKeysExposedToModel, false);
+  assert.equal(result.trace.stages.find(stage => stage.stage === "EXECUTION_GATED")?.status, "COMPLETE");
   assert.equal(result.trace.stages.some(stage => stage.evidence.some(item => /executed|transaction happened/i.test(item))), false);
 });
 
@@ -120,4 +125,24 @@ test("agent decision trace blocks readiness when no live market is resolved", as
   assert.equal(result.trace.stages.find(stage => stage.stage === "OBSERVED")?.status, "BLOCKED");
   assert.equal(result.trace.stages.find(stage => stage.stage === "POLICY_CHECKED")?.status, "BLOCKED");
   assert.equal(result.trace.executionReady, false);
+});
+
+test("agent execution gate blocks when policy or market prerequisites are unavailable", async () => {
+  const llm: LlmClient = {
+    provider: "groq",
+    model: "test",
+    async generateJson<T>(request: {schemaName:string;system:string;user:string;schema:Record<string,unknown>}): Promise<T> {
+      if (request.schemaName === "handelo_intent") {
+        return {action:"buy",ticker:"UNKNOWN",amountUsd:20,horizon:null,riskTolerance:"medium",strategyType:null,frequency:null,condition:null} as T;
+      }
+      return {answer:"Execution is blocked because no supported live market was resolved."} as T;
+    }
+  };
+  const market = { findAll: async () => { throw new Error("not found"); } } as unknown as HandeloMarketClient;
+  const result = await new HandeloAgent({llmClient:llm,marketClient:market}).run("Buy $20 of UNKNOWN.");
+  assert.equal(result.trace.executionPlan.status, "BLOCKED");
+  assert.equal(result.trace.executionPlan.executionPath, null);
+  assert.equal(result.trace.executionPlan.requiresExplicitConfirmation, true);
+  assert.equal(result.trace.executionPlan.privateKeysExposedToModel, false);
+  assert.equal(result.trace.stages.find(stage => stage.stage === "EXECUTION_GATED")?.status, "BLOCKED");
 });

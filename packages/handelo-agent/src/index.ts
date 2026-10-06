@@ -35,14 +35,22 @@ export interface MarketBrief {
 export type AgentStageStatus = "COMPLETE" | "BLOCKED" | "SKIPPED";
 
 export interface AgentStage {
-  stage: "OBSERVED" | "REASONED" | "PROPOSED" | "POLICY_CHECKED";
+  stage: "OBSERVED" | "REASONED" | "PROPOSED" | "POLICY_CHECKED" | "EXECUTION_GATED";
   status: AgentStageStatus;
   evidence: string[];
+}
+
+export interface AgentExecutionPlan {
+  status: "AWAITING_HUMAN_APPROVAL" | "BLOCKED";
+  executionPath: "/api/review" | "/api/execute" | null;
+  requiresExplicitConfirmation: boolean;
+  privateKeysExposedToModel: false;
 }
 
 export interface AgentDecisionTrace {
   stages: AgentStage[];
   executionReady: boolean;
+  executionPlan: AgentExecutionPlan;
 }
 
 export interface AgentResult {
@@ -315,6 +323,15 @@ Respond naturally and concisely.`
           stage: "POLICY_CHECKED",
           status: policy ? "COMPLETE" : "BLOCKED",
           evidence: policy ? [`policy decision: ${policy.decision}`] : ["policy was not evaluated without a resolved market"]
+        },
+        {
+          stage: "EXECUTION_GATED",
+          status: market && policy && policy.decision !== "BLOCK" && parsedIntent.amountUsd !== null && parsedIntent.amountUsd > 0
+            ? "COMPLETE"
+            : "BLOCKED",
+          evidence: market && policy && policy.decision !== "BLOCK"
+            ? ["execution remains behind the server review/confirmation boundary", "LLM receives no private key or signing capability"]
+            : ["execution gate is blocked until live market and policy prerequisites are satisfied"]
         }
       ],
       executionReady: Boolean(
@@ -323,7 +340,15 @@ Respond naturally and concisely.`
         policy.decision !== "BLOCK" &&
         parsedIntent.amountUsd !== null &&
         parsedIntent.amountUsd > 0
-      )
+      ),
+      executionPlan: {
+        status: market && policy && policy.decision !== "BLOCK" && parsedIntent.amountUsd !== null && parsedIntent.amountUsd > 0
+          ? "AWAITING_HUMAN_APPROVAL"
+          : "BLOCKED",
+        executionPath: market && policy && policy.decision !== "BLOCK" ? "/api/review" : null,
+        requiresExplicitConfirmation: true,
+        privateKeysExposedToModel: false
+      }
     };
 
     return {

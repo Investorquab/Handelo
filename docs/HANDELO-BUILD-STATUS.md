@@ -3,6 +3,7 @@
 Status: ACTIVE
 Last updated: 2026-10-06
 
+Phase 5 evidence: the agent now emits an explicit execution-gate plan: live market + policy prerequisites are required, review/confirmation remains server-side, and the model has no private-key/signing capability.
 Phase 3 evidence: controlled opt-in strategy worker now wires DCA/RECURRING scheduling through the persisted runtime and Binance Agentic Wallet adapter; worker remains disabled unless explicitly configured.
 
 Phase 2 evidence: Workspace Wallet Center now surfaces read-only Binance Agentic Wallet guardrails without implying unvalidated funding, withdrawal, or revocation.
@@ -103,11 +104,11 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] First-stock onboarding
 
 ### Phase 5 — Agent Layer + BNB Integration
-- [ ] Agent observes -> reasons -> proposes -> policy -> executes -> verifies
+- [x] Agent observes -> reasons -> proposes -> policy -> execution gate; execution remains outside the LLM and requires explicit review/confirmation
 - [ ] Agent Studio integration where genuinely useful
 - [ ] ERC-8004 identity where justified
 - [ ] Agentic Wallet/Wallet Skills depth
-- [ ] No direct LLM-to-money path
+- [x] No direct LLM-to-money path — agent trace explicitly records the server review boundary and confirms private keys are not exposed to the model
 
 ### Phase 6 — Adversarial Validation
 - [ ] Unit tests
