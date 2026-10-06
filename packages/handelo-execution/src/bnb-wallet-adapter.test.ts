@@ -14,20 +14,34 @@ const complete: WalletProviderCapabilities = {
   transferOut: true
 };
 
+function context() {
+  return {
+    mode: "USER" as const,
+    role: "AGENT" as const,
+    address: "0x2222222222222222222222222222222222222222",
+    network: "BSC" as const,
+    connected: true,
+    balanceUsd: 100,
+    ownerWallet: "0x1111111111111111111111111111111111111111",
+    policy: { permissions: ["DCA"], revocable: true },
+    status: "ACTIVE" as const
+  };
+}
+
+function validGrant() {
+  return {
+    ownerWallet: "0x1111111111111111111111111111111111111111",
+    agentWallet: "0x2222222222222222222222222222222222222222",
+    network: "BSC" as const,
+    permissions: ["DCA"],
+    revocable: true
+  };
+}
+
 test("BNB adapter reports provider capabilities without exposing signing material", async () => {
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
-    getContext: async () => ({
-      mode: "USER",
-      role: "AGENT",
-      address: "0x2222222222222222222222222222222222222222",
-      network: "BSC",
-      connected: true,
-      balanceUsd: 100,
-      ownerWallet: "0x1111111111111111111111111111111111111111",
-      policy: { permissions: ["DCA"], revocable: true },
-      status: "ACTIVE"
-    }),
+    getContext: async () => context(),
     createSession: async () => ({ sessionId: "session-test" }),
     revokeSession: async () => undefined
   });
@@ -41,46 +55,27 @@ test("BNB adapter reports provider capabilities without exposing signing materia
 test("BNB adapter refuses session creation before the capability gate passes", async () => {
   const adapter = new BnbWalletAdapter({
     capabilities: async () => ({ ...complete, spendLimits: false }),
-    getContext: async () => {
-      throw new Error("not reached");
-    },
+    getContext: async () => context(),
     createSession: async () => ({ sessionId: "should-not-run" })
   });
 
-  await assert.rejects(
-    adapter.createSession({
-      ownerWallet: "0x1111111111111111111111111111111111111111",
-      agentWallet: "0x2222222222222222222222222222222222222222",
-      network: "BSC",
-      permissions: ["DCA"],
-      revocable: true
-    }),
-    /capability gate/
-  );
+  await assert.rejects(adapter.createSession(validGrant()), /capability gate/);
 });
 
 test("BNB adapter requires an explicit runtime revocation implementation", async () => {
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
-    getContext: async () => {
-      throw new Error("not reached");
-    }
+    getContext: async () => context()
   });
 
-  await assert.rejects(
-    adapter.revokeSession("session-1"),
-    /session revocation/
-  );
+  await assert.rejects(adapter.revokeSession("session-1"), /session revocation/);
 });
-
 
 test("BNB adapter rejects an invalid wallet grant before invoking the provider", async () => {
   let providerCalls = 0;
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
-    getContext: async () => {
-      throw new Error("not reached");
-    },
+    getContext: async () => context(),
     createSession: async () => {
       providerCalls += 1;
       return { sessionId: "should-not-run" };
@@ -89,11 +84,8 @@ test("BNB adapter rejects an invalid wallet grant before invoking the provider",
 
   await assert.rejects(
     adapter.createSession({
-      ownerWallet: "not-an-address",
-      agentWallet: "0x2222222222222222222222222222222222222222",
-      network: "BSC",
-      permissions: ["DCA"],
-      revocable: true
+      ...validGrant(),
+      ownerWallet: "not-an-address"
     }),
     /Owner wallet must be a valid EVM wallet address/
   );
@@ -104,9 +96,7 @@ test("BNB adapter rejects non-revocable grants before provider invocation", asyn
   let providerCalls = 0;
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
-    getContext: async () => {
-      throw new Error("not reached");
-    },
+    getContext: async () => context(),
     createSession: async () => {
       providerCalls += 1;
       return { sessionId: "should-not-run" };
@@ -115,13 +105,31 @@ test("BNB adapter rejects non-revocable grants before provider invocation", asyn
 
   await assert.rejects(
     adapter.createSession({
-      ownerWallet: "0x1111111111111111111111111111111111111111",
-      agentWallet: "0x2222222222222222222222222222222222222222",
-      network: "BSC",
-      permissions: ["DCA"],
+      ...validGrant(),
       revocable: false
     }),
     /must be revocable/
+  );
+  assert.equal(providerCalls, 0);
+});
+
+test("BNB adapter rejects a grant for the wrong wallet context", async () => {
+  let providerCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => ({
+      ...context(),
+      ownerWallet: "0x3333333333333333333333333333333333333333"
+    }),
+    createSession: async () => {
+      providerCalls += 1;
+      return { sessionId: "should-not-run" };
+    }
+  });
+
+  await assert.rejects(
+    adapter.createSession(validGrant()),
+    /does not match the connected BNB wallet context/
   );
   assert.equal(providerCalls, 0);
 });
@@ -130,9 +138,7 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   let received: any = null;
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
-    getContext: async () => {
-      throw new Error("not reached");
-    },
+    getContext: async () => context(),
     createSession: async grant => {
       received = grant;
       return { sessionId: "session-valid" };
@@ -140,12 +146,9 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   });
 
   const result = await adapter.createSession({
+    ...validGrant(),
     ownerWallet: " 0x1111111111111111111111111111111111111111 ",
-    agentWallet: "0x2222222222222222222222222222222222222222",
-    network: "BSC",
-    permissions: ["DCA"],
-    allowedAssets: ["NVDAB"],
-    revocable: true
+    allowedAssets: ["NVDAB"]
   });
 
   assert.equal(result.sessionId, "session-valid");
