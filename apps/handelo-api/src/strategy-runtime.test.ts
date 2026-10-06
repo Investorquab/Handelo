@@ -113,7 +113,9 @@ test("strategy attribution joins persisted execution outcomes to the requested w
     const { createStrategyExecutionRecord } = await import("@handelo/strategy");
     const record = createStrategyExecutionRecord(active!, "2026-10-05T12:00:00.000Z");
     await store.claim(record);
-    await store.update(record.runId, { status: "FINISHED", finishedAt: "2026-10-05T12:00:03.000Z" });
+    record.status = "FINISHED";
+    record.finishedAt = "2026-10-05T12:00:03.000Z";
+    await store.update(record);
     const { listStrategyAttribution } = await import("./strategy-runtime.js");
     const result = await listStrategyAttribution(wallet, store);
     assert.equal(result.length, 1);
