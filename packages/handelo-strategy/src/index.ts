@@ -603,11 +603,59 @@ export async function runTriggeredStrategy(
   }
 }
 
+export async function retryPersistedStrategyExecution(
+  strategy: StrategyDefinition,
+  record: StrategyExecutionRecord,
+  dependencies: StrategyRuntimeDependencies
+): Promise<StrategyRuntimeResult> {
+  const now = dependencies.now ?? (() => new Date().toISOString());
+  const maxAttempts = dependencies.maxAttempts ?? 1;
+  if (!record.retryable || record.status !== "FAILED") {
+    return { status: "SKIPPED", reason: "Execution is not retryable." };
+  }
+  if (record.nextRetryAt && Date.parse(record.nextRetryAt) > Date.parse(now())) {
+    return { status: "SKIPPED", reason: "Retry is not due yet." };
+  }
+
+  let current = retryStrategyExecution(record, now());
+
+  while (true) {
+    try {
+      await dependencies.store.update(current);
+      const riskPassed = await dependencies.riskCheck(strategy, current);
+      if (!riskPassed) {
+        current = failStrategyExecution(current, now(), "Risk governor blocked execution.");
+        await dependencies.store.update(current);
+        return { status: "FAILED", record: current };
+      }
+
+      current = beginStrategyExecution(current, now());
+      await dependencies.store.update(current);
+      await dependencies.execute(strategy, current);
+      current = finishStrategyExecution(current, now());
+      await dependencies.store.update(current);
+      return { status: "FINISHED", record: current };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof RetryableStrategyExecutionError && current.attempt < maxAttempts) {
+        current = markRetryableStrategyFailure(current, now(), message);
+        await dependencies.store.update(current);
+        current = retryStrategyExecution(current, now());
+        continue;
+      }
+      current = failStrategyExecution(current, now(), message);
+      await dependencies.store.update(current);
+      return { status: "FAILED", record: current };
+    }
+  }
+}
+
 export interface StrategyRuntimeSchedulerDependencies extends StrategyRuntimeDependencies {
   listActiveStrategies: () => Promise<StrategyDefinition[]>;
   marketOpen?: boolean;
   conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
   updateStrategy?: (strategy: StrategyDefinition) => Promise<void>;
+  maxAttempts?: number;
 }
 
 export interface StrategySchedulerResult {
@@ -631,6 +679,25 @@ export async function runStrategyScheduler(
     const conditionMet = strategy.type === "CONDITIONAL"
       ? await (dependencies.conditionMet?.(strategy) ?? Promise.resolve(false))
       : undefined;
+
+    const retryable = (await dependencies.store.list())
+      .filter(record =>
+        record.strategyId === strategy.id &&
+        record.status === "FAILED" &&
+        record.retryable === true &&
+        (!record.nextRetryAt || Date.parse(record.nextRetryAt) <= Date.parse(now())) &&
+        record.attempt < (dependencies.maxAttempts ?? 1)
+      )
+      .sort((a, b) => Date.parse(b.triggeredAt) - Date.parse(a.triggeredAt))[0];
+
+    if (retryable) {
+      const result = await retryPersistedStrategyExecution(strategy, retryable, dependencies);
+      if (result.status === "FINISHED" && dependencies.updateStrategy) {
+        await dependencies.updateStrategy(scheduleNextStrategyExecution(strategy, result.record.finishedAt ?? result.record.triggeredAt));
+      }
+      results.push(result);
+      continue;
+    }
 
     const trigger = evaluateStrategyTrigger(strategy, {
       now: now(),
