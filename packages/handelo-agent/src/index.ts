@@ -81,7 +81,7 @@ const INTENT_SCHEMA = {
     basketAssets: { type: "array", items: { type: "string" }, maxItems: 8 },
     basketName: { type: ["string", "null"] }
   },
-  required: ["action", "ticker", "amountUsd", "horizon", "riskTolerance"],
+  required: ["action", "ticker", "amountUsd", "horizon", "riskTolerance", "strategyType", "frequency", "condition", "basketAssets", "basketName"],
   additionalProperties: false
 };
 
