@@ -134,7 +134,8 @@ test("strategy worker shares an in-flight tick instead of overlapping scheduler 
       update: async (record: any) => {
         executionRecords.set(record.executionKey, record);
         return record;
-      }
+      },
+      list: async () => [...executionRecords.values()]
     };
 
     const worker = createPersistedStrategyWorker({
