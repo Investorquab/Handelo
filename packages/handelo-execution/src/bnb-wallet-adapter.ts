@@ -35,6 +35,12 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
       throw new Error("BNB wallet provider has not passed the autonomous execution capability gate.");
     }
     const validatedGrant = validateWalletSessionGrant(grant);
+    const context = await this.getContext();
+    const ownerMatches = context.ownerWallet?.trim().toLowerCase() === validatedGrant.ownerWallet.toLowerCase();
+    const agentMatches = context.address.trim().toLowerCase() === validatedGrant.agentWallet.toLowerCase();
+    if (!ownerMatches || !agentMatches) {
+      throw new Error("Wallet session grant does not match the connected BNB wallet context.");
+    }
     return this.runtime.createSession(validatedGrant);
   }
 
