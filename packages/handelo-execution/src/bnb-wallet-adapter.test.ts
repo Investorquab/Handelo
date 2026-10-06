@@ -136,12 +136,12 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
 });
 
 test("BNB adapter forwards the validated normalized grant to the provider", async () => {
-  let received: WalletSessionGrant | null = null;
+  const received: { grant?: WalletSessionGrant } = {};
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
     getContext: async () => context(),
     createSession: async grant => {
-      received = grant;
+      received.grant = grant;
       return { sessionId: "session-valid" };
     }
   });
@@ -153,7 +153,7 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   });
 
   assert.equal(result.sessionId, "session-valid");
-  const receivedGrant = received;
+  const receivedGrant = received.grant;
   assert.ok(receivedGrant);
   assert.equal(receivedGrant.ownerWallet, "0x1111111111111111111111111111111111111111");
   assert.deepEqual(receivedGrant.allowedAssets, ["NVDAB"]);
