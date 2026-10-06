@@ -74,7 +74,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Withdrawal authorization + provider invocation boundary — verified owner, active BSC agent context and explicit approval; live wallet flow remains pending
 - [x] Revocation — provider revocation is explicitly capability-gated and tested before the provider is invoked
 - [x] Wallet activity/audit state
-- [ ] Demo Mode environment and disclosure
+- [x] Demo Mode environment and disclosure — Demo actions are explicitly labelled simulated; live wallet execution rejects DEMO contexts before provider execution
 
 ### Phase 3 — Autonomous Strategy Runtime
 - [ ] DRAFT -> REVIEW -> ACTIVE -> WAITING -> TRIGGERED -> RISK CHECK -> EXECUTING -> VERIFYING -> FINISHED/FAILED -> MONITORING -> NEXT RUN
