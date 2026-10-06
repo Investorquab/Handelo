@@ -56,6 +56,7 @@ export interface AgentResult {
   answer: string;
   provider: string;
   model: string;
+  trace: AgentDecisionTrace;
 }
 
 const INTENT_SCHEMA = {
