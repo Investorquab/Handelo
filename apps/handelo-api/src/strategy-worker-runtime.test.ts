@@ -19,9 +19,9 @@ test("autonomous worker accepts DCA and recurring strategies", () => {
   assert.equal(isSupportedAutonomousStrategy({ ...base, type: "RECURRING" }), true);
 });
 
-test("autonomous worker does not silently execute unsupported strategy types", () => {
-  assert.equal(isSupportedAutonomousStrategy({ ...base, type: "CONDITIONAL" }), false);
-  assert.equal(isSupportedAutonomousStrategy({ ...base, type: "REBALANCE" }), false);
+test("autonomous worker supports only deterministic strategy types", () => {
+  assert.equal(isSupportedAutonomousStrategy({ ...base, type: "CONDITIONAL", condition: "price below reference" }), true);
+  assert.equal(isSupportedAutonomousStrategy({ ...base, type: "REBALANCE", targetAllocation: { NVDAB: 100 } }), true);
 });
 
 test("conditional worker evaluates live reference-price conditions instead of accepting arbitrary LLM booleans", async () => {
@@ -52,6 +52,6 @@ test("conditional worker evaluates live reference-price conditions instead of ac
   assert.equal(await dependencies.conditionMet({ ...strategy, condition: "price above reference" }), false);
 });
 
-test("autonomous strategy support includes rebalance only after deterministic preview/risk gating", () => {
+test("autonomous rebalance support is explicit", () => {
   assert.equal(isSupportedAutonomousStrategy({ ...base, type: "REBALANCE", targetAllocation: { NVDAB: 100 } }), true);
 });
