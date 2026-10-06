@@ -137,7 +137,7 @@ test("times out when a funding receipt never appears", async () => {
     () => waitForPersonalWalletFundingReceipt({
       request: async () => null
     }, "0xabc123", { maxAttempts: 2, pollIntervalMs: 0, sleep: async () => {} }),
-    /not be confirmed within the polling window/
+    /was not confirmed within the polling window/
   );
 });
 
