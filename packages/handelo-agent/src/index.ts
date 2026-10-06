@@ -32,6 +32,19 @@ export interface MarketBrief {
   contract: string;
 }
 
+export type AgentStageStatus = "COMPLETE" | "BLOCKED" | "SKIPPED";
+
+export interface AgentStage {
+  stage: "OBSERVED" | "REASONED" | "PROPOSED" | "POLICY_CHECKED";
+  status: AgentStageStatus;
+  evidence: string[];
+}
+
+export interface AgentDecisionTrace {
+  stages: AgentStage[];
+  executionReady: boolean;
+}
+
 export interface AgentResult {
   intent: UserIntent;
   market: MarketBrief | null;

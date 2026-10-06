@@ -82,3 +82,42 @@ test("agent response validation rejects malformed provider output", () => {
 
 
 test("explicit DCA intent becomes a deterministic draft strategy",async()=>{const llm:LlmClient={provider:"groq",model:"test",async generateJson<T>(request:any):Promise<T>{if(request.schemaName==="handelo_intent")return {action:"invest",ticker:"NVDA",amountUsd:10,horizon:null,riskTolerance:"unknown",strategyType:"DCA",frequency:"Every Monday",condition:null} as T;return {answer:"Draft prepared."} as T;}};const market={findAll:async()=>[asset]} as unknown as HandeloMarketClient;const result=await new HandeloAgent({llmClient:llm,marketClient:market}).run("Buy $10 of NVDA every Monday.");assert.equal(result.strategy?.type,"DCA");assert.equal(result.strategy?.status,"DRAFT");assert.equal(result.strategy?.frequency,"Every Monday");assert.equal(result.strategy?.amountUsd,10);});
+
+
+test("agent decision trace records the operating stages without claiming execution", async () => {
+  const llm: LlmClient = {
+    provider: "groq",
+    model: "test",
+    async generateJson<T>(request: {schemaName:string;system:string;user:string;schema:Record<string,unknown>}): Promise<T> {
+      if (request.schemaName === "handelo_intent") {
+        return {action:"buy",ticker:"NVDA",amountUsd:20,horizon:null,riskTolerance:"medium",strategyType:null,frequency:null,condition:null} as T;
+      }
+      return {answer:"I found a live market context and checked the policy before presenting the action."} as T;
+    }
+  };
+  const market = { findAll: async () => [asset] } as unknown as HandeloMarketClient;
+  const result = await new HandeloAgent({llmClient:llm,marketClient:market}).run("Buy $20 of NVDA.");
+  assert.deepEqual(result.trace.stages.map(stage => stage.stage), ["OBSERVED","REASONED","PROPOSED","POLICY_CHECKED"]);
+  assert.equal(result.trace.stages.find(stage => stage.stage === "OBSERVED")?.status, "COMPLETE");
+  assert.equal(result.trace.stages.find(stage => stage.stage === "POLICY_CHECKED")?.status, "COMPLETE");
+  assert.equal(result.trace.executionReady, true);
+  assert.equal(result.trace.stages.some(stage => stage.evidence.some(item => /executed|transaction happened/i.test(item))), false);
+});
+
+test("agent decision trace blocks readiness when no live market is resolved", async () => {
+  const llm: LlmClient = {
+    provider: "groq",
+    model: "test",
+    async generateJson<T>(request: {schemaName:string;system:string;user:string;schema:Record<string,unknown>}): Promise<T> {
+      if (request.schemaName === "handelo_intent") {
+        return {action:"buy",ticker:"UNKNOWN",amountUsd:20,horizon:null,riskTolerance:"medium",strategyType:null,frequency:null,condition:null} as T;
+      }
+      return {answer:"I could not resolve a supported live market."} as T;
+    }
+  };
+  const market = { findAll: async () => { throw new Error("not found"); } } as unknown as HandeloMarketClient;
+  const result = await new HandeloAgent({llmClient:llm,marketClient:market}).run("Buy $20 of UNKNOWN.");
+  assert.equal(result.trace.stages.find(stage => stage.stage === "OBSERVED")?.status, "BLOCKED");
+  assert.equal(result.trace.stages.find(stage => stage.stage === "POLICY_CHECKED")?.status, "BLOCKED");
+  assert.equal(result.trace.executionReady, false);
+});
