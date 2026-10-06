@@ -304,11 +304,12 @@ export function evaluatePortfolioStrategyRisk(
     : 100;
   const balance = portfolio.balanceUsd;
   const minimumReservePercent = constraints.minimumReservePercent ?? 0;
-  const minimumReserveUsd = Number.isFinite(Number(balance)) && Number(balance) >= 0
-    ? Number(balance) * (minimumReservePercent / 100)
+  const numericBalance = balance === null ? null : Number(balance);
+  const minimumReserveUsd = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
+    ? numericBalance * (minimumReservePercent / 100)
     : null;
-  const availableAfterSpend = Number.isFinite(Number(balance)) && Number(balance) >= 0
-    ? Number(balance) - amountUsd
+  const availableAfterSpend = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
+    ? numericBalance - amountUsd
     : null;
   const cashSufficient = availableAfterSpend === null ||
     (availableAfterSpend >= 0 && availableAfterSpend + 1e-9 >= (minimumReserveUsd ?? 0));
