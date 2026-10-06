@@ -128,6 +128,7 @@ export type StrategyExecutionStatus =
   | "TRIGGERED"
   | "RISK_CHECK"
   | "EXECUTING"
+  | "VERIFYING"
   | "FINISHED"
   | "FAILED"
   | "PAUSED"
@@ -137,7 +138,8 @@ const EXECUTION_TRANSITIONS: Record<StrategyExecutionStatus, readonly StrategyEx
   ACTIVE: ["TRIGGERED", "PAUSED", "CANCELLED"],
   TRIGGERED: ["RISK_CHECK", "FAILED"],
   RISK_CHECK: ["EXECUTING", "FAILED"],
-  EXECUTING: ["FINISHED", "FAILED"],
+  EXECUTING: ["VERIFYING", "FAILED"],
+  VERIFYING: ["FINISHED", "FAILED"],
   FINISHED: ["ACTIVE", "PAUSED", "CANCELLED"],
   FAILED: ["ACTIVE", "RISK_CHECK", "PAUSED", "CANCELLED"],
   PAUSED: ["ACTIVE", "CANCELLED"],
@@ -409,7 +411,7 @@ export function failStrategyExecution(
   now: string,
   error: string
 ): StrategyExecutionRecord {
-  if (record.status !== "TRIGGERED" && record.status !== "RISK_CHECK" && record.status !== "EXECUTING") {
+  if (record.status !== "TRIGGERED" && record.status !== "RISK_CHECK" && record.status !== "EXECUTING" && record.status !== "VERIFYING") {
     throw new Error("Only in-flight strategy runs can fail.");
   }
   return {
@@ -629,7 +631,7 @@ export async function recoverStaleStrategyExecutions(
   const recovered: StrategyExecutionRecord[] = [];
 
   for (const record of await store.list()) {
-    if (record.status !== "RISK_CHECK" && record.status !== "EXECUTING") continue;
+    if (record.status !== "RISK_CHECK" && record.status !== "EXECUTING" && record.status !== "VERIFYING") continue;
     const anchor = record.startedAt ?? record.triggeredAt;
     const ageMs = nowMs - Date.parse(anchor);
     if (!Number.isFinite(ageMs) || ageMs < staleAfterMs) continue;
@@ -651,6 +653,7 @@ export interface StrategyRuntimeDependencies {
   now?: () => string;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  verify?: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   maxAttempts?: number;
   executionTimeoutMs?: number;
 }
@@ -717,6 +720,17 @@ export async function runTriggeredStrategy(
         () => dependencies.execute(strategy, current),
         dependencies.executionTimeoutMs
       );
+
+      current = {
+        ...current,
+        status: transitionStrategyExecution(current.status, "VERIFYING")
+      };
+      await dependencies.store.update(current);
+
+      const verified = await (dependencies.verify?.(strategy, current) ?? Promise.resolve(true));
+      if (!verified) {
+        throw new StrategyExecutionRejectedError("Strategy execution verification failed.");
+      }
 
       current = finishStrategyExecution(current, now());
       await dependencies.store.update(current);
@@ -786,6 +800,15 @@ export async function retryPersistedStrategyExecution(
         () => dependencies.execute(strategy, current),
         dependencies.executionTimeoutMs
       );
+      current = {
+        ...current,
+        status: transitionStrategyExecution(current.status, "VERIFYING")
+      };
+      await dependencies.store.update(current);
+      const verified = await (dependencies.verify?.(strategy, current) ?? Promise.resolve(true));
+      if (!verified) {
+        throw new StrategyExecutionRejectedError("Strategy execution verification failed.");
+      }
       current = finishStrategyExecution(current, now());
       await dependencies.store.update(current);
       return { status: "FINISHED", record: current };
