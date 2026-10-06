@@ -584,12 +584,15 @@ export async function runTriggeredStrategy(
       const message = error instanceof Error ? error.message : String(error);
       const retryable = error instanceof RetryableStrategyExecutionError;
 
-      if (retryable && current.attempt < maxAttempts) {
+      if (retryable) {
         current = markRetryableStrategyFailure(current, now(), message);
         await dependencies.store.update(current);
-        current = retryStrategyExecution(current, now());
-        await dependencies.store.update(current);
-        continue;
+        if (current.attempt < maxAttempts) {
+          current = retryStrategyExecution(current, now());
+          await dependencies.store.update(current);
+          continue;
+        }
+        return { status: "FAILED", record: current };
       }
 
       const stored = await dependencies.store.get(record.executionKey);
