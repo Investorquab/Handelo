@@ -8,7 +8,9 @@ import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, Ma
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
+import { FileStrategyExecutionStore } from "@handelo/strategy";
 import { activateStoredStrategy, cancelStoredStrategy, getStoredStrategy, listActiveStrategies, listStrategies, pauseStoredStrategy, resumeStoredStrategy, updateStoredStrategy } from "./strategy-store.js";
+import { listPersistedStrategyExecutions } from "./strategy-runtime.js";
 
 const port = Number(process.env.PORT ?? "8787");
 const execFileAsync = promisify(execFile);
@@ -24,6 +26,9 @@ function getMarket(): ReturnType<typeof marketClientFromEnv> {
   return market;
 }
 const wallet = new BinanceAgenticWalletAdapter();
+const strategyExecutionStore = new FileStrategyExecutionStore(
+  process.env.HANDELO_STRATEGY_EXECUTION_STORE_PATH ?? "./data/strategy-executions.json"
+);
 const DEFAULT_BSC_QUOTE_TOKEN = "0x55d398326f99059fF775485246999027B3197955";
 const CORS_ORIGIN = process.env.HANDELO_CORS_ORIGIN?.trim() || "*";
 const CLIENT_API_KEY = process.env.HANDELO_CLIENT_API_KEY?.trim() || "";
@@ -259,6 +264,19 @@ const server = createServer(async (req, res) => {
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/strategies/executions")) {
+    const walletAddress = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() ?? "";
+    if (!isEvmAddress(walletAddress)) return json(res, 400, { error: "A valid wallet is required." });
+    try {
+      return json(res, 200, {
+        wallet: walletAddress,
+        executions: await listPersistedStrategyExecutions(walletAddress, strategyExecutionStore)
+      });
+    } catch (error) {
+      return json(res, 500, { error: errorMessage(error) });
     }
   }
 
