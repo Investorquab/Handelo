@@ -51,10 +51,7 @@ export interface TokenAudit {
 
 export function normalizeTokenAudit(audit:TokenAudit):TokenAudit{
   if(audit.hasResult && audit.isSupported) return audit;
-  return {
-    hasResult:audit.hasResult,
-    isSupported:audit.isSupported
-  };
+  return {hasResult:audit.hasResult,isSupported:audit.isSupported};
 }
 
 export const TOKEN_AUDIT_HEADERS={
@@ -79,12 +76,7 @@ export async function auditToken(chainId:string,contractAddress:string):Promise<
     headers:TOKEN_AUDIT_HEADERS,
     body:JSON.stringify({binanceChainId:chainId,contractAddress,requestId:randomUUID()})
   });
-  const payload=await response.json() as {
-    code:string|number;
-    data:TokenAudit;
-    success:boolean;
-    message?:string;
-  };
+  const payload=await response.json() as {code:string|number;data:TokenAudit;success:boolean;message?:string;};
   if(!response.ok||!payload.success) throw new Error(payload.message??"Token security audit failed.");
   return payload.data;
 }
@@ -103,15 +95,12 @@ export class BinanceAgenticWalletAdapter{
 
   async execute(request:WalletSwapRequest,confirmed:boolean):Promise<WalletOrder>{
     if(!confirmed) throw new Error("Execution requires explicit user confirmation.");
-
     const audit=await auditToken(request.binanceChainId,request.toToken);
     assertTokenAuditSafe(audit);
-
     const wallet = await baw<{status:"CONNECTED"|"UNCONNECTED"|"CREATING"}>(["wallet","status"]);
     if(wallet.status !== "CONNECTED"){
       throw new Error(`Binance Agentic Wallet is not connected (status: ${wallet.status}). Execution is blocked.`);
     }
-
     const order=await baw<{orderId:string}>([
       "market-order","swap",
       "--fromTokenQty",request.fromTokenQty,
@@ -122,7 +111,6 @@ export class BinanceAgenticWalletAdapter{
       ...(request.mev===undefined?[]:["--mev",String(request.mev)]),
       ...(request.gasLevel?["--gasLevel",request.gasLevel]:[])
     ]);
-
     for(let i=0;i<10;i++){
       await new Promise(resolve=>setTimeout(resolve,3000));
       const result=await baw<MarketOrderList>([
@@ -132,14 +120,9 @@ export class BinanceAgenticWalletAdapter{
       ]);
       const current=result.list?.[0];
       if(!current) continue;
-      if(current.status==="FINISHED"){
-        return {orderId:current.orderId,status:current.status,txHash:current.txHash,toCoinAmount:current.toCoinActualQty};
-      }
-      if(current.status==="FAILED"){
-        return {orderId:current.orderId,status:current.status,txHash:current.txHash};
-      }
+      if(current.status==="FINISHED") return {orderId:current.orderId,status:current.status,txHash:current.txHash,toCoinAmount:current.toCoinActualQty};
+      if(current.status==="FAILED") return {orderId:current.orderId,status:current.status,txHash:current.txHash};
     }
-
     return {orderId:order.orderId,status:"PENDING",txHash:null};
   }
 }
@@ -155,10 +138,8 @@ export class BinanceSimulationAdapter implements ExecutionAdapter{
 }
 
 export * from "./wallet-context.js";
-
 export * from "./bnb-agent-provider.js";
-
 export * from "./wallet-provider.js";
-
 export * from "./bnb-wallet-adapter.js";
 export * from "./bnb-agentic-wallet-contract.js";
+export * from "./wallet-funding.js";

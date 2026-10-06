@@ -7,6 +7,7 @@ Phase 5 evidence: the agent now emits an explicit execution-gate plan: live mark
 Phase 3 evidence: controlled opt-in strategy worker now wires DCA/RECURRING scheduling through the persisted runtime and Binance Agentic Wallet adapter; worker remains disabled unless explicitly configured.
 
 Phase 2 evidence: Workspace Wallet Center surfaces wallet guardrails; session admission now enforces active agent policy permissions/limits and capability-gated provider revocation without claiming funding/withdrawal is implemented.
+Funding evidence: the agent-wallet funding boundary now authorizes only explicit user-approved transfers from the matched personal owner wallet to the matched active BSC agent wallet, with personal-balance fail-closed checks. The result explicitly remains pre-chain authorization and requires a provider transfer; no on-chain funding is claimed.
 
 Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provider contract and remaining live mainnet gates.
 
@@ -59,6 +60,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [ ] Validate per-user agent-wallet isolation
 - [ ] Validate funding from personal wallet
 - [ ] Validate withdrawal to personal wallet
+- [x] Define funding authorization boundary — explicit owner approval, owner/agent context binding, BSC-only checks, and personal-balance fail-closed validation; live provider transfer remains unvalidated
 - [x] Validate permission/revocation model — session admission intersects requested grants with the active agent policy and revocation is capability-gated
 - [x] Decide Agent Studio runtime vs selected wallet/identity primitives
 - [x] Add automated architecture/contract tests
@@ -68,7 +70,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Wallet Center
 - [ ] Agent wallet lifecycle
 - [x] Agent permissions/policies — effective session grants cannot exceed active wallet permissions, spend caps, reserve or asset scope
-- [ ] Funding flow
+- [x] Funding authorization boundary — provider-independent, explicit user approval and balance checks; actual on-chain funding remains pending
 - [ ] Withdrawal flow
 - [x] Revocation — provider revocation is explicitly capability-gated and tested before the provider is invoked
 - [x] Wallet activity/audit state
@@ -84,7 +86,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] Pause/resume/edit/cancel
 - [x] Retry/failure recovery — bounded explicit retryable failures only; timeout/rejection remains non-retryable
 - [x] Restart recovery — stale RISK_CHECK/EXECUTING records fail closed before the next scheduler tick
-- [x] Idempotency/duplicate-execution protection — executionKey claim blocks duplicate triggers
+- [x] Idempotency/duplicate-execution protection — executionKey claim blocks duplicate triggers, including concurrent file-store claims
 - [x] Execution history
 - [x] Next-run and last-run state
 - [x] Strategy runtime tests
