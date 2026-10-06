@@ -331,10 +331,49 @@ export function finishStrategyExecution(
 
 export class RetryableStrategyExecutionError extends Error {
   readonly retryable = true;
-
   constructor(message: string) {
     super(message.trim() || "Retryable strategy execution failure.");
     this.name = "RetryableStrategyExecutionError";
+  }
+}
+
+export class StrategyExecutionTimeoutError extends Error {
+  readonly retryable = false;
+  constructor(timeoutMs: number) {
+    super(`Strategy execution timed out after ${timeoutMs}ms; reconciliation is required before retry.`);
+    this.name = "StrategyExecutionTimeoutError";
+  }
+}
+
+export class StrategyExecutionRejectedError extends Error {
+  readonly retryable = false;
+  constructor(message: string) {
+    super(message.trim() || "Strategy execution was rejected.");
+    this.name = "StrategyExecutionRejectedError";
+  }
+}
+
+async function executeWithTimeout(
+  execute: () => Promise<void>,
+  timeoutMs?: number
+): Promise<void> {
+  if (timeoutMs === undefined) {
+    await execute();
+    return;
+  }
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000) {
+    throw new Error("Strategy execution timeout must be at least 1000ms.");
+  }
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    await Promise.race([
+      execute(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new StrategyExecutionTimeoutError(timeoutMs)), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -563,6 +602,7 @@ export interface StrategyRuntimeDependencies {
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
   maxAttempts?: number;
+  executionTimeoutMs?: number;
 }
 
 export type StrategyRuntimeResult =
@@ -596,6 +636,10 @@ export async function runTriggeredStrategy(
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
     throw new Error("Strategy maxAttempts must be a positive integer.");
   }
+  if (dependencies.executionTimeoutMs !== undefined &&
+      (!Number.isInteger(dependencies.executionTimeoutMs) || dependencies.executionTimeoutMs < 1_000)) {
+    throw new Error("Strategy execution timeout must be at least 1000ms.");
+  }
 
   let current = record;
 
@@ -619,7 +663,10 @@ export async function runTriggeredStrategy(
       current = beginStrategyExecution(current, now());
       await dependencies.store.update(current);
 
-      await dependencies.execute(strategy, current);
+      await executeWithTimeout(
+        () => dependencies.execute(strategy, current),
+        dependencies.executionTimeoutMs
+      );
 
       current = finishStrategyExecution(current, now());
       await dependencies.store.update(current);
