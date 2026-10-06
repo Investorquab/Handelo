@@ -336,7 +336,8 @@ Respond naturally and concisely.`
       basket,
       answer: validatedResponse.answer,
       provider: this.llm.provider,
-      model: this.llm.model
+      model: this.llm.model,
+      trace
     };
   }
 }
