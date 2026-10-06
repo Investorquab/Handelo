@@ -130,7 +130,7 @@ function renderWorkspaceGapRadar(markets, representations = []) {
     ? '<div class="workspace-empty">No measurable gaps available.</div>'
     : "";
 
-  workspaceGapRadar.innerHTML = marketRows + comparisonHeader + comparisonRows + empty;
+  workspaceGapRadar.innerHTML = marketRows + comparisonHeader + empty;
   workspaceGapRadar.setAttribute("aria-busy", "false");
 }
 
