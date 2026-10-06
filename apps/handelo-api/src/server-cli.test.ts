@@ -62,7 +62,7 @@ test("execution boundary requires explicit enablement, non-default secret, walle
   assert.match(source, /reviewTokenSecret === "handelo-local-review-secret"/);
   assert.match(source, /connectedAddress\.toLowerCase\(\) !== walletAddress\.toLowerCase\(\)/);
   assert.match(source, /const reviewedQuote = await wallet\.quote/);
-  assert.match(source, /!securityAudit\.hasResult \|\| !securityAudit\.isSupported/);
+  assert.match(source, /!securityAudit\.isSupported/);
   assert.match(source, /consumeReviewToken\(reviewToken\)/);
 });
 
