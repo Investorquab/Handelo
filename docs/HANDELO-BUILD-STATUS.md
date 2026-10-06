@@ -6,7 +6,7 @@ Last updated: 2026-10-06
 Phase 5 evidence: the agent now emits an explicit execution-gate plan: live market + policy prerequisites are required, review/confirmation remains server-side, and the model has no private-key/signing capability.
 Phase 3 evidence: controlled opt-in strategy worker now wires DCA/RECURRING scheduling through the persisted runtime and Binance Agentic Wallet adapter; worker remains disabled unless explicitly configured.
 
-Phase 2 evidence: Workspace Wallet Center now surfaces read-only Binance Agentic Wallet guardrails without implying unvalidated funding, withdrawal, or revocation.
+Phase 2 evidence: Workspace Wallet Center surfaces wallet guardrails; session admission now enforces active agent policy permissions/limits and capability-gated provider revocation without claiming funding/withdrawal is implemented.
 
 Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provider contract and remaining live mainnet gates.
 
@@ -59,7 +59,7 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [ ] Validate per-user agent-wallet isolation
 - [ ] Validate funding from personal wallet
 - [ ] Validate withdrawal to personal wallet
-- [ ] Validate permission/revocation model
+- [x] Validate permission/revocation model — session admission intersects requested grants with the active agent policy and revocation is capability-gated
 - [x] Decide Agent Studio runtime vs selected wallet/identity primitives
 - [x] Add automated architecture/contract tests
 
@@ -67,10 +67,10 @@ Phase 1 evidence: docs/BNB-WALLET-PROVIDER-AUDIT.md records the verified provide
 - [x] User wallet connection/context
 - [x] Wallet Center
 - [ ] Agent wallet lifecycle
-- [ ] Agent permissions/policies
+- [x] Agent permissions/policies — effective session grants cannot exceed active wallet permissions, spend caps, reserve or asset scope
 - [ ] Funding flow
 - [ ] Withdrawal flow
-- [ ] Revocation
+- [x] Revocation — provider revocation is explicitly capability-gated and tested before the provider is invoked
 - [x] Wallet activity/audit state
 - [ ] Demo Mode environment and disclosure
 

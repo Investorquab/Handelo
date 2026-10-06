@@ -214,3 +214,107 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   assert.equal(receivedGrant.ownerWallet, "0x1111111111111111111111111111111111111111");
   assert.deepEqual(receivedGrant.allowedAssets, ["NVDAB"]);
 });
+
+
+test("BNB adapter intersects requested permissions with the active agent wallet policy", async () => {
+  const received: { grant?: WalletSessionGrant } = {};
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => ({
+      ...context(),
+      policy: {
+        permissions: ["DCA", "RECURRING"],
+        maxTransactionUsd: 8,
+        maxDailySpendUsd: 20,
+        minimumReservePercent: 15,
+        allowedAssets: ["NVDAB"],
+        revocable: true
+      }
+    }),
+    createSession: async grant => {
+      received.grant = grant;
+      return { sessionId: "session-policy-bounded" };
+    }
+  });
+
+  const result = await adapter.createSession({
+    ...validGrant(),
+    permissions: ["DCA"],
+    maxTransactionUsd: 10,
+    maxDailySpendUsd: 25,
+    minimumReservePercent: 5,
+    allowedAssets: ["NVDAB"]
+  });
+
+  assert.equal(result.sessionId, "session-policy-bounded");
+  assert.equal(received.grant?.maxTransactionUsd, 8);
+  assert.equal(received.grant?.maxDailySpendUsd, 20);
+  assert.equal(received.grant?.minimumReservePercent, 15);
+  assert.deepEqual(received.grant?.permissions, ["DCA"]);
+});
+
+test("BNB adapter rejects a requested permission outside the active wallet policy", async () => {
+  let providerCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => context(),
+    createSession: async () => {
+      providerCalls += 1;
+      return { sessionId: "should-not-run" };
+    }
+  });
+
+  await assert.rejects(
+    adapter.createSession({ ...validGrant(), permissions: ["RECURRING"] }),
+    /permission that is not authorized/
+  );
+  assert.equal(providerCalls, 0);
+});
+
+test("BNB adapter refuses an expired wallet policy before provider invocation", async () => {
+  let providerCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => ({
+      ...context(),
+      policy: { ...context().policy, expiresAt: "2020-01-01T00:00:00.000Z" }
+    }),
+    createSession: async () => {
+      providerCalls += 1;
+      return { sessionId: "should-not-run" };
+    }
+  });
+
+  await assert.rejects(
+    adapter.createSession(validGrant()),
+    /expiry must be a valid future timestamp/
+  );
+  assert.equal(providerCalls, 0);
+});
+
+test("BNB adapter gates revocation on the provider capability", async () => {
+  let revokeCalls = 0;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => ({ ...complete, revocation: false }),
+    getContext: async () => context(),
+    revokeSession: async () => { revokeCalls += 1; }
+  });
+
+  await assert.rejects(
+    adapter.revokeSession("session-1"),
+    /revocation capability gate/
+  );
+  assert.equal(revokeCalls, 0);
+});
+
+test("BNB adapter forwards a valid revocation only when the provider supports it", async () => {
+  let revoked: string | null = null;
+  const adapter = new BnbWalletAdapter({
+    capabilities: async () => complete,
+    getContext: async () => context(),
+    revokeSession: async sessionId => { revoked = sessionId; }
+  });
+
+  await adapter.revokeSession("session-1");
+  assert.equal(revoked, "session-1");
+});

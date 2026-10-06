@@ -4,7 +4,7 @@ import type {
   WalletProviderCapabilities,
   WalletSessionGrant
 } from "./wallet-provider.js";
-import { autonomousExecutionProviderReady, validateWalletSessionGrant } from "./wallet-provider.js";
+import { autonomousExecutionProviderReady, intersectWalletPolicies, validateWalletSessionGrant } from "./wallet-provider.js";
 
 export interface BnbWalletRuntime {
   capabilities(): Promise<WalletProviderCapabilities>;
@@ -48,7 +48,11 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
     if (!ownerMatches || !agentMatches) {
       throw new Error("Wallet session grant does not match the connected BNB wallet context.");
     }
-    return this.runtime.createSession(validatedGrant);
+    if (!context.policy.revocable) {
+      throw new Error("Agent wallet policy is not revocable; autonomous session creation is blocked.");
+    }
+    const effectiveGrant = intersectWalletPolicies(context.policy, validatedGrant);
+    return this.runtime.createSession(effectiveGrant);
   }
 
   async revokeSession(sessionId: string): Promise<void> {
@@ -56,6 +60,10 @@ export class BnbWalletAdapter implements WalletProviderAdapter {
       throw new Error("BNB wallet runtime does not expose session revocation.");
     }
     if (!sessionId.trim()) throw new Error("Session ID is required for revocation.");
+    const capabilities = await this.capabilities();
+    if (!capabilities.revocation) {
+      throw new Error("BNB wallet provider has not passed the revocation capability gate.");
+    }
     await this.runtime.revokeSession(sessionId);
   }
 }
