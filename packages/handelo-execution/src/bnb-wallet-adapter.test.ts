@@ -39,7 +39,7 @@ function validGrant(): WalletSessionGrant {
   };
 }
 
-function invalidContext(
+function makeInvalidContext(
   overrides: Record<string, unknown>
 ): import("@handelo/core").AgentWalletContext {
   // These fixtures intentionally inject impossible discriminant states to exercise the runtime fail-closed boundary.
@@ -146,8 +146,8 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
 
 test("BNB adapter refuses session creation from a non-user or non-agent context", async () => {
   for (const invalidContext of [
-    invalidContext({ mode: "DEMO" }),
-    invalidContext({ role: "PERSONAL" })
+    makeInvalidContext({ mode: "DEMO" }),
+    makeInvalidContext({ role: "PERSONAL" })
   ]) {
     let providerCalls = 0;
     const adapter = new BnbWalletAdapter({
@@ -169,9 +169,9 @@ test("BNB adapter refuses session creation from a non-user or non-agent context"
 
 test("BNB adapter refuses disconnected, non-BSC, and inactive contexts", async () => {
   for (const invalidContext of [
-    invalidContext({ connected: false }),
-    invalidContext({ network: "ETHEREUM" }),
-    invalidContext({ status: "REVOKED" })
+    makeInvalidContext({ connected: false }),
+    makeInvalidContext({ network: "ETHEREUM" }),
+    makeInvalidContext({ status: "REVOKED" })
   ]) {
     let providerCalls = 0;
     const adapter = new BnbWalletAdapter({
