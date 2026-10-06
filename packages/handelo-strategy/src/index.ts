@@ -281,6 +281,32 @@ export function finishStrategyExecution(
   };
 }
 
+export class RetryableStrategyExecutionError extends Error {
+  readonly retryable = true;
+
+  constructor(message: string) {
+    super(message.trim() || "Retryable strategy execution failure.");
+    this.name = "RetryableStrategyExecutionError";
+  }
+}
+
+export function retryStrategyExecution(
+  record: StrategyExecutionRecord,
+  now: string
+): StrategyExecutionRecord {
+  if (record.status !== "FAILED") {
+    throw new Error("Only failed strategy runs can be retried.");
+  }
+  return {
+    ...record,
+    status: transitionStrategyExecution(record.status, "RISK_CHECK"),
+    attempt: record.attempt + 1,
+    startedAt: null,
+    finishedAt: null,
+    error: null
+  };
+}
+
 export function failStrategyExecution(
   record: StrategyExecutionRecord,
   now: string,
@@ -462,6 +488,7 @@ export interface StrategyRuntimeDependencies {
   now?: () => string;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  maxAttempts?: number;
 }
 
 export type StrategyRuntimeResult =
@@ -491,39 +518,56 @@ export async function runTriggeredStrategy(
   }
 
   const now = dependencies.now ?? (() => new Date().toISOString());
+  const maxAttempts = dependencies.maxAttempts ?? 1;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+    throw new Error("Strategy maxAttempts must be a positive integer.");
+  }
 
-  try {
-    let current = {
-      ...record,
-      status: transitionStrategyExecution(record.status, "RISK_CHECK")
-    };
-    await dependencies.store.update(current);
+  let current = record;
 
-    const riskPassed = await dependencies.riskCheck(strategy, current);
-    if (!riskPassed) {
-      current = failStrategyExecution(current, now(), "Risk governor blocked execution.");
+  while (true) {
+    try {
+      current = {
+        ...current,
+        status: transitionStrategyExecution(current.status, "RISK_CHECK")
+      };
       await dependencies.store.update(current);
-      return { status: "FAILED", record: current };
+
+      const riskPassed = await dependencies.riskCheck(strategy, current);
+      if (!riskPassed) {
+        current = failStrategyExecution(current, now(), "Risk governor blocked execution.");
+        await dependencies.store.update(current);
+        return { status: "FAILED", record: current };
+      }
+
+      current = beginStrategyExecution(current, now());
+      await dependencies.store.update(current);
+
+      await dependencies.execute(strategy, current);
+
+      current = finishStrategyExecution(current, now());
+      await dependencies.store.update(current);
+      return { status: "FINISHED", record: current };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const retryable = error instanceof RetryableStrategyExecutionError;
+
+      if (retryable && current.attempt < maxAttempts) {
+        current = failStrategyExecution(current, now(), message);
+        await dependencies.store.update(current);
+        current = retryStrategyExecution(current, now());
+        await dependencies.store.update(current);
+        continue;
+      }
+
+      const stored = await dependencies.store.get(record.executionKey);
+      if (!stored) throw error;
+      if (stored.status === "FAILED") return { status: "FAILED", record: stored };
+
+      const failed = failStrategyExecution(stored, now(), message);
+      await dependencies.store.update(failed);
+      return { status: "FAILED", record: failed };
     }
-
-    current = beginStrategyExecution(current, now());
-    await dependencies.store.update(current);
-
-    await dependencies.execute(strategy, current);
-
-    current = finishStrategyExecution(current, now());
-    await dependencies.store.update(current);
-    return { status: "FINISHED", record: current };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const current = await dependencies.store.get(record.executionKey);
-    if (!current) throw error;
-
-    if (current.status === "FAILED") return { status: "FAILED", record: current };
-
-    const failed = failStrategyExecution(current, now(), message);
-    await dependencies.store.update(failed);
-    return { status: "FAILED", record: failed };
   }
 }
 
