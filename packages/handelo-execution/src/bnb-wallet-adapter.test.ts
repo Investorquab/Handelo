@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { AgentWalletContext } from "@handelo/core";
 import { BnbWalletAdapter, probeBnbWalletAdapter } from "./bnb-wallet-adapter.js";
-import type { WalletProviderCapabilities } from "./wallet-provider.js";
+import type { WalletProviderCapabilities, WalletSessionGrant } from "./wallet-provider.js";
 
 const complete: WalletProviderCapabilities = {
   bscMainnet: true,
@@ -14,25 +15,25 @@ const complete: WalletProviderCapabilities = {
   transferOut: true
 };
 
-function context() {
+function context(): AgentWalletContext {
   return {
-    mode: "USER" as const,
-    role: "AGENT" as const,
+    mode: "USER",
+    role: "AGENT",
     address: "0x2222222222222222222222222222222222222222",
-    network: "BSC" as const,
+    network: "BSC",
     connected: true,
     balanceUsd: 100,
     ownerWallet: "0x1111111111111111111111111111111111111111",
     policy: { permissions: ["DCA"], revocable: true },
-    status: "ACTIVE" as const
+    status: "ACTIVE"
   };
 }
 
-function validGrant() {
+function validGrant(): WalletSessionGrant {
   return {
     ownerWallet: "0x1111111111111111111111111111111111111111",
     agentWallet: "0x2222222222222222222222222222222222222222",
-    network: "BSC" as const,
+    network: "BSC",
     permissions: ["DCA"],
     revocable: true
   };
@@ -135,7 +136,7 @@ test("BNB adapter rejects a grant for the wrong wallet context", async () => {
 });
 
 test("BNB adapter forwards the validated normalized grant to the provider", async () => {
-  let received: any = null;
+  let received: WalletSessionGrant | null = null;
   const adapter = new BnbWalletAdapter({
     capabilities: async () => complete,
     getContext: async () => context(),
@@ -152,6 +153,6 @@ test("BNB adapter forwards the validated normalized grant to the provider", asyn
   });
 
   assert.equal(result.sessionId, "session-valid");
-  assert.equal(received.ownerWallet, "0x1111111111111111111111111111111111111111");
-  assert.deepEqual(received.allowedAssets, ["NVDAB"]);
+  assert.equal(received?.ownerWallet, "0x1111111111111111111111111111111111111111");
+  assert.deepEqual(received?.allowedAssets, ["NVDAB"]);
 });
