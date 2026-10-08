@@ -389,8 +389,8 @@ h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-s
       <div>Reference price<b id="sr">$187.40</b></div>
       <div>Token price<b id="st">$189.10</b></div>
       <div>Gap<b id="sg" style="color:var(--gold)">+0.91%</b></div>
-      <div>24h volume<b>$2.4M</b></div>
-      <div>Pool liquidity<b>$180K</b></div>
+      <div>24h volume<b id="sv">—</b></div>
+      <div>Pool liquidity<b id="slq">—</b></div>
       <div>US market<b id="sus" style="font-family:Manrope;font-size:15px"></b></div>
       <div>Token market<b style="font-family:Manrope;font-size:15px"><span class="dot g"></span> Open</b></div>
     </div>
@@ -519,7 +519,7 @@ function policy(P){var q=qty(),c=checks(P,S.side,q),bad=c.filter(function(x){ret
 $("pc").textContent=(c.length-bad)+" of "+c.length+" checks pass";$("pc").style.color=bad?"var(--red)":"var(--green)";$("ordv").textContent="$"+(q*P.k).toFixed(2)+" at $"+P.k.toFixed(2);
 setH("checks",c.map(function(x){return'<li class="'+(x[3]?"":"fail")+'"><span class="dot '+(x[3]?"g":"r")+'"></span><span>'+x[0]+"<small>"+x[1]+'</small></span><span class="v">'+x[2]+"</span></li>"}).join(""));
 var a=$("approve");a.disabled=bad>0;a.title=bad?"Blocked: "+bad+" policy "+(bad>1?"checks":"check")+" failed":"";a.textContent=bad?"Blocked by "+bad+(bad>1?" checks":" check"):S.w?"Approve order":"Connect wallet to approve"}
-function render(){var P=px(),g=(P.k/P.r-1)*100,o=us(S.t),nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),c=rk<40?"var(--green)":rk<=60?"var(--amber)":"var(--red)";
+function render(){if(window.HANDELO_LIVE_WORKSPACE){return}var P=px(),g=(P.k/P.r-1)*100,o=us(S.t),nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),c=rk<40?"var(--green)":rk<=60?"var(--amber)":"var(--red)";
 $("tp").textContent=$("st").textContent="$"+P.k.toFixed(2);$("sr").textContent="$"+P.r.toFixed(2);$("sg").textContent=(g>=0?"+":"")+g.toFixed(2)+"%";
 $("sus").innerHTML='<span class="dot '+(o?"g":"r")+'"></span> '+(o?"Open":"Closed");
 chart();ro();
@@ -595,8 +595,10 @@ function tlr(){var t=+$("ts").value,r=ref(t,1),k=r+prem(t,1),g=(k/r-1)*100;$("tl
 $("ts").addEventListener("input",tlr);
 function rl(){var P=px(),nv=S.nv*P.k,tot=nv+S.bnb*S.bnbp+S.usdt,b="";for(var i=0;i<14;i++){var h=i==9;b+='<rect x="'+(i*17+2)+'" y="'+(h?8:4)+'" width="10" height="'+(h?24:32)+'" fill="'+(h?"none":"#d4af37")+'"'+(h?' stroke="#e6af06"':"")+"/>"}
 $("c1").innerHTML=spark();setH("c2",'<svg viewBox="0 0 240 40" class="sp2">'+b+"</svg>");setH("c3",meter("NVDAB exposure",nv/tot*100,70,1))}
-function go(){location.hash="workspace"}
-["oh1","oh2","openh","tryd"].forEach(function(i){$(i).addEventListener("click",go)});
+function goLive(){window.HANDELO_LIVE_WORKSPACE=true;location.hash="workspace?mode=live";route();if(window.HandeloLiveWorkspace)window.HandeloLiveWorkspace.load()}
+function goDemo(){window.HANDELO_LIVE_WORKSPACE=false;location.hash="workspace?mode=demo";route();render()}
+["oh1","oh2","openh"].forEach(function(i){$(i).addEventListener("click",goLive)});
+$("tryd").addEventListener("click",goDemo);
 $("how").addEventListener("click",function(){$("loop").scrollIntoView({behavior:"smooth"})});
 window.addEventListener("resize",chart);
 tlr();rl();
@@ -609,5 +611,6 @@ document.querySelector(".lg").addEventListener("click",function(e){var b=e.targe
 setInterval(function(){if(S.run)step()},100);
 ranges();render();
 </script>
+<script src="./src/live-workspace.js"></script>
 </body>
 </html>
