@@ -324,12 +324,12 @@ test("live workspace loads a coherent snapshot and then receives streamed update
   assert.match(liveWorkspaceSource, /function applyWorkspaceSnapshot\(snapshot\)/);
 });
 
-test("live portfolio uses the real API cash balance and token positions", () => {
-  assert.match(liveWorkspaceSource, /totalValueUsd/);
-  assert.match(liveWorkspaceSource, /balanceUsd/);
-  assert.match(liveWorkspaceSource, /valueUsd/);
-  assert.match(liveWorkspaceSource, /Live BSC token balance/);
-  assert.match(liveWorkspaceSource, /BNB is shown as unavailable until the backend exposes a native BNB balance source/);
+test("live portfolio uses the real API wallet balances", () => {
+  assert.match(liveWorkspaceSource, /walletBalances/);
+  assert.match(liveWorkspaceSource, /balance\.value/);
+  assert.match(liveWorkspaceSource, /balance\.symbol/);
+  assert.match(liveWorkspaceSource, /Binance Agentic Wallet/);
+  assert.match(liveWorkspaceSource, /0\.01/);
 });
 
 test("live mode clears demo values before the real workspace loads", () => {
@@ -402,9 +402,12 @@ test("live workspace consumes one coherent market and account snapshot", () => {
   assert.match(liveWorkspaceSource, /snapshot\.market/);
   assert.match(liveWorkspaceSource, /snapshot\.account/);
 });
-test("live portfolio rendering accepts the real API snapshot fields", () => {
-  assert.match(liveWorkspaceSource, /totalValueUsd \?\? portfolio\?\.totalEstimatedValueUsd/);
-  assert.match(liveWorkspaceSource, /position\.valueUsd \?\? position\.estimatedValueUsd/);
+test("live portfolio rendering accepts the wallet balance snapshot fields", () => {
+  assert.match(liveWorkspaceSource, /walletBalances/);
+  assert.match(liveWorkspaceSource, /balance\.symbol/);
+  assert.match(liveWorkspaceSource, /balance\.balance/);
+  assert.match(liveWorkspaceSource, /balance\.price/);
+  assert.match(liveWorkspaceSource, /balance\.value/);
 });
 test("live workspace closes its stream when leaving live mode", () => {
   assert.match(liveWorkspaceSource, /if\(!window\.HANDELO_LIVE_WORKSPACE\)closeLiveStream\(\)/);
