@@ -18,6 +18,7 @@ export interface VerifiedReviewToken {
   ticker: string;
   amountUsd: number;
   fromToken: string;
+  fromTokenQty: string;
   contract: string;
   slippage?: string;
   wallet: string;
