@@ -376,5 +376,5 @@ test("order review surfaces security-audit state and fail-closed execution", () 
   assert.match(source, /securityAuditError/);
   assert.match(source, /executionBlocked/);
   assert.match(source, /SECURITY CHECK UNAVAILABLE — EXECUTION BLOCKED/);
-  assert.match(source, /Token security audit reports high risk/);
+  assert.match(source, /Binance security audit reports high risk/);
 });
