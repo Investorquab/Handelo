@@ -170,13 +170,13 @@ test("Handelo exposes exactly two primary navigation destinations", () => {
 });
 
 test("homepage contains the locked product narrative and real UI surfaces", () => {
-  assert.match(indexSource, /Understand\.\\?<br><em>Strategize\. Execute\.<\\?\/em>/);
+  assert.match(indexSource, /AI explains\.<br><em>The system governs\.<\\?\/em><br>You decide\./);
   assert.match(indexSource, /Markets close\.<br><em>Tokenized stocks don't\.<\\?\/em>/);
   assert.match(indexSource, /DISCOVER|Discover/);
-  assert.match(indexSource, /MARKET INSIGHT/);
-  assert.match(indexSource, /STRATEGY PREVIEW/);
-  assert.match(indexSource, /RISK RESULT/);
-  assert.match(indexSource, /TRANSACTION PREVIEW/);
+  assert.match(indexSource, /MARKET INTELLIGENCE/);
+  assert.match(indexSource, /STRATEGY/);
+  assert.match(indexSource, /PORTFOLIO RISK/);
+  assert.match(indexSource, /EXECUTION/);
 });
 
 test("homepage CTAs open the unified workspace", () => {
@@ -285,4 +285,21 @@ test("workspace strategy cards expose pause, resume and cancel controls", () => 
   assert.match(source, /data-strategy-action="resume"/);
   assert.match(source, /data-strategy-action="cancel"/);
   assert.match(source, /\/api\/strategies\/"\s*\+\s*action/);
+});
+
+
+test("premium terminal header exposes direct workspace surfaces without adding primary pages",()=> {
+  assert.match(indexSource,/class="terminal-header"/);
+  for (const label of ["Markets","Portfolio","Strategies","Activity"]) assert.match(indexSource,new RegExp(label));
+  assert.match(indexSource,/data-workspace-focus="workspacePortfolio"/);
+  assert.match(indexSource,/data-workspace-focus="workspaceStrategies"/);
+  assert.match(indexSource,/data-ask-handelo/);
+});
+
+test("homepage uses the approved connected seven-stage operating loop",()=> {
+  assert.match(indexSource,/class="premium-loop-track"/);
+  assert.match(indexSource,/data-home-stage="0"/);
+  assert.match(indexSource,/data-home-stage="6"/);
+  assert.match(source,/premiumLoopDetail/);
+  assert.match(source,/The system does not jump from an AI answer straight to money movement/);
 });
