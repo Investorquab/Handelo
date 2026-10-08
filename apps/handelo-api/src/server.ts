@@ -959,4 +959,7 @@ if (
   console.log("Handelo strategy worker enabled for the configured controlled wallet.");
 }
 
-server.listen(port, () => {\n  console.log(`Handelo API listening on http://localhost:${port}`);\n  void discoverMarketsCached(true).catch(() => undefined);\n});
+server.listen(port, () => {
+  console.log(`Handelo API listening on http://localhost:${port}`);
+  void discoverMarketsCached(true).catch(() => undefined);
+});
