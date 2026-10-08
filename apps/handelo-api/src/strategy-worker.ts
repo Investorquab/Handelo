@@ -2,7 +2,8 @@ import {
   recoverStaleStrategyExecutions,
   type StrategyExecutionRecord,
   type StrategyExecutionStore,
-  type StrategySchedulerResult
+  type StrategySchedulerResult,
+  type StrategyExecutionReceipt
 } from "@handelo/strategy";
 import type { StrategyDefinition } from "@handelo/core";
 import { runPersistedStrategyScheduler } from "./strategy-runtime.js";
@@ -14,7 +15,7 @@ export interface PersistedStrategyWorkerDependencies {
   marketOpen?: boolean;
   conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
-  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<StrategyExecutionReceipt | void>;
   intervalMs?: number;
   recoveryAfterMs?: number;
   setInterval?: (handler: () => void, timeoutMs: number) => ReturnType<typeof setInterval>;
