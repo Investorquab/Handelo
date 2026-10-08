@@ -326,7 +326,7 @@ h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-s
   <div>
     <h1>AI explains.<br>The system governs.<br>You decide.</h1>
     <p class="lede">An AI operating layer for tokenized stocks on BNB Chain. It connects market intelligence, strategy, portfolio risk, policy, wallet permissions, execution and verification into one governed workflow.</p>
-    <div class="acts"><button class="btn solid" id="oh1">Open Handelo</button><button class="btn quiet" id="how">See how it works</button></div>
+    <div class="acts"><button class="btn solid" id="oh1">Open Handelo</button><button class="btn quiet" id="how">See how it works</button><button class="btn quiet" id="tryd">Try Demo</button></div>
   </div>
   <div>
     <div class="readout" id="hro"></div>
@@ -596,7 +596,7 @@ $("ts").addEventListener("input",tlr);
 function rl(){var P=px(),nv=S.nv*P.k,tot=nv+S.bnb*S.bnbp+S.usdt,b="";for(var i=0;i<14;i++){var h=i==9;b+='<rect x="'+(i*17+2)+'" y="'+(h?8:4)+'" width="10" height="'+(h?24:32)+'" fill="'+(h?"none":"#d4af37")+'"'+(h?' stroke="#e6af06"':"")+"/>"}
 $("c1").innerHTML=spark();setH("c2",'<svg viewBox="0 0 240 40" class="sp2">'+b+"</svg>");setH("c3",meter("NVDAB exposure",nv/tot*100,70,1))}
 function go(){location.hash="workspace"}
-["oh1","oh2","openh"].forEach(function(i){$(i).addEventListener("click",go)});
+["oh1","oh2","openh","tryd"].forEach(function(i){$(i).addEventListener("click",go)});
 $("how").addEventListener("click",function(){$("loop").scrollIntoView({behavior:"smooth"})});
 window.addEventListener("resize",chart);
 tlr();rl();
