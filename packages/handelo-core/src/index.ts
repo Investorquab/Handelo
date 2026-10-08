@@ -310,7 +310,7 @@ export function evaluatePortfolioStrategyRisk(
 
   const result = createRiskResult(constraints, {
     proposedAmountUsd: amountUsd,
-    projectedAssetExposurePercent,
+    projectedAssetExposurePercent: projectedExposurePercent,
     now: new Date().toISOString()
   });
 
