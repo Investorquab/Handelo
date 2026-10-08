@@ -456,7 +456,7 @@ async function refreshWorkspaceContext() {
         const pnl = Number(position.unrealizedPnlUsd);
         const pnlPct = Number(position.unrealizedPnlPercent);
         const pnlText = Number.isFinite(pnl) ? money(pnl) + (Number.isFinite(pnlPct) ? " · " + (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%" : "") : "—";
-        return "<div class="workspace-position portfolio-position"><span><strong>" + escapeHtml(position.tokenSymbol || position.asset || "Asset") + "</strong><small>" + escapeHtml(position.ticker || position.asset || "—") + " · " + escapeHtml(money(value)) + "</small></span><b>" + (Number.isFinite(allocation) ? allocation.toFixed(1) + "%" : "—") + "</b><small class="portfolio-pnl">" + escapeHtml(pnlText) + "</small></div>";
+        return "<div class=\"workspace-position portfolio-position\"><span><strong>" + escapeHtml(position.tokenSymbol || position.asset || "Asset") + "</strong><small>" + escapeHtml(position.ticker || position.asset || "—") + " · " + escapeHtml(money(value)) + "</small></span><b>" + (Number.isFinite(allocation) ? allocation.toFixed(1) + "%" : "—") + "</b><small class=\"portfolio-pnl\">" + escapeHtml(pnlText) + "</small></div>";
       }).join("");
       workspacePortfolio.innerHTML =
         "<div class="workspace-gap-section-label">" + escapeHtml(reconciliation) + "</div>" +
