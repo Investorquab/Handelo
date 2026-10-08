@@ -99,7 +99,12 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
   workspaceStrategies.innerHTML = strategies.map(strategy => {
     const stats = byId.get(strategy.id);
     const runs = stats ? String(stats.finishedCount) + "/" + String(stats.executionCount) + " runs finished" : "No recorded runs";
+    const failed = stats?.failedCount ? " · " + String(stats.failedCount) + " failed" : "";
     const planned = stats?.successfulPlannedUsd == null ? "" : " · " + money(stats.successfulPlannedUsd) + " attributed";
+    const nextRun = stats?.nextExecutionAt || strategy.nextExecutionAt;
+    const nextRunText = nextRun ? "NEXT " + formatMarketTime(nextRun) : "NEXT RUN NOT SCHEDULED";
+    const lastRun = stats?.lastExecutionAt;
+    const lastRunText = lastRun ? "LAST " + formatMarketTime(lastRun) : "NO RUN YET";
     const status = String(strategy.status || "ACTIVE");
     const action = status === "ACTIVE"
       ? '<button type="button" class="strategy-control" data-strategy-action="pause" data-strategy-id="' + escapeHtml(strategy.id) + '">Pause</button>'
@@ -113,7 +118,7 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
       escapeHtml(strategy.type || "STRATEGY") + '</strong><small>' +
       escapeHtml(strategy.asset || "—") + ' · ' +
       escapeHtml(strategy.frequency || strategy.condition || "Rule-based") +
-      '</small><small>' + escapeHtml(runs + planned) + '</small></span><span class="strategy-actions"><b>' + escapeHtml(status) + '</b>' + action + cancel + '</span></div>';
+      '</small><small>' + escapeHtml(runs + failed + planned) + '</small><small class="strategy-runtime-meta">' + escapeHtml(nextRunText) + ' · ' + escapeHtml(lastRunText) + '</small></span><span class="strategy-actions"><b>' + escapeHtml(status) + '</b>' + action + cancel + '</span></div>';
   }).join("");
 }
   workspaceStrategies.querySelectorAll("[data-strategy-action]").forEach((button) => {
