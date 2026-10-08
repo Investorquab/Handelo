@@ -459,9 +459,9 @@ async function refreshWorkspaceContext() {
         return "<div class=\"workspace-position portfolio-position\"><span><strong>" + escapeHtml(position.tokenSymbol || position.asset || "Asset") + "</strong><small>" + escapeHtml(position.ticker || position.asset || "—") + " · " + escapeHtml(money(value)) + "</small></span><b>" + (Number.isFinite(allocation) ? allocation.toFixed(1) + "%" : "—") + "</b><small class=\"portfolio-pnl\">" + escapeHtml(pnlText) + "</small></div>";
       }).join("");
       workspacePortfolio.innerHTML =
-        "<div class="workspace-gap-section-label">" + escapeHtml(reconciliation) + "</div>" +
-        (rows || "<div class="workspace-empty">No supported tokenized-stock positions found in this wallet.</div>") +
-        "<div class="portfolio-note">P&amp;L is shown only when trustworthy acquisition cost basis is available. Handelo does not estimate historical cost from current balances.</div>";
+        "<div class=\"workspace-gap-section-label\">" + escapeHtml(reconciliation) + "</div>" +
+        (rows || "<div class=\"workspace-empty\">No supported tokenized-stock positions found in this wallet.</div>") +
+        "<div class=\"portfolio-note\">P&amp;L is shown only when trustworthy acquisition cost basis is available. Handelo does not estimate historical cost from current balances.</div>";
     }
     const historyResponse = await fetch(API_BASE + "/api/history?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const history = await historyResponse.json();
