@@ -297,11 +297,11 @@ test("premium terminal header exposes direct workspace surfaces without adding p
 });
 
 test("homepage uses the approved connected seven-stage operating loop",()=> {
-  assert.match(indexSource,/class="premium-loop-track"/);
+  assert.match(indexSource,/class="lg"/);
   assert.match(indexSource,/data-home-stage="0"/);
   assert.match(indexSource,/data-home-stage="6"/);
   assert.match(source,/premiumLoopDetail/);
-  assert.match(indexSource,/The system does not jump from an AI answer straight to money movement/);
+  assert.match(indexSource,/The system makes the decision path visible/);
 });
 
 
