@@ -16,7 +16,7 @@ test("sends Binance's documented agent headers for token audits", () => {
   });
 });
 
-test("preserves a supported LOW audit even when Binance has no detailed result", () => {
+test("fails closed when Binance reports a supported token without a security result", () => {
   const normalized = normalizeTokenAudit({
     hasResult: false,
     isSupported: true,
@@ -30,7 +30,10 @@ test("preserves a supported LOW audit even when Binance has no detailed result",
     riskLevel: -1,
     riskLevelEnum: "LOW"
   });
-  assert.doesNotThrow(() => assertTokenAuditSafe(normalized));
+  assert.throws(
+    () => assertTokenAuditSafe(normalized),
+    /audit data is unavailable/
+  );
 });
 
 test("hides details and blocks unsupported audit data", () => {
