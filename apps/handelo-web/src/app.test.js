@@ -378,3 +378,21 @@ test("order review surfaces security-audit state and fail-closed execution", () 
   assert.match(source, /SECURITY CHECK UNAVAILABLE — EXECUTION BLOCKED/);
   assert.match(source, /Binance security audit reports high risk/);
 });
+
+test("chat surfaces the server-provided agent decision trace", () => {
+  assert.match(source, /data\.trace/);
+  assert.match(source, /function addAgentTracePreview\(trace\)/);
+  assert.match(source, /HANDELO OPERATING TRACE/);
+  assert.match(source, /OBSERVED/);
+  assert.match(source, /POLICY_CHECKED/);
+  assert.match(source, /EXECUTION_GATED/);
+  assert.match(source, /AWAITING APPROVAL/);
+  assert.match(source, /No execution occurs from chat/);
+});
+
+test("chat keeps execution behind the review and confirmation boundary", () => {
+  assert.match(source, /trace\.executionPlan/);
+  assert.match(source, /requiresExplicitConfirmation/);
+  assert.match(source, /\/api\/review/);
+  assert.match(source, /data\.policy\?\.decision !== "BLOCK"/);
+});
