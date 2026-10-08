@@ -105,6 +105,9 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
     const nextRunText = nextRun ? "NEXT " + formatMarketTime(nextRun) : "NEXT RUN NOT SCHEDULED";
     const lastRun = stats?.lastExecutionAt;
     const lastRunText = lastRun ? "LAST " + formatMarketTime(lastRun) : "NO RUN YET";
+    const receiptText = stats?.lastExecutionTxHash
+      ? "TX " + String(stats.lastExecutionTxHash).slice(0, 10) + "…" + String(stats.lastExecutionTxHash).slice(-8)
+      : "NO PROVIDER RECEIPT";
     const status = String(strategy.status || "ACTIVE");
     const action = status === "ACTIVE"
       ? '<button type="button" class="strategy-control" data-strategy-action="pause" data-strategy-id="' + escapeHtml(strategy.id) + '">Pause</button>'
@@ -118,7 +121,7 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
       escapeHtml(strategy.type || "STRATEGY") + '</strong><small>' +
       escapeHtml(strategy.asset || "—") + ' · ' +
       escapeHtml(strategy.frequency || strategy.condition || "Rule-based") +
-      '</small><small>' + escapeHtml(runs + failed + planned) + '</small><small class="strategy-runtime-meta">' + escapeHtml(nextRunText) + ' · ' + escapeHtml(lastRunText) + '</small></span><span class="strategy-actions"><b>' + escapeHtml(status) + '</b>' + action + cancel + '</span></div>';
+      '</small><small>' + escapeHtml(runs + failed + planned) + '</small><small class="strategy-runtime-meta">' + escapeHtml(nextRunText) + ' · ' + escapeHtml(lastRunText) + '</small><small class="strategy-runtime-meta">' + escapeHtml(receiptText) + '</small></span><span class="strategy-actions"><b>' + escapeHtml(status) + '</b>' + action + cancel + '</span></div>';
   }).join("");
 }
   workspaceStrategies.querySelectorAll("[data-strategy-action]").forEach((button) => {

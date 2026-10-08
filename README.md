@@ -165,7 +165,7 @@ Never commit secrets or private keys.
 
 The repository uses GitHub Actions for TypeScript checks, frontend syntax checks and the full workspace test suite. The current web workspace is backed by live market data, real wallet status/address/guardrails, live BSC portfolio reconciliation, deterministic policy/risk review, security-audit gating and explicit execution boundaries.
 
-Active strategy cards also surface persisted runtime telemetry — next scheduled run, last execution, finished/failed counts and attributed spend — so autonomous behavior is observable rather than implied.
+Active strategy cards also surface persisted runtime telemetry — next scheduled run, last execution, finished/failed counts and attributed spend — so autonomous behavior is observable rather than implied. They also surface the latest provider transaction receipt when one exists; Handelo does not label a strategy run finished from a fabricated or client-generated hash.
 
 The Ask Handelo workspace chat now surfaces the agent's server-generated decision trace — observe, reason, propose, policy-check and execution-gate — so users can see why an action is ready or blocked without exposing model signing authority.
 

@@ -1,4 +1,5 @@
 import { evaluatePortfolioStrategyRisk, type PortfolioSnapshot, type StrategyDefinition } from "@handelo/core";
+import type { StrategyExecutionReceipt } from "@handelo/strategy";
 import { evaluateStrategyCondition, executionGrantFromStrategy, RetryableStrategyExecutionError, type StrategyExecutionRecord, type StrategyExecutionStore } from "@handelo/strategy";
 import { createRebalancePreview } from "@handelo/core";
 import { BinanceAgenticWalletAdapter } from "@handelo/execution";
@@ -196,7 +197,7 @@ export function createHandeloStrategyWorkerDependencies(
           allowed.toLowerCase() === asset.underlyingTicker.toLowerCase()
       );
     },
-    execute: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<void> => {
+    execute: async (strategy: StrategyDefinition, _record: StrategyExecutionRecord): Promise<StrategyExecutionReceipt> => {
       if (!isSupportedAutonomousStrategy(strategy)) {
         throw new Error("This strategy type is not enabled for autonomous BAW execution yet.");
       }
@@ -254,7 +255,11 @@ export function createHandeloStrategyWorkerDependencies(
             if (result.status !== "FINISHED") throw new Error("Rebalance sell did not finish successfully.");
           }
         }
-        return;
+        return {
+          txHash: "REBALANCE_MULTIPLE_ORDERS",
+          network: "BSC",
+          provider: "BINANCE_AGENTIC_WALLET"
+        };
       }
 
       if (!strategy.amountUsd || strategy.amountUsd <= 0) {
@@ -315,6 +320,14 @@ export function createHandeloStrategyWorkerDependencies(
       if (result.status === "PENDING") {
         throw new Error("Agentic Wallet order remained pending after the verification window.");
       }
+      if (!result.txHash) {
+        throw new Error("Agentic Wallet execution finished without a transaction hash; execution is not considered verified.");
+      }
+      return {
+        txHash: result.txHash,
+        network: "BSC",
+        provider: "BINANCE_AGENTIC_WALLET"
+      };
     }
   };
 }

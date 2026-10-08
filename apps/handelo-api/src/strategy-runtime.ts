@@ -4,7 +4,8 @@ import {
   type StrategyExecutionRecord,
   type StrategyExecutionStore,
   type StrategyRuntimeResult,
-  type StrategySchedulerResult
+  type StrategySchedulerResult,
+  type StrategyExecutionReceipt
 } from "@handelo/strategy";
 import type { StrategyDefinition } from "@handelo/core";
 import {
@@ -20,7 +21,7 @@ export interface PersistedStrategySchedulerDependencies {
   marketOpen?: boolean;
   conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
-  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<StrategyExecutionReceipt | void>;
 }
 
 export async function listPersistedStrategyExecutions(
@@ -47,6 +48,8 @@ export interface StrategyAttribution {
   lastExecutionAt: string | null;
   nextExecutionAt: string | null;
   successfulPlannedUsd: number | null;
+  lastExecutionTxHash: string | null;
+  lastExecutionProvider: string | null;
 }
 
 export async function listStrategyAttribution(
@@ -71,7 +74,9 @@ export async function listStrategyAttribution(
       failedCount,
       lastExecutionAt: strategyRecords[0]?.finishedAt ?? strategyRecords[0]?.triggeredAt ?? null,
       nextExecutionAt: strategy.nextExecutionAt ?? null,
-      successfulPlannedUsd: strategy.amountUsd === undefined ? null : strategy.amountUsd * finishedCount
+      successfulPlannedUsd: strategy.amountUsd === undefined ? null : strategy.amountUsd * finishedCount,
+      lastExecutionTxHash: strategyRecords.find(record => record.executionReceipt?.txHash)?.executionReceipt?.txHash ?? null,
+      lastExecutionProvider: strategyRecords.find(record => record.executionReceipt?.provider)?.executionReceipt?.provider ?? null
     };
   });
 }
