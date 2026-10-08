@@ -726,3 +726,24 @@ button{cursor:pointer}
 .home-market-metric span{display:block;color:var(--faint);font:8px var(--mono);letter-spacing:.08em}
 .home-market-metric strong{display:block;margin-top:8px;color:var(--text);font:500 11px var(--mono);line-height:1.35}
 .home-market-loading{grid-column:1/-1;padding:18px;color:var(--muted);font:9px var(--mono);line-height:1.6}
+
+/* Batch 3 — real wallet + portfolio context. */
+.wallet-status-line{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:10px 0 7px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);font:8px var(--mono);letter-spacing:.07em}
+.wallet-status-line>span:last-child{color:var(--faint)}
+.wallet-status-value.connected{color:var(--green)}
+.wallet-status-value.unconnected,.wallet-status-value.unavailable{color:var(--muted)}
+.wallet-status-value.creating{color:var(--gold)}
+.wallet-balance{display:grid;gap:5px;margin:10px 0}
+.wallet-balance small,.portfolio-summary-inline small{font:8px var(--mono);letter-spacing:.07em;color:var(--faint)}
+.wallet-balance strong{font:500 22px var(--mono);color:var(--text)}
+.portfolio-summary-inline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);margin:10px 0}
+.portfolio-summary-inline>div{min-width:0;padding:10px;background:rgba(255,255,255,.018)}
+.portfolio-summary-inline strong{display:block;margin-top:6px;font:500 11px var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.portfolio-position{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px}
+.portfolio-position>span{display:grid;gap:3px;min-width:0}
+.portfolio-position>span strong{font-size:10px}
+.portfolio-position>span small,.portfolio-position>.portfolio-pnl{color:var(--faint);font:8px var(--mono)}
+.portfolio-position>b{font:500 9px var(--mono);color:var(--gold)}
+.portfolio-position .portfolio-pnl{grid-column:1/-1}
+.portfolio-note{margin-top:10px;color:var(--faint);font:8px/1.55 var(--mono)}
+@media(max-width:720px){.portfolio-summary-inline{grid-template-columns:1fr}.wallet-status-line{align-items:flex-start;flex-direction:column;gap:4px}}
