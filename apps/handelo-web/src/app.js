@@ -26,6 +26,9 @@ let chatRequestId = 0;
 const workspaceMarket = document.querySelector("#workspaceMarket");
 const workspaceMarketStatus = document.querySelector("#workspaceMarketStatus");
 const workspaceWalletBalance = document.querySelector("#workspaceWalletBalance");
+const workspaceWalletStatus = document.querySelector("#workspaceWalletStatus");
+const workspaceWalletProvider = document.querySelector("#workspaceWalletProvider");
+const workspacePortfolioSummary = document.querySelector("#workspacePortfolioSummary");
 const workspaceWalletAddress = document.querySelector("#workspaceWalletAddress");
 const workspacePortfolio = document.querySelector("#workspacePortfolio");
 const workspaceActivity = document.querySelector("#workspaceActivity");
@@ -335,9 +338,24 @@ async function loadHomeMarketReality() {
 
 async function refreshWorkspaceContext() {
   renderWorkspaceStrategies();
-  [workspaceMarket, workspaceGapRadar, workspacePortfolio, workspaceActivity].forEach((element) => {
+  [workspaceMarket, workspaceGapRadar, workspacePortfolio, workspaceActivity, workspacePortfolioSummary].forEach((element) => {
     element?.setAttribute("aria-busy", "true");
   });
+  try {
+    const walletStatusResponse = await fetch(API_BASE + "/api/wallet/status", {cache:"no-store"});
+    const walletStatus = await walletStatusResponse.json();
+    const status = walletStatus?.status || "UNAVAILABLE";
+    if (workspaceWalletStatus) {
+      workspaceWalletStatus.textContent = status;
+      workspaceWalletStatus.className = "wallet-status-value " + status.toLowerCase();
+    }
+    if (workspaceWalletProvider) workspaceWalletProvider.textContent = "BINANCE AGENTIC WALLET";
+  } catch {
+    if (workspaceWalletStatus) {
+      workspaceWalletStatus.textContent = "UNAVAILABLE";
+      workspaceWalletStatus.className = "wallet-status-value unavailable";
+    }
+  }
   try {
     const marketsResponse = await fetch(API_BASE + "/api/markets", {cache:"no-store"});
     const markets = await marketsResponse.json();
@@ -381,13 +399,22 @@ async function refreshWorkspaceContext() {
     const address = await addressResponse.json();
     if (!address.connected || !address.address) {
       workspaceWalletAddressValue = "";
-      if (workspaceWalletBalance) workspaceWalletBalance.textContent = "—";
+      if (workspaceWalletBalance) workspaceWalletBalance.innerHTML = "<small>AVAILABLE USDT</small><strong>—</strong>";
       if (workspaceWalletAddress) workspaceWalletAddress.textContent = "WALLET NOT CONNECTED";
+      if (workspaceWalletStatus) {
+        workspaceWalletStatus.textContent = "UNCONNECTED";
+        workspaceWalletStatus.className = "wallet-status-value unconnected";
+      }
+      if (workspacePortfolioSummary) workspacePortfolioSummary.innerHTML = "<div><small>POSITION VALUE</small><strong>—</strong></div><div><small>AVAILABLE USDT</small><strong>—</strong></div><div><small>UNREALIZED P&amp;L</small><strong>NOT AVAILABLE</strong></div>";
       renderWorkspaceWalletCenter({ status: "UNCONNECTED" });
       return;
     }
     workspaceWalletAddressValue = address.address;
     if (workspaceWalletAddress) workspaceWalletAddress.textContent = address.address.slice(0,6) + "…" + address.address.slice(-4);
+    if (workspaceWalletStatus) {
+      workspaceWalletStatus.textContent = "CONNECTED";
+      workspaceWalletStatus.className = "wallet-status-value connected";
+    }
     try {
       const guardrailsResponse = await fetch(API_BASE + "/api/wallet/guardrails", {cache:"no-store"});
       const guardrails = await guardrailsResponse.json();
@@ -404,13 +431,37 @@ async function refreshWorkspaceContext() {
     else renderWorkspaceStrategies([]);
     const portfolioResponse = await fetch(API_BASE + "/api/portfolio?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const portfolio = await portfolioResponse.json();
-    if (workspaceWalletBalance) workspaceWalletBalance.textContent = money(portfolio?.totalValueUsd ?? portfolio?.balanceUsd);
+    if (!portfolioResponse.ok) throw new Error(portfolio?.error || "Portfolio data is unavailable.");
+    const positionValue = portfolio?.totalValueUsd;
+    const cashBalance = portfolio?.balanceUsd;
+    if (workspaceWalletBalance) workspaceWalletBalance.innerHTML = "<small>AVAILABLE USDT</small><strong>" + escapeHtml(money(cashBalance)) + "</strong>";
+    if (workspacePortfolioSummary) {
+      const pnlUsd = Number(portfolio?.unrealizedPnlUsd);
+      const pnlPct = Number(portfolio?.unrealizedPnlPercent);
+      const pnlText = Number.isFinite(pnlUsd)
+        ? money(pnlUsd) + (Number.isFinite(pnlPct) ? " · " + (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%" : "")
+        : "COST BASIS REQUIRED";
+      workspacePortfolioSummary.innerHTML =
+        "<div><small>POSITION VALUE</small><strong>" + escapeHtml(money(positionValue)) + "</strong></div>" +
+        "<div><small>AVAILABLE USDT</small><strong>" + escapeHtml(money(cashBalance)) + "</strong></div>" +
+        "<div><small>UNREALIZED P&amp;L</small><strong>" + escapeHtml(pnlText) + "</strong></div>";
+    }
     if (workspacePortfolio && Array.isArray(portfolio?.positions)) {
       const reconciliation = portfolio?.source === "BSC_TOKEN_BALANCES"
         ? "LIVE BSC SNAPSHOT · " + (formatMarketTime(portfolio?.asOf) === "—" ? "time unavailable" : formatMarketTime(portfolio?.asOf))
         : "PORTFOLIO";
-      workspacePortfolio.innerHTML = '<div class="workspace-gap-section-label">' + escapeHtml(reconciliation) + '</div>' +
-        (portfolio.positions.slice(0,4).map(position => `<div class="workspace-position"><span>${escapeHtml(position.tokenSymbol || position.asset)}</span><b>${position.allocationPercent == null ? "—" : position.allocationPercent.toFixed(1) + "%"}</b></div>`).join("") || '<div class="workspace-empty">No positions yet.</div>');
+      const rows = portfolio.positions.slice(0, 6).map(position => {
+        const allocation = Number(position.allocationPercent);
+        const value = position.valueUsd ?? position.estimatedValueUsd;
+        const pnl = Number(position.unrealizedPnlUsd);
+        const pnlPct = Number(position.unrealizedPnlPercent);
+        const pnlText = Number.isFinite(pnl) ? money(pnl) + (Number.isFinite(pnlPct) ? " · " + (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%" : "") : "—";
+        return "<div class=\"workspace-position portfolio-position\"><span><strong>" + escapeHtml(position.tokenSymbol || position.asset || "Asset") + "</strong><small>" + escapeHtml(position.ticker || position.asset || "—") + " · " + escapeHtml(money(value)) + "</small></span><b>" + (Number.isFinite(allocation) ? allocation.toFixed(1) + "%" : "—") + "</b><small class=\"portfolio-pnl\">" + escapeHtml(pnlText) + "</small></div>";
+      }).join("");
+      workspacePortfolio.innerHTML =
+        "<div class=\"workspace-gap-section-label\">" + escapeHtml(reconciliation) + "</div>" +
+        (rows || "<div class=\"workspace-empty\">No supported tokenized-stock positions found in this wallet.</div>") +
+        "<div class=\"portfolio-note\">P&amp;L is shown only when trustworthy acquisition cost basis is available. Handelo does not estimate historical cost from current balances.</div>";
     }
     const historyResponse = await fetch(API_BASE + "/api/history?wallet=" + encodeURIComponent(address.address), {cache:"no-store"});
     const history = await historyResponse.json();
@@ -427,7 +478,7 @@ async function refreshWorkspaceContext() {
     renderWorkspaceError(workspacePortfolio, "Portfolio data is unavailable. Try refreshing.");
     renderWorkspaceError(workspaceActivity, "Activity data is unavailable. Try refreshing.");
   } finally {
-    [workspaceMarket, workspaceGapRadar, workspacePortfolio, workspaceActivity].forEach((element) => {
+    [workspaceMarket, workspaceGapRadar, workspacePortfolio, workspaceActivity, workspacePortfolioSummary].forEach((element) => {
       element?.setAttribute("aria-busy", "false");
     });
   }
