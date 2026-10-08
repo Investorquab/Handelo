@@ -303,3 +303,32 @@ test("homepage uses the approved connected seven-stage operating loop",()=> {
   assert.match(source,/premiumLoopDetail/);
   assert.match(indexSource,/The system does not jump from an AI answer straight to money movement/);
 });
+
+
+test("homepage market object is backed by live market reality", () => {
+  assert.match(indexSource, /id="homeMarketReality"/);
+  assert.match(indexSource, /id="homeMarketLiveStatus"/);
+  assert.doesNotMatch(indexSource, /INTERFACE PREVIEW/);
+  assert.doesNotMatch(indexSource, /Illustrative relationship/);
+  assert.match(source, /function renderHomeMarketReality\(markets = \[\]\)/);
+  assert.match(source, /function loadHomeMarketReality\(\)/);
+  assert.match(source, /API_BASE \+ "\/api\/markets"/);
+});
+
+test("homepage market reality exposes truthful price, gap, state, liquidity and provider context", () => {
+  assert.match(source, /homeReferencePrice/);
+  assert.match(source, /homeTokenPrice/);
+  assert.match(source, /homeMarketGap/);
+  assert.match(source, /homeMarketState/);
+  assert.match(source, /selected\.liquidityContext/);
+  assert.match(source, /selected\.provider/);
+  assert.match(source, /selected\.volume24hUsd/);
+  assert.match(indexSource, /No simulated market state is shown/);
+});
+
+test("workspace selected market exposes live liquidity and volume fields", () => {
+  assert.match(source, /<small>LIQUIDITY<\/small>/);
+  assert.match(source, /<small>VOLUME<\/small>/);
+  assert.match(source, /market\.liquidityContext/);
+  assert.match(source, /market\.volume24hUsd/);
+});

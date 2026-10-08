@@ -128,6 +128,7 @@ function renderWorkspaceStrategies(strategies = [], attribution = []) {
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error || "Strategy update failed.");
         await refreshWorkspaceContext();
+loadHomeMarketReality();
       } catch (error) {
         addAgentError(error instanceof Error ? error.message : String(error));
       } finally {
@@ -220,7 +221,7 @@ function renderWorkspaceMarket(market) {
   const scale = hasComparison ? Math.max(tokenPrice, referencePrice) : 0;
   const referenceWidth = hasComparison ? Math.max((referencePrice / scale) * 100, 4) : 0;
   const tokenWidth = hasComparison ? Math.max((tokenPrice / scale) * 100, 4) : 0;
-  workspaceMarket.innerHTML = `<div class="workspace-ticker"><strong>${escapeHtml(market.ticker)}</strong><span>${escapeHtml(market.tokenSymbol)}</span></div><div class="workspace-price">${money(market.tokenPrice)}</div><div class="workspace-price-compare" aria-label="Current on-chain versus reference price comparison"><div class="workspace-price-row"><span>REFERENCE</span><div class="workspace-price-track"><i style="width:${referenceWidth}%"></i></div><b>${money(market.referencePrice)}</b></div><div class="workspace-price-row"><span>ON-CHAIN</span><div class="workspace-price-track"><i style="width:${tokenWidth}%"></i></div><b>${money(market.tokenPrice)}</b></div></div><div class="workspace-market-grid"><div><small>GAP</small><b class="${gap === null ? "" : gap >= 0 ? "positive" : "negative"}">${gapText}</b></div><div><small>STATUS</small><b>${escapeHtml(market.marketStatus || "—")}</b></div><div><small>PROVIDER</small><b>${escapeHtml(market.provider || "BSC")}</b></div><div><small>REPRESENTATION</small><b>${escapeHtml(market.tokenSymbol || "—")}</b></div></div><div class="context-schedule"><span>${market.marketOpen ? "NEXT CLOSE" : "NEXT OPEN"}</span><strong>${escapeHtml(marketSchedule(market))}</strong></div>${market.marketStatusReason ? `<div class="context-reason">${escapeHtml(market.marketStatusReason)}</div>` : ""}`;
+  workspaceMarket.innerHTML = `<div class="workspace-ticker"><strong>${escapeHtml(market.ticker)}</strong><span>${escapeHtml(market.tokenSymbol)}</span></div><div class="workspace-price">${money(market.tokenPrice)}</div><div class="workspace-price-compare" aria-label="Current on-chain versus reference price comparison"><div class="workspace-price-row"><span>REFERENCE</span><div class="workspace-price-track"><i style="width:${referenceWidth}%"></i></div><b>${money(market.referencePrice)}</b></div><div class="workspace-price-row"><span>ON-CHAIN</span><div class="workspace-price-track"><i style="width:${tokenWidth}%"></i></div><b>${money(market.tokenPrice)}</b></div></div><div class="workspace-market-grid"><div><small>GAP</small><b class="${gap === null ? "" : gap >= 0 ? "positive" : "negative"}">${gapText}</b></div><div><small>STATUS</small><b>${escapeHtml(market.marketStatus || "—")}</b></div><div><small>PROVIDER</small><b>${escapeHtml(market.provider || "BSC")}</b></div><div><small>LIQUIDITY</small><b>${escapeHtml(market.liquidityContext || market.liquidity || "—")}</b></div><div><small>VOLUME</small><b>${escapeHtml(formatMarketMetric(market.volume24hUsd ?? market.volumeUsd ?? market.volume24h ?? market.volume))}</b></div><div><small>REPRESENTATION</small><b>${escapeHtml(market.tokenSymbol || "—")}</b></div></div><div class="context-schedule"><span>${market.marketOpen ? "NEXT CLOSE" : "NEXT OPEN"}</span><strong>${escapeHtml(marketSchedule(market))}</strong></div>${market.marketStatusReason ? `<div class="context-reason">${escapeHtml(market.marketStatusReason)}</div>` : ""}`;
 }
 
 function renderWorkspaceGapRadar(markets, representations = []) {
@@ -255,6 +256,81 @@ function renderWorkspaceGapRadar(markets, representations = []) {
 
   workspaceGapRadar.innerHTML = marketRows + comparisonHeader + empty;
   workspaceGapRadar.setAttribute("aria-busy", "false");
+}
+
+function formatMarketMetric(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "number" && Number.isFinite(value)) return money(value);
+  return String(value);
+}
+
+function renderHomeMarketReality(markets = []) {
+  const liveStatus = document.querySelector("#homeMarketLiveStatus");
+  const referenceTicker = document.querySelector("#homeReferenceTicker");
+  const referencePrice = document.querySelector("#homeReferencePrice");
+  const tokenSymbol = document.querySelector("#homeTokenSymbol");
+  const tokenPrice = document.querySelector("#homeTokenPrice");
+  const reality = document.querySelector("#homeMarketReality");
+  const gapNode = document.querySelector("#homeMarketGap");
+  const stateNode = document.querySelector("#homeMarketState");
+  const provenance = document.querySelector("#homeMarketProvenance");
+  if (!reality) return;
+
+  const records = Array.isArray(markets) ? markets.map(normalizeMarketRecord) : [];
+  const selected = records.find((market) =>
+    String(market.tokenSymbol || "").toUpperCase() === "NVDAB" ||
+    String(market.ticker || market.underlyingTicker || "").toUpperCase() === "NVDA"
+  ) || records[0];
+
+  if (!selected) {
+    if (liveStatus) liveStatus.textContent = "UNAVAILABLE";
+    reality.innerHTML = '<div class="home-market-loading">Live market data is unavailable right now.</div>';
+    reality.setAttribute("aria-busy", "false");
+    return;
+  }
+
+  const gap = selected.premiumPct;
+  const gapText = Number.isFinite(gap) ? (gap >= 0 ? "+" : "") + gap.toFixed(2) + "%" : "—";
+  const volume = selected.volume24hUsd ?? selected.volumeUsd ?? selected.volume24h ?? selected.volume ?? null;
+  const liquidity = selected.liquidityContext ?? selected.liquidity ?? selected.liquidityTier ?? "—";
+  const status = selected.marketStatus || (selected.marketOpen ? "OPEN" : "CLOSED");
+  const reason = selected.marketStatusReason ? " · " + selected.marketStatusReason : "";
+
+  if (referenceTicker) referenceTicker.textContent = selected.ticker || selected.underlyingTicker || "—";
+  if (referencePrice) referencePrice.textContent = money(selected.referencePrice);
+  if (tokenSymbol) tokenSymbol.textContent = selected.tokenSymbol || "—";
+  if (tokenPrice) tokenPrice.textContent = money(selected.tokenPrice);
+  if (liveStatus) liveStatus.textContent = selected.marketOpen ? "LIVE / " + status : status;
+  if (gapNode) gapNode.textContent = "GAP " + gapText;
+  if (stateNode) stateNode.textContent = "MARKET " + String(status).toUpperCase();
+  if (provenance) provenance.textContent = (selected.provider || "BSC") + " market layer" + reason;
+
+  reality.innerHTML =
+    '<div class="home-market-metric"><span>LIQUIDITY</span><strong>' + escapeHtml(String(liquidity)) + '</strong></div>' +
+    '<div class="home-market-metric"><span>VOLUME</span><strong>' + escapeHtml(formatMarketMetric(volume)) + '</strong></div>' +
+    '<div class="home-market-metric"><span>REPRESENTATION</span><strong>' + escapeHtml(selected.tokenSymbol || "—") + '</strong></div>' +
+    '<div class="home-market-metric"><span>PROVIDER</span><strong>' + escapeHtml(selected.provider || "BSC") + '</strong></div>';
+  reality.setAttribute("aria-busy", "false");
+}
+
+async function loadHomeMarketReality() {
+  const reality = document.querySelector("#homeMarketReality");
+  if (!reality) return;
+  try {
+    const response = await fetch(API_BASE + "/api/markets", {cache:"no-store"});
+    const markets = await response.json();
+    if (!response.ok || !Array.isArray(markets)) {
+      throw new Error((markets && typeof markets === "object" && markets.error) || "Market data unavailable.");
+    }
+    renderHomeMarketReality(markets);
+  } catch (error) {
+    const status = document.querySelector("#homeMarketLiveStatus");
+    const provenance = document.querySelector("#homeMarketProvenance");
+    if (status) status.textContent = "UNAVAILABLE";
+    if (provenance) provenance.textContent = userFacingError(error, "Live market data could not be loaded.");
+    reality.innerHTML = '<div class="home-market-loading">Could not reach the live market source. Open the workspace to retry.</div>';
+    reality.setAttribute("aria-busy", "false");
+  }
 }
 
 async function refreshWorkspaceContext() {
