@@ -271,13 +271,16 @@ test("Try Demo CTA is present beside the approved how-it-works CTA", () => {
   assert.match(indexSource, /id="how"/);
   assert.match(indexSource, /id="tryd"/);
   assert.match(indexSource, />Try Demo<\/button>/);
-  assert.match(indexSource, /"oh1","oh2","openh","tryd"/);
+  assert.match(indexSource, /["oh1","oh2","openh"]/);
 });
 
-test("Try Demo and Open Handelo currently enter the same workspace mock interface without real-data wiring", () => {
-  assert.match(indexSource, /function go\(\)\{location\.hash="workspace"\}/);
-  assert.match(indexSource, /"openh","tryd"/);
-  assert.doesNotMatch(indexSource, /tryd[^\n]*api|api[^\n]*tryd/i);
+test("Try Demo remains demo-only while Open Handelo enters live mode", () => {
+  assert.match(indexSource, /function goLive\(\)/);
+  assert.match(indexSource, /function goDemo\(\)/);
+  assert.match(indexSource, /\$\("tryd"\)\.addEventListener\("click",goDemo\)/);
+  assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=true/);
+  assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=false/);
+  assert.doesNotMatch(indexSource, /goDemo\(\)[\s\S]*?\/api\//);
 });
 
 

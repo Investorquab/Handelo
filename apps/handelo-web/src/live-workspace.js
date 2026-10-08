@@ -150,4 +150,17 @@
   }
 
   window.HandeloLiveWorkspace = { load };
+
+  function syncFromHash() {
+    const liveMode = location.hash.includes("mode=live");
+    if (!liveMode) return;
+    window.HANDELO_LIVE_WORKSPACE = true;
+    void load();
+  }
+
+  window.addEventListener("hashchange", syncFromHash);
+  syncFromHash();
+  setInterval(() => {
+    if (window.HANDELO_LIVE_WORKSPACE) void load();
+  }, 30000);
 })();
