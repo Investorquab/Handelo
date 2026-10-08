@@ -839,3 +839,30 @@ test("execution fails closed when verification rejects the provider outcome", as
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+test("finished strategy execution persists a provider receipt", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(join(tmpdir(), "handelo-receipt-"));
+  try {
+    const store = new FileStrategyExecutionStore(join(dir, "runs.json"));
+    const strategy = activateStrategy(createDraftStrategy({ type: "DCA", asset: "NVDAB", amountUsd: 10, frequency: "Daily" }));
+    const result = await runTriggeredStrategy(strategy, { eligible: true, reason: "ready", triggeredAt: "2026-10-05T12:00:00.000Z" }, {
+      store,
+      now: () => "2026-10-05T12:00:01.000Z",
+      riskCheck: async () => true,
+      execute: async () => ({
+        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        network: "BSC",
+        provider: "BINANCE_AGENTIC_WALLET"
+      })
+    });
+    assert.equal(result.status, "FINISHED");
+    assert.equal(result.record.executionReceipt?.txHash, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    assert.equal((await store.list())[0]?.executionReceipt?.provider, "BINANCE_AGENTIC_WALLET");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
