@@ -219,7 +219,13 @@ export class HandeloAgent {
     this.market = opts.marketClient ?? marketClientFromEnv();
   }
 
-  async run(message: string): Promise<AgentResult> {
+  async run(message: string, accountContext?: {
+    wallet: string | null;
+    portfolio: unknown;
+    strategies: unknown[];
+    attribution: unknown;
+    executions: unknown[];
+  }): Promise<AgentResult> {
     const normalizedMessage = normalizeUserMessage(message);
     const intent = await this.llm.generateJson<UserIntent>({
       schemaName: "handelo_intent",
@@ -310,7 +316,7 @@ export class HandeloAgent {
         })
       : null;
 
-    const context = market
+    const marketContext = market
       ? JSON.stringify({ market, policy }, null, 2)
       : candidates.length
         ? JSON.stringify({ candidateMarkets: candidates }, null, 2)
@@ -318,10 +324,14 @@ export class HandeloAgent {
           ? marketResolutionError
           : "No specific stock market record was resolved.";
 
+    const context = accountContext
+      ? JSON.stringify({ marketContext, accountContext }, null, 2)
+      : marketContext;
+
     const response = await this.llm.generateJson<{ answer: string }>({
       schemaName: "handelo_response",
       schema: RESPONSE_SCHEMA,
-      system: "You are Handelo, a beginner-friendly tokenized-stock market agent on BNB Chain. Explain market structure in simple language. Never claim a trade happened unless execution evidence is supplied. If the market is closed, explain that the on-chain token may still trade while the latest reference price is stale. Mention the on-chain/reference gap when available. When candidateMarkets are supplied, explain that they are live market-data candidates rather than a personalized recommendation. Do not give personalized certainty; present observations and let the user decide.",
+      system: "You are Handelo, a beginner-friendly tokenized-stock market agent on BNB Chain. Explain market structure in simple language. Never claim a trade happened unless execution evidence is supplied. If the market is closed, explain that the on-chain token may still trade while the latest reference price is stale. Mention the on-chain/reference gap when available. When candidateMarkets are supplied, explain that they are live market-data candidates rather than a personalized recommendation. When accountContext is supplied, treat its wallet, portfolio, strategies, attribution and execution history as authoritative live account context for this user. Use it to answer questions about their portfolio, strategies and prior executions. Never invent missing account data. Do not give personalized certainty; present observations and let the user decide.",
       user: `User request: ${normalizedMessage}
 Parsed intent: ${JSON.stringify(parsedIntent)}
 Live market context: ${context}
