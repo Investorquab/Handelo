@@ -20,6 +20,7 @@ export interface WalletSwapRequest{
   gasLevel?:"LOW"|"MEDIUM"|"HIGH";
 }
 export interface WalletQuote{fromCoinSymbol:string;fromCoinAmount:string;toCoinSymbol:string;toCoinAmount:string;slippage:number;}
+export interface WalletBalance{symbol:string;address:string;binanceChainId:string;balance:string;price:string;value:string;}
 
 export interface WalletSendRequest{
   recipient:string;
@@ -122,6 +123,8 @@ export async function auditToken(chainId:string,contractAddress:string):Promise<
 }
 
 export class BinanceAgenticWalletAdapter{
+  async balances(binanceChainId:"56"="56"):Promise<WalletBalance[]>{return baw<WalletBalance[]>(["wallet","balance","--binanceChainId",binanceChainId]);}
+
   async withdraw(request: import("./wallet-withdrawal.js").AgentWalletWithdrawalRequest, context: import("@handelo/core").AgentWalletContext): Promise<WalletSendResult> {
     const authorization = (await import("./wallet-withdrawal.js")).authorizeAgentWalletWithdrawal(context, request);
     return this.sendToken({recipient: authorization.to, amount: authorization.amount, tokenAddress: authorization.tokenAddress, binanceChainId: "56"}, request.userApproved);

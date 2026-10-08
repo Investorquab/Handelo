@@ -126,6 +126,22 @@ export class HandeloMarketClient {
     })));
   }
 
+  async candles(tokenContractAddress:string,bar="5m",limit=100):Promise<Array<[number,number,number,number,number,number,number]>>{
+    if(!/^0x[0-9a-fA-F]{40}$/.test(tokenContractAddress)) throw new Error("Invalid RWA token contract address.");
+    const allowedBars=new Set(["1s","5s","30s","1m","3m","5m","15m","30m","1h","2h","4h","6h","8h","12h","1d","3d","1w","1M"]);
+    if(!allowedBars.has(bar)) throw new Error("Unsupported candle interval.");
+    const normalizedLimit=Math.min(Math.max(Math.floor(limit),1),500);
+    const data=await this.request<unknown[]>("GET","/api/v1/dex/market/candles",undefined,{
+      binanceChainId:"56",
+      tokenContractAddress,
+      bar,
+      limit:String(normalizedLimit)
+    });
+    return data.filter((row):row is unknown[]=>Array.isArray(row)&&row.length>=7).map(row=>[
+      Number(row[0]),Number(row[1]),Number(row[2]),Number(row[3]),Number(row[4]),Number(row[5]),Number(row[6])
+    ] as [number,number,number,number,number,number,number]).filter(row=>row.every(Number.isFinite));
+  }
+
   async discover(limit=8):Promise<RwaAsset[]>{
     const all=await this.tokens();
     return all.filter(x=>x.binanceChainId==="56"&&x.underlyingTicker).sort((a,b)=>Number(b.volume24H)-Number(a.volume24H)).slice(0,limit);
@@ -151,17 +167,22 @@ export class HandeloMarketClient {
 
   async find(ticker:string):Promise<RwaAsset>{
     const query=ticker.trim();
-    const exactToken= (await this.tokens()).filter(
-      asset => asset.binanceChainId==="56" && asset.tokenSymbol.trim().toLowerCase()===query.toLowerCase()
-    );
-    if(exactToken.length===1) return exactToken[0];
-    const matches=await this.findAll(query);
-    const exact=matches.filter(x=>x.tokenSymbol.toLowerCase()===ticker.trim().toLowerCase());
+    if (!query) throw new MarketResolutionError("NOT_FOUND","A ticker is required.");
+    const all=await this.tokens();
+    const tokenExact=all.filter(asset=>asset.binanceChainId==="56"&&asset.tokenSymbol.trim().toLowerCase()===query.toLowerCase());
+    if (tokenExact.length===1) return tokenExact[0];
+    if (tokenExact.length>1) throw new MarketResolutionError("AMBIGUOUS","Multiple live BSC market records use token symbol "+query+".");
+    const searchResults=await this.search(query);
+    const searchAssets=searchResults.flatMap(result=>result.assets).filter(asset=>asset.binanceChainId==="56");
+    const contractSet=new Set(searchAssets.map(asset=>asset.tokenContractAddress.toLowerCase()));
+    const matches=all.filter(asset=>contractSet.has(asset.tokenContractAddress.toLowerCase())&&(asset.tokenSymbol.trim().toLowerCase()===query.toLowerCase()||asset.underlyingTicker.trim().toLowerCase()===query.toLowerCase()));
+    const exact=matches.filter(asset=>asset.tokenSymbol.trim().toLowerCase()===query.toLowerCase());
     if(exact.length===1) return exact[0];
-    if(matches.length>1) throw new MarketResolutionError("AMBIGUOUS",`Multiple BSC tokenized-stock representations found for ${ticker}: ${matches.map(x=>x.tokenSymbol+" ("+x.platformId+")").join(", ")}. Resolve the representation before trading.`);
-    return matches[0];
-  }
-}
+    const unique=new Map(matches.map(asset=>[asset.tokenContractAddress.toLowerCase(),asset]));
+    if(unique.size===1) return [...unique.values()][0];
+    if(unique.size>1) throw new MarketResolutionError("AMBIGUOUS","Multiple BSC tokenized-stock representations found for "+ticker+": "+[...unique.values()].map(x=>x.tokenSymbol+" ("+x.platformId+")").join(", ")+". Resolve the representation before trading.");
+    throw new MarketResolutionError("NOT_FOUND","No live BSC tokenized-stock market record found for "+query+".");
+  }}
 
 export function toMarketInsight(asset:RwaAsset):MarketInsight{
   const onChainPrice=Number(asset.tokenPrice);

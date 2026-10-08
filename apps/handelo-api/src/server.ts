@@ -92,10 +92,12 @@ function toMarketInsightForServer(asset: import("@handelo/market").RwaAsset) {
   return {
     ticker: insight.underlyingTicker,
     tokenSymbol: insight.tokenSymbol,
+    contract: asset.tokenContractAddress,
     provider: insight.provider,
     tokenPrice: insight.onChainPrice,
     referencePrice: insight.referencePrice,
     divergencePercent: insight.divergencePercent,
+    volume24h: insight.volume24h,
     marketStatus: insight.marketStatus,
     marketOpen: asset.statusInfo.openState,
     nextOpenAt: insight.nextOpenAt,
@@ -177,6 +179,16 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "GET" && req.url?.startsWith("/api/wallet/balances")) {
+    try {
+      const chain = new URL(req.url, "http://localhost").searchParams.get("chain")?.trim() || "56";
+      if (chain !== "56") return json(res, 400, { error: "Only BSC wallet balances are supported by this workspace." });
+      return json(res, 200, { balances: await bawJson<unknown[]>(["wallet", "balance", "--binanceChainId", "56"]) });
+    } catch (error) {
+      return json(res, 503, { balances: [], error: walletServiceError(error) });
+    }
+  }
+
   if (req.method === "GET" && req.url === "/api/wallet/guardrails") {
     try {
       const status = await walletStatus();
@@ -208,6 +220,17 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "POST" && req.url === "/api/wallet/signout") {
+    try {
+      await bawJson(["auth", "signout"]);
+      walletAuth = { status: "IDLE" };
+      return json(res, 200, { status: "LOGGED_OUT" });
+    } catch (error) {
+      walletAuth = { status: "FAILED", error: walletServiceError(error) };
+      return json(res, 502, { error: walletServiceError(error) });
+    }
+  }
+
   if (req.method === "GET" && req.url === "/api/wallet/auth") {
     if (walletAuth.status === "WAITING" || walletAuth.status === "SUCCESS" || walletAuth.status === "FAILED") return json(res, 200, walletAuth);
 
@@ -236,9 +259,53 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "GET" && req.url?.startsWith("/api/markets/asset")) {
+    const ticker = new URL(req.url, "http://localhost").searchParams.get("ticker")?.trim() ?? "";
+    if (!ticker) return json(res, 400, { error: "ticker is required" });
+    try {
+      const asset = await getMarket().find(ticker);
+      return json(res, 200, { asset: toMarketInsightForServer(asset) });
+    } catch (error) {
+      const status = marketErrorStatus(error);
+      return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
   if (req.method === "GET" && req.url === "/api/markets") {
     try {
       return json(res, 200, await getMarket().discover(8));
+    } catch (error) {
+      const status = marketErrorStatus(error);
+      return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/markets/candles")) {
+    const url = new URL(req.url, "http://localhost");
+    const ticker = url.searchParams.get("ticker")?.trim() ?? "";
+    const bar = url.searchParams.get("bar")?.trim() || "5m";
+    const requestedLimit = Number(url.searchParams.get("limit") ?? "100");
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), 500) : 100;
+    if (!ticker) return json(res, 400, { error: "ticker is required" });
+    try {
+      const contract = url.searchParams.get("contract")?.trim() ?? "";
+      const asset = contract && /^0x[a-fA-F0-9]{40}$/.test(contract)
+        ? (await getMarket().tokens()).find(item => item.binanceChainId === "56" && item.tokenContractAddress.toLowerCase() === contract.toLowerCase())
+        : await getMarket().find(ticker);
+      if (!asset) return json(res, 404, { error: "Tokenized-stock market record not found for candle history." });
+      const candles = await getMarket().candles(asset.tokenContractAddress, bar, limit);
+      return json(res, 200, {
+        asset: {
+          ticker: asset.underlyingTicker,
+          tokenSymbol: asset.tokenSymbol,
+          contract: asset.tokenContractAddress,
+          provider: asset.platformId,
+          referencePrice: Number(asset.referencePrice),
+          tokenPrice: Number(asset.tokenPrice)
+        },
+        bar,
+        candles
+      });
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
@@ -391,7 +458,7 @@ const server = createServer(async (req, res) => {
     }
   }
 
-  if (req.method === "GET" && req.url?.startsWith("/api/strategies")) {
+  if (req.method === "GET" && req.url?.startsWith("/api/strategies") && !req.url.startsWith("/api/strategies/all")) {
     const walletAddress = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() ?? "";
     if (!isEvmAddress(walletAddress)) return json(res, 400, { error: "A valid wallet is required." });
     try {
@@ -899,6 +966,12 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "GET" && req.url === "/api/chat/status") {
+    const key = process.env.HANDELO_API_KEY?.trim() || process.env.API_KEY?.trim() || "";
+    const provider = key.startsWith("gsk_") ? "groq" : key.startsWith("sk-ant-") ? "anthropic" : key.startsWith("sk-") ? "openai" : null;
+    return json(res, 200, { configured: Boolean(provider), provider });
+  }
+
   if (req.method !== "POST" || req.url !== "/api/chat") {
     return json(res, 404, { error: "Not found" });
   }
@@ -909,13 +982,32 @@ const server = createServer(async (req, res) => {
 
   try {
     const raw = await readRequestBody(req);
-    const body = parseJsonBody<{ message?: unknown }>(raw);
+    const body = parseJsonBody<{ message?: unknown; wallet?: unknown }>(raw);
 
     if (typeof body.message !== "string" || !body.message.trim()) {
       return json(res, 400, { error: "message is required" });
     }
 
-    const result = await getAgent().run(body.message.trim());
+    const walletAddress = String(body.wallet ?? "").trim();
+    let accountContext: {
+      wallet: string | null;
+      portfolio: unknown;
+      strategies: unknown[];
+      attribution: unknown;
+      executions: unknown[];
+    } | undefined;
+
+    if (isEvmAddress(walletAddress)) {
+      const [portfolio, strategies, attribution, executions] = await Promise.all([
+        portfolioSnapshot(walletAddress).catch(() => null),
+        listStrategies(walletAddress).catch(() => []),
+        listStrategyAttribution(walletAddress, strategyExecutionStore).catch(() => []),
+        listPersistedStrategyExecutions(walletAddress, strategyExecutionStore).catch(() => [])
+      ]);
+      accountContext = { wallet: walletAddress, portfolio, strategies, attribution, executions };
+    }
+
+    const result = await getAgent().run(body.message.trim(), accountContext);
     return json(res, 200, result);
   } catch (error) {
     const status = error instanceof SyntaxError ? 400 : marketErrorStatus(error);
