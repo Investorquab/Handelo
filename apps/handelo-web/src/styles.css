@@ -761,3 +761,6 @@ button{cursor:pointer}
 .agent-trace-step.complete strong{color:var(--green);}.agent-trace-step.blocked strong{color:var(--muted);}.agent-trace-step.skipped strong{color:var(--faint);}
 .agent-trace-note{margin-top:9px;color:var(--faint);font:8px/1.55 var(--mono);}
 @media(max-width:800px){.agent-trace-steps{grid-template-columns:1fr 1fr;}.agent-trace-step:last-child{grid-column:1/-1;}}
+/* Batch 6 — strategy runtime telemetry. */
+.workspace-strategy .strategy-runtime-meta{color:var(--faint);font:8px var(--mono);letter-spacing:.02em}
+.workspace-strategy .strategy-actions{align-items:center}
