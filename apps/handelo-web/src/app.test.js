@@ -315,12 +315,13 @@ test("live workspace uses raw Binance market fields without demo simulation", ()
   assert.doesNotMatch(liveWorkspaceSource, /S\.nv|B0\(|prem\(|tok\(/);
 });
 
-test("live workspace loads market and account state independently", () => {
-  assert.match(liveWorkspaceSource, /void refreshMarket\(\)/);
-  assert.match(liveWorkspaceSource, /void refreshAccount\(\)/);
+test("live workspace loads a coherent snapshot and then receives streamed updates", () => {
+  assert.match(liveWorkspaceSource, /\/api\/workspace\/snapshot/);
+  assert.match(liveWorkspaceSource, /\/api\/workspace\/stream/);
+  assert.match(liveWorkspaceSource, /new EventSource/);
   assert.match(liveWorkspaceSource, /Promise\.allSettled/);
   assert.match(liveWorkspaceSource, /\/api\/portfolio\?wallet=/);
-  assert.match(liveWorkspaceSource, /\/api\/history\?wallet=/);
+  assert.match(liveWorkspaceSource, /function applyWorkspaceSnapshot\(snapshot\)/);
 });
 
 test("live portfolio uses the real API cash balance and token positions", () => {
