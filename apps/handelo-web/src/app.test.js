@@ -305,3 +305,39 @@ test("live workspace uses the Handelo API for market and portfolio data", () => 
   assert.match(liveWorkspaceSource, /NVDAB token · live API/);
   assert.doesNotMatch(liveWorkspaceSource, /Try Demo/);
 });
+
+test("live workspace uses raw Binance market fields without demo simulation", () => {
+  assert.match(liveWorkspaceSource, /volume24H/);
+  assert.match(liveWorkspaceSource, /statusInfo/);
+  assert.match(liveWorkspaceSource, /liveSamples/);
+  assert.match(liveWorkspaceSource, /LIVE API/);
+  assert.doesNotMatch(liveWorkspaceSource, /live simulation/);
+  assert.doesNotMatch(liveWorkspaceSource, /S\.nv|B0\(|prem\(|tok\(/);
+});
+
+test("live workspace loads market and account state independently", () => {
+  assert.match(liveWorkspaceSource, /void refreshMarket\(\)/);
+  assert.match(liveWorkspaceSource, /void refreshAccount\(\)/);
+  assert.match(liveWorkspaceSource, /Promise\.allSettled/);
+  assert.match(liveWorkspaceSource, //api\/portfolio\?wallet=/);
+  assert.match(liveWorkspaceSource, //api\/history\?wallet=/);
+});
+
+test("live portfolio uses the real API cash balance and token positions", () => {
+  assert.match(liveWorkspaceSource, /totalValueUsd/);
+  assert.match(liveWorkspaceSource, /balanceUsd/);
+  assert.match(liveWorkspaceSource, /valueUsd/);
+  assert.match(liveWorkspaceSource, /Live Binance token balance/);
+  assert.match(liveWorkspaceSource, /BNB is not included/);
+});
+
+test("live mode clears demo values before the real workspace loads", () => {
+  assert.match(indexSource, /window\.HandeloLiveWorkspace\.enter\(\)/);
+  assert.match(liveWorkspaceSource, /function resetLiveSurface\(\)/);
+  assert.match(liveWorkspaceSource, /liveSamples = \[\]/);
+});
+
+test("live portfolio and history routes do not invoke demo renderers", () => {
+  assert.match(indexSource, /if\(window\.HANDELO_LIVE_WORKSPACE\)\{window\.HandeloLiveWorkspace\?\.syncView/);
+  assert.match(indexSource, /if\(v=="hist"\)\{if\(window\.HANDELO_LIVE_WORKSPACE\)\{window\.HandeloLiveWorkspace\?\.syncView/);
+});

@@ -1,8 +1,21 @@
 (() => {
   const API_BASE = window.HANDELO_API_URL || localStorage.getItem("handelo_api_url") || "http://localhost:8787";
-  const state = { market: null, portfolio: null, wallet: null, history: null };
+  const state = {
+    market: null,
+    portfolio: null,
+    wallet: null,
+    address: null,
+    history: null,
+    liveSamples: [],
+    entered: false,
+    marketInFlight: false,
+    accountInFlight: false
+  };
 
   const $ = (id) => document.getElementById(id);
+  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 
   function money(value) {
     const n = Number(value);
@@ -11,156 +24,361 @@
       : "—";
   }
 
-  function percent(value) {
+  function pct(value, digits = 1) {
     const n = Number(value);
-    return Number.isFinite(n) ? (n >= 0 ? "+" : "") + n.toFixed(2) + "%" : "—";
+    return Number.isFinite(n) ? n.toFixed(digits) + "%" : "—";
   }
 
-  function esc(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
+  function gap(reference, token) {
+    const r = Number(reference);
+    const t = Number(token);
+    return Number.isFinite(r) && r > 0 && Number.isFinite(t) ? ((t / r) - 1) * 100 : null;
   }
 
-  async function get(path) {
-    const response = await fetch(API_BASE + path, { cache: "no-store" });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body?.error || "Handelo API request failed.");
-    return body;
+  async function get(path, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(API_BASE + path, {
+        cache: "no-store",
+        signal: controller.signal,
+        headers: { "accept": "application/json" }
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || "Handelo API request failed.");
+      return body;
+    } finally {
+      window.clearTimeout(timer);
+    }
   }
 
   function selectedMarket(markets) {
     return (Array.isArray(markets) ? markets : []).find((market) =>
-      String(market.tokenSymbol || "").toUpperCase() === "NVDAB" ||
-      String(market.underlyingTicker || market.ticker || "").toUpperCase() === "NVDA"
-    ) || markets?.[0] || null;
+      String(market.tokenSymbol || "").toUpperCase() === "NVDAB"
+    ) || (Array.isArray(markets) ? markets.find((market) =>
+      String(market.underlyingTicker || "").toUpperCase() === "NVDA"
+    ) : null) || markets?.[0] || null;
   }
 
-  function renderLiveChart(market) {
-    const reference = Number(market.referencePrice);
-    const token = Number(market.tokenPrice);
-    const values = [reference, token].filter(Number.isFinite);
-    if (values.length !== 2) {
-      $("chart").innerHTML = '<div class="msg">Live chart unavailable: the API did not return both prices.</div>';
+  function resetLiveSurface() {
+    const safeText = (id, value = "—") => { const el = $(id); if (el) el.textContent = value; };
+    safeText("tp"); safeText("sr"); safeText("st"); safeText("sg"); safeText("sv"); safeText("slq");
+    safeText("tot"); safeText("pn"); safeText("pb"); safeText("pu"); safeText("gv");
+    safeText("pc", "CONNECTING");
+    safeText("msg", "Connecting to Handelo API…");
+    if ($("sus")) $("sus").innerHTML = '<span class="dot"></span> Connecting';
+    ["bn","bb","bu"].forEach((id) => { if ($(id)) $(id).style.width = "0%"; });
+    if ($("gp")) $("gp").setAttribute("stroke-dasharray", "0 100");
+    if ($("gl")) { $("gl").textContent = "Waiting for live portfolio data"; $("gl").style.color = "var(--mute)"; }
+    if ($("chart")) $("chart").innerHTML = '<div class="msg">LIVE API · waiting for first market sample…</div>';
+    state.market = null;
+    state.portfolio = null;
+    state.wallet = null;
+    state.address = null;
+    state.history = null;
+    state.liveSamples = [];
+    if ($("v-port") && !$("v-port").hidden) renderPortfolioView();
+    if ($("v-hist") && !$("v-hist").hidden) renderHistoryView();
+  }
+
+  function enter() {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    state.entered = true;
+    resetLiveSurface();
+  }
+
+  function addSample(market) {
+    const reference = Number(market?.referencePrice);
+    const token = Number(market?.tokenPrice);
+    if (!Number.isFinite(reference) || !Number.isFinite(token)) return;
+    state.liveSamples.push({ t: new Date(), reference, token });
+    if (state.liveSamples.length > 60) state.liveSamples.shift();
+  }
+
+  function renderLiveChart() {
+    const chart = $("chart");
+    if (!chart) return;
+    const samples = state.liveSamples;
+    if (!samples.length) {
+      chart.innerHTML = '<div class="msg">LIVE API · waiting for first market sample…</div>';
       return;
     }
-    const lo = Math.min(...values), hi = Math.max(...values), pad = Math.max((hi-lo)*0.35, 0.5);
-    const min = lo-pad, max = hi+pad;
-    const y = (v) => 70 - ((v-min)/(max-min))*52;
-    $("chart").innerHTML =
-      '<svg viewBox="0 0 640 84" role="img" aria-label="Live NVDA reference and NVDAB token price snapshot">' +
-      '<line x1="20" y1="78" x2="620" y2="78" stroke="var(--line)"/>' +
-      '<line x1="20" y1="'+y(reference).toFixed(1)+'" x2="620" y2="'+y(reference).toFixed(1)+'" stroke="var(--ink)" stroke-width="2"/>' +
-      '<line x1="20" y1="'+y(token).toFixed(1)+'" x2="620" y2="'+y(token).toFixed(1)+'" stroke="var(--gold)" stroke-width="2"/>' +
-      '<circle cx="620" cy="'+y(reference).toFixed(1)+'" r="3" fill="var(--ink)"/>' +
-      '<circle cx="620" cy="'+y(token).toFixed(1)+'" r="3" fill="var(--gold)"/>' +
-      '<text x="20" y="14" fill="var(--mute)" font-size="11">LIVE PRICE SNAPSHOT · API</text></svg>';
+
+    const values = samples.flatMap((s) => [s.reference, s.token]);
+    const lo = Math.min(...values);
+    const hi = Math.max(...values);
+    const pad = Math.max((hi - lo) * 0.22, 0.5);
+    const min = lo - pad;
+    const max = hi + pad;
+    const width = 640;
+    const height = 180;
+    const left = 44;
+    const right = 14;
+    const top = 24;
+    const bottom = 28;
+    const innerW = width - left - right;
+    const innerH = height - top - bottom;
+    const x = (i) => left + (samples.length <= 1 ? innerW : (i / (samples.length - 1)) * innerW);
+    const y = (v) => top + (1 - (v - min) / (max - min || 1)) * innerH;
+    const refPoints = samples.map((s, i) => x(i).toFixed(1) + "," + y(s.reference).toFixed(1)).join(" ");
+    const tokenPoints = samples.map((s, i) => x(i).toFixed(1) + "," + y(s.token).toFixed(1)).join(" ");
+    const last = samples[samples.length - 1];
+    const stamp = last.t.toLocaleTimeString();
+
+    chart.innerHTML =
+      '<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Live NVDA reference and NVDAB token prices">' +
+      '<line x1="'+left+'" y1="'+(height-bottom)+'" x2="'+(width-right)+'" y2="'+(height-bottom)+'" stroke="var(--line)"/>' +
+      '<polyline points="'+refPoints+'" fill="none" stroke="var(--ink)" stroke-width="1.6"/>' +
+      '<polyline points="'+tokenPoints+'" fill="none" stroke="var(--gold)" stroke-width="2"/>' +
+      '<circle cx="'+x(samples.length-1).toFixed(1)+'" cy="'+y(last.reference).toFixed(1)+'" r="3" fill="var(--ink)"/>' +
+      '<circle cx="'+x(samples.length-1).toFixed(1)+'" cy="'+y(last.token).toFixed(1)+'" r="3.5" fill="var(--gold)"/>' +
+      '<text x="'+left+'" y="14" fill="var(--mute)" font-size="11">LIVE API · '+samples.length+' REAL SAMPLE'+(samples.length === 1 ? "" : "S")+'</text>' +
+      '<text x="'+(width-right)+'" y="14" text-anchor="end" fill="var(--mute)" font-size="11">'+esc(stamp)+'</text>' +
+      '<text x="'+left+'" y="'+(height-8)+'" fill="var(--mute)" font-size="11">NVDA reference</text>' +
+      '<text x="'+(left+118)+'" y="'+(height-8)+'" fill="var(--gold)" font-size="11">NVDAB token</text>' +
+      '</svg>';
   }
 
   function renderMarket(market) {
     state.market = market;
+    addSample(market);
+
     const reference = Number(market.referencePrice);
     const token = Number(market.tokenPrice);
-    const gap = Number.isFinite(reference) && reference !== 0 && Number.isFinite(token)
-      ? ((token/reference)-1)*100 : Number(market.premiumPct);
+    const divergence = gap(reference, token);
+    const statusInfo = market.statusInfo || {};
+    const marketOpen = statusInfo.openState === true;
+    const status = statusInfo.marketStatus || (marketOpen ? "OPEN" : "CLOSED");
+    const volume = Number(market.volume24H);
+    const liquidity = Number.isFinite(volume)
+      ? "24h volume " + volume.toLocaleString("en-US") + " · live API"
+      : "Live API";
 
-    $("tp").textContent = money(token);
-    $("tp").nextElementSibling.textContent = "NVDAB token · live API";
-    $("sr").textContent = money(reference);
-    $("st").textContent = money(token);
-    $("sg").textContent = percent(gap);
-    $("sv").textContent = money(market.volume24hUsd ?? market.volumeUsd ?? market.volume24h);
-    $("slq").textContent = String(market.liquidityContext ?? market.liquidity ?? "—");
-    $("sus").innerHTML = '<span class="dot '+(market.marketOpen ? "g" : "r")+'"></span> '+esc(market.marketStatus || (market.marketOpen ? "Open" : "Closed"));
-    $("readout").innerHTML =
-      '<div>LIVE API<b>'+new Date().toLocaleTimeString()+"</b></div>" +
-      '<div>'+esc(market.underlyingTicker || market.ticker || "NVDA")+' reference<b>'+money(reference)+'</b></div>' +
-      '<div class="t">'+esc(market.tokenSymbol || "NVDAB")+' token<b>'+money(token)+'</b></div>' +
-      '<div>Gap<b>'+percent(gap)+'</b></div>';
-    renderLiveChart(market);
+    if ($("tp")) $("tp").textContent = money(token);
+    if ($("tp")?.nextElementSibling) $("tp").nextElementSibling.textContent = "NVDAB token · live API";
+    if ($("sr")) $("sr").textContent = money(reference);
+    if ($("st")) $("st").textContent = money(token);
+    if ($("sg")) $("sg").textContent = Number.isFinite(divergence) ? (divergence >= 0 ? "+" : "") + divergence.toFixed(2) + "%" : "—";
+    if ($("sv")) $("sv").textContent = Number.isFinite(volume) ? money(volume) : "—";
+    if ($("slq")) $("slq").textContent = liquidity;
+    if ($("sus")) $("sus").innerHTML = '<span class="dot '+(marketOpen ? "g" : "r")+'"></span> '+esc(status);
+    if ($("readout")) {
+      $("readout").innerHTML =
+        '<div>LIVE API<b>'+new Date().toLocaleTimeString()+"</b></div>" +
+        '<div>'+esc(market.underlyingTicker || "NVDA")+' reference<b>'+money(reference)+'</b></div>' +
+        '<div class="t">'+esc(market.tokenSymbol || "NVDAB")+' token<b>'+money(token)+'</b></div>' +
+        '<div>Gap<b>'+ (Number.isFinite(divergence) ? (divergence >= 0 ? "+" : "") + divergence.toFixed(2) + "%" : "—") +'</b></div>';
+    }
+    renderLiveChart();
+    if ($("pc")) { $("pc").textContent = "LIVE BACKEND"; $("pc").style.color = "var(--green)"; }
+  }
+
+  function portfolioTotals(portfolio) {
+    const tokenTotal = Number(portfolio?.totalValueUsd);
+    const cash = Number(portfolio?.balanceUsd);
+    const safeTokenTotal = Number.isFinite(tokenTotal) && tokenTotal >= 0 ? tokenTotal : 0;
+    const safeCash = Number.isFinite(cash) && cash >= 0 ? cash : 0;
+    return { tokenTotal: safeTokenTotal, cash: safeCash, total: safeTokenTotal + safeCash };
   }
 
   function renderWalletAndPortfolio(address, portfolio) {
+    state.address = address;
+    state.portfolio = portfolio;
     const connected = Boolean(address?.connected && address?.address);
-    $("wal").innerHTML = connected
-      ? '<span class="dot g"></span>'+esc(address.address.slice(0,6)+"…"+address.address.slice(-4))
-      : "Connect wallet";
-    $("wal").className = "chip wal"+(connected ? " on" : "");
-    $("wal").title = connected ? "Wallet connected through the backend" : "Wallet not connected";
+    if ($("wal")) {
+      $("wal").innerHTML = connected
+        ? '<span class="dot g"></span>'+esc(address.address.slice(0,6)+"…"+address.address.slice(-4))
+        : "Connect wallet";
+      $("wal").className = "chip wal"+(connected ? " on" : "");
+      $("wal").title = connected ? "Wallet connected through the backend" : "Wallet not connected";
+    }
 
     if (!connected || !portfolio) {
-      $("tot").textContent = "—";
-      $("pn").textContent = "—"; $("pb").textContent = "—"; $("pu").textContent = "—";
-      $("bn").style.width = "0%"; $("bb").style.width = "0%"; $("bu").style.width = "0%";
-      $("gp").setAttribute("stroke-dasharray","0 100");
-      $("gv").textContent = "—";
-      $("gl").textContent = "Portfolio unavailable";
-      $("gl").style.color = "var(--mute)";
+      if ($("tot")) $("tot").textContent = "—";
+      ["pn","pb","pu"].forEach((id) => { if ($(id)) $(id).textContent = "—"; });
+      ["bn","bb","bu"].forEach((id) => { if ($(id)) $(id).style.width = "0%"; });
+      if ($("gp")) $("gp").setAttribute("stroke-dasharray", "0 100");
+      if ($("gv")) $("gv").textContent = "—";
+      if ($("gl")) { $("gl").textContent = connected ? "Portfolio unavailable" : "Wallet not connected"; $("gl").style.color = "var(--mute)"; }
+      renderPortfolioView();
       return;
     }
 
-    const total = Number(portfolio.totalValueUsd);
-    $("tot").textContent = money(total);
+    const totals = portfolioTotals(portfolio);
     const positions = Array.isArray(portfolio.positions) ? portfolio.positions : [];
-    const shares = positions.map((p) => [String(p.tokenSymbol || p.asset || "").toUpperCase(), Number(p.allocationPercent)]);
-    const nvdab = shares.find((p) => p[0] === "NVDAB")?.[1];
-    const bnb = shares.find((p) => p[0] === "BNB")?.[1];
-    const usdt = shares.find((p) => p[0] === "USDT")?.[1];
-    $("pn").textContent = Number.isFinite(nvdab) ? nvdab.toFixed(1)+"%" : "—";
-    $("pb").textContent = Number.isFinite(bnb) ? bnb.toFixed(1)+"%" : "—";
-    $("pu").textContent = Number.isFinite(usdt) ? usdt.toFixed(1)+"%" : "—";
-    $("bn").style.width = (Number.isFinite(nvdab) ? Math.max(0,nvdab) : 0)+"%";
-    $("bb").style.width = (Number.isFinite(bnb) ? Math.max(0,bnb) : 0)+"%";
-    $("bu").style.width = (Number.isFinite(usdt) ? Math.max(0,usdt) : 0)+"%";
+    const nvdabValue = positions.filter((p) => String(p.tokenSymbol || "").toUpperCase() === "NVDAB")
+      .reduce((sum, p) => sum + (Number(p.valueUsd) || 0), 0);
+    const usdtShare = totals.total > 0 ? (totals.cash / totals.total) * 100 : 0;
+    const nvdabShare = totals.total > 0 ? (nvdabValue / totals.total) * 100 : 0;
 
-    const riskValue = Number(portfolio.riskPercent ?? portfolio.portfolioRiskPercent);
-    $("gp").setAttribute("stroke-dasharray", Number.isFinite(riskValue) ? Math.max(0,Math.min(100,riskValue))+" 100" : "0 100");
-    $("gv").textContent = Number.isFinite(riskValue) ? Math.round(riskValue)+"%" : "—";
-    $("gl").textContent = Number.isFinite(riskValue) ? "Backend portfolio risk" : "Risk unavailable";
-    $("gl").style.color = Number.isFinite(riskValue) ? (riskValue <= 60 ? "var(--green)" : "var(--red)") : "var(--mute)";
+    if ($("tot")) $("tot").textContent = money(totals.total);
+    if ($("pn")) $("pn").textContent = pct(nvdabShare);
+    if ($("pb")) $("pb").textContent = "—";
+    if ($("pu")) $("pu").textContent = pct(usdtShare);
+    if ($("bn")) $("bn").style.width = Math.max(0, Math.min(100, nvdabShare))+"%";
+    if ($("bb")) $("bb").style.width = "0%";
+    if ($("bu")) $("bu").style.width = Math.max(0, Math.min(100, usdtShare))+"%";
+
+    if ($("gp")) $("gp").setAttribute("stroke-dasharray", "0 100");
+    if ($("gv")) $("gv").textContent = "—";
+    if ($("gl")) {
+      $("gl").textContent = "Live portfolio · risk score not supplied by API";
+      $("gl").style.color = "var(--mute)";
+    }
+    renderPortfolioView();
   }
 
-  async function load() {
-    if (!window.HANDELO_LIVE_WORKSPACE) return;
-    $("msg").textContent = "Connecting to Handelo API…";
+  function renderPortfolioView() {
+    if (!$("pvt") || $("v-port")?.hidden) return;
+    const portfolio = state.portfolio;
+    const address = state.address;
+    if (!portfolio || !address?.connected) {
+      $("pvt").textContent = "—";
+      $("pvt").nextElementSibling.textContent = "Live API · portfolio unavailable";
+      $("pvc").innerHTML = '<p class="hint">A connected backend wallet is required for live portfolio data.</p>';
+      return;
+    }
+
+    const totals = portfolioTotals(portfolio);
+    const positions = Array.isArray(portfolio.positions) ? portfolio.positions : [];
+    const rows = positions.map((position) => {
+      const value = Number(position.valueUsd);
+      const allocation = totals.total > 0 && Number.isFinite(value) ? (value / totals.total) * 100 : null;
+      return [
+        position.tokenSymbol || "—",
+        position.balance || "—",
+        money(position.tokenPrice),
+        money(value),
+        pct(allocation),
+        "Live on-chain balance"
+      ];
+    });
+    rows.push(["USDT", "cash", "$1.00", money(totals.cash), pct(totals.total > 0 ? totals.cash / totals.total * 100 : null), "Live Binance token balance"]);
+    $("pvt").textContent = money(totals.total);
+    $("pvt").nextElementSibling.textContent = "LIVE API · BSC token balances + USDT";
+    $("pvc").innerHTML =
+      '<div class="bar">'+rows.map((row) => {
+        const share = parseFloat(row[4]);
+        const width = Number.isFinite(share) ? share : 0;
+        const background = row[0] === "NVDAB" ? "var(--gold)" : row[0] === "USDT" ? "#5c5546" : "#a9742b";
+        return '<i style="width:'+width+'%;background:'+background+'"></i>';
+      }).join("")+'</div>' +
+      '<div class="tw"><table class="tb"><thead><tr><th>Asset</th><th>Holding</th><th>Price</th><th>Value</th><th>Share</th><th>Source</th></tr></thead><tbody>' +
+      rows.map((row) => "<tr>"+row.map((cell) => "<td>"+esc(cell)+"</td>").join("")+"</tr>").join("") +
+      '</tbody></table></div>' +
+      '<p class="hint">As of '+esc(portfolio.asOf || "—")+'. BNB is not included because the current portfolio endpoint exposes BSC RWA token balances and USDT cash only.</p>';
+  }
+
+  function renderHistoryView() {
+    if (!$("hl") || $("v-hist")?.hidden) return;
+    const history = Array.isArray(state.history?.transactions) ? state.history.transactions : [];
+    $("hs").textContent = history.length + " live blockchain entr" + (history.length === 1 ? "y" : "ies") + ".";
+    const heldOnly = $("hf1")?.getAttribute("aria-pressed") === "true";
+    const filtered = heldOnly ? history.filter((tx) => String(tx.txStatus || "").toUpperCase() !== "SUCCESS") : history;
+    $("hl").innerHTML = filtered.map((tx) => {
+      const time = tx.txTime ? new Date(tx.txTime).toLocaleString() : "Unknown time";
+      const status = tx.txStatus || "UNKNOWN";
+      const hash = tx.txHash ? String(tx.txHash) : "No hash";
+      return '<li class="'+(String(status).toUpperCase() === "SUCCESS" ? "" : "hold")+'"><time>'+esc(time)+'</time>' +
+        '<b>'+esc(tx.symbol || "BSC transaction")+'</b> · '+esc(tx.amount || "")+' · '+esc(status)+'<br><span class="num">'+esc(hash)+'</span></li>';
+    }).join("") || '<li><time></time>No live transactions available.</li>';
+  }
+
+  async function refreshMarket() {
+    if (!window.HANDELO_LIVE_WORKSPACE || state.marketInFlight) return;
+    state.marketInFlight = true;
     try {
       const markets = await get("/api/markets");
       const market = selectedMarket(markets);
       if (!market) throw new Error("The Handelo API returned no supported market data.");
       renderMarket(market);
-
-      const status = await get("/api/wallet/status").catch(() => ({status:"UNAVAILABLE"}));
-      const address = await get("/api/wallet/address").catch(() => ({connected:false,address:null}));
-      let portfolio = null;
-      if (address.connected && address.address) {
-        portfolio = await get("/api/portfolio?wallet="+encodeURIComponent(address.address)).catch(() => null);
-      }
-      state.wallet = status;
-      state.portfolio = portfolio;
-      renderWalletAndPortfolio(address, portfolio);
-
-      $("pc").textContent = "LIVE BACKEND";
-      $("pc").style.color = "var(--green)";
-      $("msg").textContent = "Live market data and wallet/portfolio state loaded from the Handelo API.";
+      if ($("msg")) $("msg").textContent = "Live market data · refreshed " + new Date().toLocaleTimeString();
     } catch (error) {
-      $("pc").textContent = "API ERROR";
-      $("pc").style.color = "var(--red)";
-      $("msg").textContent = "Live workspace unavailable: " + error.message;
+      if ($("msg")) $("msg").textContent = "Live market refresh delayed: " + (error.name === "AbortError" ? "API timeout" : error.message);
+    } finally {
+      state.marketInFlight = false;
     }
   }
 
-  window.HandeloLiveWorkspace = { load };
+  async function refreshAccount() {
+    if (!window.HANDELO_LIVE_WORKSPACE || state.accountInFlight) return;
+    state.accountInFlight = true;
+    try {
+      const results = await Promise.allSettled([
+        get("/api/wallet/status", 6000),
+        get("/api/wallet/address", 6000)
+      ]);
+      const status = results[0].status === "fulfilled" ? results[0].value : { status: "UNAVAILABLE" };
+      const address = results[1].status === "fulfilled" ? results[1].value : { connected: false, address: null };
 
-  function syncFromHash() {
-    const liveMode = location.hash.includes("mode=live");
-    if (!liveMode) return;
+      state.wallet = status;
+      if (address.connected && address.address) {
+        const [portfolioResult, historyResult] = await Promise.allSettled([
+          get("/api/portfolio?wallet="+encodeURIComponent(address.address), 10000),
+          get("/api/history?wallet="+encodeURIComponent(address.address), 8000)
+        ]);
+        const portfolio = portfolioResult.status === "fulfilled" ? portfolioResult.value : state.portfolio;
+        const history = historyResult.status === "fulfilled" ? historyResult.value : state.history;
+        state.portfolio = portfolio;
+        state.history = history;
+        renderWalletAndPortfolio(address, portfolio);
+      } else {
+        renderWalletAndPortfolio(address, null);
+      }
+
+      if ($("msg") && address.connected) {
+        $("msg").textContent = "Live market + portfolio data · refreshed " + new Date().toLocaleTimeString();
+      } else if ($("msg")) {
+        $("msg").textContent = "Live market data · backend wallet is not connected";
+      }
+    } catch (error) {
+      if ($("msg")) $("msg").textContent = "Live account refresh delayed: " + (error.name === "AbortError" ? "API timeout" : error.message);
+    } finally {
+      state.accountInFlight = false;
+    }
+  }
+
+  async function load() {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    if (!state.entered) enter();
+
+    // Market and wallet/account start together; market can render without waiting for wallet/portfolio.
+    void refreshMarket();
+    void refreshAccount();
+  }
+
+  function syncView(view) {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    if (view === "port") renderPortfolioView();
+    if (view === "hist") renderHistoryView();
+  }
+
+  window.HandeloLiveWorkspace = { enter, load, syncView };
+
+  // Deep-link support for workspace?mode=live.
+  if (location.hash.includes("mode=live")) {
     window.HANDELO_LIVE_WORKSPACE = true;
+    enter();
     void load();
   }
 
-  window.addEventListener("hashchange", syncFromHash);
-  syncFromHash();
-  setInterval(() => {
-    if (window.HANDELO_LIVE_WORKSPACE) void load();
+  window.addEventListener("hashchange", () => {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    const hash = location.hash;
+    const view = hash.split("?")[0].replace("#", "");
+    if (hash.includes("mode=live")) {
+      syncView(view === "workspace" ? "work" : view);
+      void load();
+    }
+  });
+
+  window.setInterval(() => {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    void refreshMarket();
+  }, 10000);
+
+  window.setInterval(() => {
+    if (!window.HANDELO_LIVE_WORKSPACE) return;
+    void refreshAccount();
   }, 30000);
 })();
