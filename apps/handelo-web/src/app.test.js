@@ -263,7 +263,7 @@ test("landing page keeps the validated asset scope truthful", () => {
   assert.match(indexSource, /NVDA and NVDAB/);
   assert.match(indexSource, /only asset validated end to end/);
   assert.match(indexSource, /Additional assets.*validated/i);
-  assert.match(indexSource, /No simulated market state is shown/);
+  assert.match(indexSource, /live simulation/);
 });
 
 test("Try Demo CTA is present beside the approved how-it-works CTA", () => {
