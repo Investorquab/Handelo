@@ -4,7 +4,8 @@ import {
   type StrategyExecutionRecord,
   type StrategyExecutionStore,
   type StrategyRuntimeResult,
-  type StrategySchedulerResult
+  type StrategySchedulerResult,
+  type StrategyExecutionReceipt
 } from "@handelo/strategy";
 import type { StrategyDefinition } from "@handelo/core";
 import {
@@ -20,7 +21,7 @@ export interface PersistedStrategySchedulerDependencies {
   marketOpen?: boolean;
   conditionMet?: (strategy: StrategyDefinition) => Promise<boolean>;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
-  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<StrategyExecutionReceipt | void>;
 }
 
 export async function listPersistedStrategyExecutions(
