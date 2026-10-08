@@ -200,3 +200,39 @@ test("autonomous worker does not retry an uncertain execution-network failure", 
   if (result.status === "FAILED") assert.equal(result.record.retryable, false);
   assert.equal(executeCalls, 1);
 });
+
+
+test("autonomous execution rechecks policy and portfolio risk immediately before quote/execution", async () => {
+  let quoteCalls = 0;
+  let executeCalls = 0;
+  const dependencies = createHandeloStrategyWorkerDependencies({
+    walletAddress: "0x1111111111111111111111111111111111111111",
+    executionWallet: {
+      quote: async () => { quoteCalls += 1; return { fromCoinAmount: "150", toCoinAmount: "1.5", slippage: 0 }; },
+      execute: async () => { executeCalls += 1; return { orderId: "order", status: "FINISHED", txHash: "tx" }; }
+    } as never,
+    market: {
+      find: async () => ({
+        binanceChainId: "56", tokenContractAddress: "0x2222222222222222222222222222222222222222",
+        platformId: "bstock", tokenSymbol: "NVDAB", decimals: "18", underlyingTicker: "NVDA",
+        underlyingName: "NVIDIA", tokenToShareRatio: "1", tokenPrice: "95", referencePrice: "100",
+        volume24H: "1000", marketCap: "100000",
+        statusInfo: { openState: true, marketStatus: "OPEN", reasonCode: "OPEN", reasonMsg: null, nextOpenTime: null, nextCloseTime: null }
+      })
+    },
+    store: {} as never,
+    portfolioSnapshot: async () => ({
+      wallet: "0x1111111111111111111111111111111111111111",
+      balanceUsd: 500,
+      totalValueUsd: 500,
+      positions: []
+    })
+  });
+
+  await assert.rejects(
+    dependencies.execute({ ...base, amountUsd: 150 }, {} as never),
+    /final server-side policy recheck/i
+  );
+  assert.equal(quoteCalls, 0);
+  assert.equal(executeCalls, 0);
+});
