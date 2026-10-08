@@ -447,7 +447,7 @@ test("live buy explicitly targets the NVDAB representation", () => {
 });
 test("live buy displays the selected funding-token equivalent", () => {
   assert.match(liveWorkspaceSource, /sourceQty=usd\/sourcePrice/);
-  assert.match(liveWorkspaceSource, /funding\.symbol/);
+  assert.match(liveWorkspaceSource, /selected\.symbol/);
 });
 
 test("live Buy and Sell modes have distinct real trade semantics", () => {
