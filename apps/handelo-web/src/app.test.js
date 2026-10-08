@@ -379,7 +379,7 @@ test("live assistant output formats markdown professionally", () => {
   assert.match(liveWorkspaceSource, /function formatLiveAssistantText\(rawText\)/);
   assert.match(liveWorkspaceSource, /<strong>/);
   assert.match(liveWorkspaceSource, /listType="ol"/);
-  assert.match(liveWorkspaceSource, /replace\(\/\*\*\/g/);
+  assert.match(liveWorkspaceSource, /value\.replace\(\/.*\\\*\\\*/);
 });
 
 test("live-only wallet and chat work remains isolated from Try Demo", () => {
