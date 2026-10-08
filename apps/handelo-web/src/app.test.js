@@ -332,3 +332,30 @@ test("workspace selected market exposes live liquidity and volume fields", () =>
   assert.match(source, /market\.liquidityContext/);
   assert.match(source, /market\.volume24hUsd/);
 });
+
+test("wallet center exposes real connection status and BSC address context", () => {
+  assert.match(indexSource, /id="workspaceWalletStatus"/);
+  assert.match(indexSource, /id="workspaceWalletProvider"/);
+  assert.match(indexSource, /id="workspaceWalletAddress"/);
+  assert.match(source, /\/api\/wallet\/status/);
+  assert.match(source, /workspaceWalletStatus\.textContent = "CONNECTED"/);
+  assert.match(source, /workspaceWalletAddressValue = address\.address/);
+  assert.match(source, /BINANCE AGENTIC WALLET/);
+});
+
+test("portfolio surface exposes live value, cash balance, allocations and fail-closed P&L", () => {
+  assert.match(indexSource, /id="workspacePortfolioSummary"/);
+  assert.match(indexSource, /POSITION VALUE/);
+  assert.match(indexSource, /AVAILABLE USDT/);
+  assert.match(indexSource, /UNREALIZED P&amp;L/);
+  assert.match(source, /portfolio\?\.totalValueUsd/);
+  assert.match(source, /portfolio\?\.balanceUsd/);
+  assert.match(source, /position\.allocationPercent/);
+  assert.match(source, /COST BASIS REQUIRED/);
+  assert.match(source, /does not estimate historical cost from current balances/);
+});
+
+test("portfolio presentation has no fabricated demo balance", () => {
+  assert.doesNotMatch(indexSource, /12,480/);
+  assert.doesNotMatch(source, /\$12,480/);
+});
