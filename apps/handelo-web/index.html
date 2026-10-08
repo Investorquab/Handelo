@@ -537,7 +537,7 @@ $("qty").addEventListener("input",render);
 $("sim").addEventListener("click",function(){var on=this.getAttribute("aria-checked")!="true";this.setAttribute("aria-checked",on);S.st=on?S.d*24+S.t:null;log(on?"Stress test on: token price pushed 1% higher.":"Stress test off.",on);ranges();render()});
 var money=function(n){return"$"+Math.round(n).toLocaleString("en-US")};
 function view(v){["home","work","port","hist"].forEach(function(k){$("v-"+k).hidden=k!=v});document.body.classList.toggle("home",v=="home");if(v=="home"){rl();tlr()}document.querySelectorAll("nav a").forEach(function(a){if(a.dataset.v==v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});if(v=="port")rp();if(v=="hist")rh();window.scrollTo(0,0)}
-function route(){var v=(location.hash||"").slice(1);view(v=="portfolio"?"port":v=="history"?"hist":v=="workspace"?"work":"home")}
+function route(){var v=(location.hash||"").slice(1).split("?")[0];view(v=="portfolio"?"port":v=="history"?"hist":v=="workspace"?"work":"home")}
 window.addEventListener("hashchange",route);
 function meter(n,v,l,max){var c=max?(v<=l*.85?"var(--green)":v<=l?"var(--amber)":"var(--red)"):(v>=l*1.3?"var(--green)":v>=l?"var(--amber)":"var(--red)");return'<div class="m"><div class="mh"><span>'+n+'</span><b class="num">'+Math.round(v)+'%</b></div><div class="tr"><i style="width:'+Math.min(100,v)+"%;background:"+c+'"></i><u style="left:'+l+'%"></u></div><small>'+(max?"Limit ":"Minimum ")+l+"%</small></div>"}
 function rp(){var P=px(),g=(P.k/P.r-1)*100,nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),pl=(P.k-S.avg)*S.nv,pc=(P.k/S.avg-1)*100,sh=function(x){return x/tot*100};
