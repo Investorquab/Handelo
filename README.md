@@ -155,7 +155,7 @@ Never commit secrets or private keys.
 - Agent wallet private keys never enter the LLM or browser UI.
 - Wallet connection does not equal spending authorization.
 - Transaction execution requires the appropriate explicit approval or delegated policy.
-- Risk and market checks are re-run at the execution boundary.
+- Risk and market checks are re-run at the execution boundary. Autonomous strategy runs also repeat policy, portfolio-risk and strategy-asset-scope checks immediately before obtaining an executable quote, reducing time-of-check/time-of-use drift.
 - Unsupported or unavailable security/audit paths remain blocking conditions.
 - Handelo never fabricates transaction hashes or execution success.
 - Ambiguous tokenized-stock representations are surfaced rather than silently selected.
