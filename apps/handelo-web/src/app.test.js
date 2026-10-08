@@ -171,7 +171,7 @@ test("Handelo exposes exactly two primary navigation destinations", () => {
 
 test("homepage contains the locked product narrative and real UI surfaces", () => {
   assert.match(indexSource, /AI explains\.<br>The system governs\.<br>You decide\./);
-  assert.match(indexSource, /Markets close\\.[\\s\\S]*Tokenized stocks don't\\./);
+  assert.match(indexSource, /Markets close\.[\s\S]*Tokenized stocks don't\./);
   assert.match(indexSource, /DISCOVER|Discover/);
   assert.match(indexSource, /MARKET INTELLIGENCE/);
   assert.match(indexSource, /STRATEGY/);
