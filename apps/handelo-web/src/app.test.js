@@ -274,6 +274,10 @@ test("Try Demo CTA is present beside the approved how-it-works CTA", () => {
   assert.match(indexSource, /["oh1","oh2","openh"]/);
 });
 
+test("workspace route accepts the live and demo mode query strings", () => {
+  assert.match(indexSource, /function route\(\)\{var v=\(location\.hash\|\|""\)\.slice\(1\)\.split\("\?"\)\[0\]/);
+});
+
 test("Try Demo remains demo-only while Open Handelo enters live mode", () => {
   assert.match(indexSource, /function goLive\(\)/);
   assert.match(indexSource, /function goDemo\(\)/);
