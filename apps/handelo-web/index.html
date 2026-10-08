@@ -533,6 +533,20 @@ Intelligence Strategy Portfolio
     <p>Handelo is a TypeScript and pnpm monorepo. The repository contains the web application, API, core logic, market layer, policy, execution, strategy runtime, SDK, MCP and Telegram integrations, with GitHub Actions used as an engineering gate.</p>
     <div class="doclinks"><a href="https://github.com/Investorquab/Handelo" target="_blank" rel="noopener">Repository ↗</a><a href="https://github.com/Investorquab/Handelo#local-development" target="_blank" rel="noopener">Local development ↗</a><a href="https://github.com/Investorquab/Handelo/blob/main/docs/AGENT-WALLET-ARCHITECTURE.md" target="_blank" rel="noopener">Wallet architecture ↗</a></div>
   </div>
+
+<script>
+(function(){
+  function openDocumentation(){
+    if((location.hash||"").slice(1).split("?")[0]!=="documentation")return;
+    setTimeout(function(){
+      var section=document.getElementById("documentation");
+      if(section)section.scrollIntoView({behavior:"auto",block:"start"});
+    },0);
+  }
+  openDocumentation();
+  window.addEventListener("hashchange",openDocumentation);
+})();
+</script>
 </section>
 
 <section class="sec" id="faq"><h2>Questions, answered plainly.</h2><div class="faq"><details><summary><span>Is Handelo a chatbot?</span></summary><p>No. The AI is an intelligence and command layer inside a broader system of market data, strategy, portfolio, policy, wallet, execution and verification.</p></details><details><summary><span>Can the AI directly move my money?</span></summary><p>No. The model never receives private keys and does not control the wallet. Execution passes through deterministic application logic and the wallet provider boundary.</p></details><details><summary><span>Does Handelo hold my private key?</span></summary><p>The intended architecture does not require a private key or seed phrase. Handelo works with wallet context and a scoped agent wallet at the provider boundary.</p></details><details><summary><span>What stock does Handelo support today?</span></summary><p>NVIDIA (NVDA), represented by the bStock token NVDAB on BNB Chain. It is the only asset validated end to end.</p></details><details><summary><span>Does it support every bStock Binance returns?</span></summary><p>Not yet as a validated claim. Ingestion is provider driven and can consume Binance BNB Chain RWA assets, but each additional asset must be validated before it is presented as supported.</p></details><details><summary><span>What happens if a risk check fails?</span></summary><p>The transaction is blocked. The review shows the reasons, so you can see what prevented execution.</p></details><details><summary><span>Does passing the AI review mean a trade will happen?</span></summary><p>No. Policy, portfolio risk, wallet authorization, security checks, quote freshness, explicit confirmation, execution configuration and verification all still apply.</p></details><details><summary><span>Is Handelo live with real-money autonomous trading?</span></summary><p>No. Substantial engineering and local validation is complete. Controlled real-money validation and the remaining live provider checks are later gates.</p></details></div></section>
