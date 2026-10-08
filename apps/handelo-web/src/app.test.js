@@ -301,5 +301,5 @@ test("homepage uses the approved connected seven-stage operating loop",()=> {
   assert.match(indexSource,/data-home-stage="0"/);
   assert.match(indexSource,/data-home-stage="6"/);
   assert.match(source,/premiumLoopDetail/);
-  assert.match(source,/The system does not jump from an AI answer straight to money movement/);
+  assert.match(indexSource,/The system does not jump from an AI answer straight to money movement/);
 });
