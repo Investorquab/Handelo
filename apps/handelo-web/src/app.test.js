@@ -396,3 +396,19 @@ test("chat keeps execution behind the review and confirmation boundary", () => {
   assert.match(source, /\/api\/review/);
   assert.match(source, /data\.policy\?\.decision !== "BLOCK"/);
 });
+
+test("active strategy cards expose scheduler state and execution outcomes", () => {
+  assert.match(source, /stats\?\.failedCount/);
+  assert.match(source, /stats\?\.nextExecutionAt/);
+  assert.match(source, /strategy\.nextExecutionAt/);
+  assert.match(source, /stats\?\.lastExecutionAt/);
+  assert.match(source, /NEXT RUN NOT SCHEDULED/);
+  assert.match(source, /NO RUN YET/);
+  assert.match(source, /failed/);
+});
+
+test("strategy runtime presentation does not imply execution from a stored schedule", () => {
+  assert.match(source, /No transaction or schedule was created automatically/);
+  assert.match(source, /Active strategy stored/);
+  assert.match(source, /nextExecutionAt/);
+});
