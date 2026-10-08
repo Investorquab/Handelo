@@ -113,13 +113,15 @@ export class HandeloPortfolio{
     if(!/^0x[0-9a-fA-F]{40}$/.test(wallet)) throw new Error("Invalid EVM wallet address.");
     const assets=normalizeAssets(await this.market.tokens());
     const positions:PortfolioPosition[]=[];
-    const balances=await this.market.tokenBalances(wallet,assets.map(asset=>asset.tokenContractAddress));
+    const [balances, cash] = await Promise.all([
+      this.market.tokenBalances(wallet, assets.map(asset => asset.tokenContractAddress)),
+      this.market.tokenBalance(wallet, this.quoteToken)
+    ]);
     for(const asset of assets){
       const rawBalance=normalizeRawBalance(balances.get(asset.tokenContractAddress.toLowerCase())??"0");
       if(BigInt(rawBalance)>0n) positions.push(position(asset,rawBalance));
     }
-    const values=positions.map(p=>p.estimatedValueUsd).filter((v):v is number=>v!==null);
-    const cash=await this.market.tokenBalance(wallet,this.quoteToken);
+    const values=positions.map(p=>p.estimatedValueUsd).filter((v): v is number=>v!==null);
     const rawCash=normalizeRawBalance(cash.rawBalance);
     const cashUnits=Number(rawCash)/10**cash.decimals;
     const balanceUsd=Number.isFinite(cashUnits)&&cashUnits>=0?cashUnits:null;

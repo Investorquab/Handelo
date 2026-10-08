@@ -6,7 +6,7 @@ import { portfolioSnapshot } from "./portfolio.js";
 import { createQuoteQuality } from "@handelo/core";
 import { toMarketInsight } from "@handelo/market";
 import { BAW_COMMAND, BAW_SHELL, BinanceAgenticWalletAdapter } from "@handelo/execution";
-import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError } from "@handelo/market";
+import { isExecutableMarketAsset, marketClientFromEnv, MarketResolutionError, MarketUpstreamError, type RwaAsset } from "@handelo/market";
 import { auditToken, normalizeTokenAudit } from "@handelo/execution";
 import { consumeReviewToken, createReviewToken, quoteDriftWithinTolerance, readVerifiedReviewToken, verifyReviewToken } from "./review-token.js";
 import { walletServiceError } from "./wallet-errors.js";
@@ -30,6 +30,26 @@ let market: ReturnType<typeof marketClientFromEnv> | null = null;
 function getMarket(): ReturnType<typeof marketClientFromEnv> {
   market ??= marketClientFromEnv();
   return market;
+}
+
+const MARKET_CACHE_TTL_MS = 5000;
+let marketCacheData: RwaAsset[] | null = null;
+let marketCacheAt = 0;
+let marketRefresh: Promise<RwaAsset[]> | null = null;
+
+async function discoverMarketsCached(force = false): Promise<RwaAsset[]> {
+  if (!force && marketCacheData && Date.now() - marketCacheAt < MARKET_CACHE_TTL_MS) return marketCacheData;
+  if (marketRefresh) return marketRefresh;
+  marketRefresh = getMarket().discover(8)
+    .then((data) => {
+      marketCacheData = data;
+      marketCacheAt = Date.now();
+      return data;
+    })
+    .finally(() => {
+      marketRefresh = null;
+    });
+  return marketRefresh;
 }
 const wallet = new BinanceAgenticWalletAdapter();
 const strategyExecutionStore = new FileStrategyExecutionStore(
@@ -238,7 +258,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && req.url === "/api/markets") {
     try {
-      return json(res, 200, await getMarket().discover(8));
+      return json(res, 200, await discoverMarketsCached());
     } catch (error) {
       const status = marketErrorStatus(error);
       return json(res, status ?? 500, { error: errorMessage(error) });
@@ -939,4 +959,4 @@ if (
   console.log("Handelo strategy worker enabled for the configured controlled wallet.");
 }
 
-server.listen(port, () => console.log(`Handelo API listening on http://localhost:${port}`));
+server.listen(port, () => {\n  console.log(`Handelo API listening on http://localhost:${port}`);\n  void discoverMarketsCached(true).catch(() => undefined);\n});

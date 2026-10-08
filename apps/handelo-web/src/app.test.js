@@ -319,8 +319,8 @@ test("live workspace loads market and account state independently", () => {
   assert.match(liveWorkspaceSource, /void refreshMarket\(\)/);
   assert.match(liveWorkspaceSource, /void refreshAccount\(\)/);
   assert.match(liveWorkspaceSource, /Promise\.allSettled/);
-  assert.match(liveWorkspaceSource, //api\/portfolio\?wallet=/);
-  assert.match(liveWorkspaceSource, //api\/history\?wallet=/);
+  assert.match(liveWorkspaceSource, /\/api\/portfolio\?wallet=/);
+  assert.match(liveWorkspaceSource, /\/api\/history\?wallet=/);
 });
 
 test("live portfolio uses the real API cash balance and token positions", () => {
@@ -340,4 +340,30 @@ test("live mode clears demo values before the real workspace loads", () => {
 test("live portfolio and history routes do not invoke demo renderers", () => {
   assert.match(indexSource, /if\(window\.HANDELO_LIVE_WORKSPACE\)\{window\.HandeloLiveWorkspace\?\.syncView/);
   assert.match(indexSource, /if\(v=="hist"\)\{if\(window\.HANDELO_LIVE_WORKSPACE\)\{window\.HandeloLiveWorkspace\?\.syncView/);
+});
+
+test("live workspace owns wallet connection, review, execution, and chat actions", () => {
+  assert.match(liveWorkspaceSource, /function connectLiveWallet\(\)/);
+  assert.match(liveWorkspaceSource, /\/api\/wallet\/auth/);
+  assert.match(liveWorkspaceSource, /\/api\/review/);
+  assert.match(liveWorkspaceSource, /\/api\/execute/);
+  assert.match(liveWorkspaceSource, /\/api\/chat/);
+  assert.match(liveWorkspaceSource, /stopImmediatePropagation/);
+});
+
+test("live workspace removes demo-only order controls without touching Try Demo", () => {
+  assert.match(liveWorkspaceSource, /const stress = .*closest\("\.sw"\)/);
+  assert.match(liveWorkspaceSource, /stress\.hidden = true/);
+  assert.doesNotMatch(liveWorkspaceSource, /tryd/);
+});
+
+test("live workspace exposes real portfolio failures instead of hiding them", () => {
+  assert.match(liveWorkspaceSource, /portfolioError/);
+  assert.match(liveWorkspaceSource, /portfolio data is unavailable/);
+});
+
+test("live order value and review are driven by the live market price", () => {
+  assert.match(liveWorkspaceSource, /qty\*tokenPrice/);
+  assert.match(liveWorkspaceSource, /amountUsd:qty\*tokenPrice/);
+  assert.match(liveWorkspaceSource, /state\.market\.tokenPrice/);
 });
