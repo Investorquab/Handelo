@@ -558,6 +558,7 @@ function addAgentMessage(data) {
 
   if (data.strategy) addStrategyPreview(data.strategy);
   if (data.basket) addBasketPreview(data.basket);
+  if (data.trace) addAgentTracePreview(data.trace);
   if (data.portfolio) addPortfolioPreview(data.portfolio);
   if (data.policy && data.intent?.action !== "research") addRiskPreview(data.policy);
 
@@ -586,6 +587,19 @@ function addAgentMessage(data) {
   scrollConversation();
 }
 
+function addAgentTracePreview(trace) {
+  if (!trace || !Array.isArray(trace.stages)) return;
+  const node = document.createElement("article");
+  node.className = "agent-trace";
+  node.setAttribute("role", "status");
+  const labels = { OBSERVED: "OBSERVE", REASONED: "REASON", PROPOSED: "PROPOSE", POLICY_CHECKED: "CHECK RISK", EXECUTION_GATED: "GATE" };
+  const statusLabel = (stage) => stage.status === "COMPLETE" ? "READY" : stage.status === "BLOCKED" ? "BLOCKED" : "SKIPPED";
+  node.innerHTML = '<div class="agent-trace-head"><div><div class="message-label">HANDELO OPERATING TRACE</div><h3>Decision path</h3></div><span class="agent-trace-state">' + escapeHtml(trace.executionReady ? "AWAITING APPROVAL" : "BLOCKED") + '</span></div><div class="agent-trace-steps">' +
+    trace.stages.map(stage => '<div class="agent-trace-step ' + String(stage.status || "SKIPPED").toLowerCase() + '"><span>' + escapeHtml(labels[stage.stage] || stage.stage) + '</span><strong>' + escapeHtml(statusLabel(stage)) + '</strong><small>' + escapeHtml(Array.isArray(stage.evidence) && stage.evidence.length ? stage.evidence[0] : "No evidence supplied.") + '</small></div>').join("") +
+    '</div><div class="agent-trace-note">' + escapeHtml(trace.executionPlan?.requiresExplicitConfirmation ? "No execution occurs from chat. Any executable action remains behind server review and explicit human confirmation." : "Execution is not available for this request.") + '</div>';
+  conversation.appendChild(node);
+  scrollConversation();
+}
 function addRiskPreview(policy) {
   if (!policy) return;
   const node = document.createElement("article");

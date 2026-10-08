@@ -747,3 +747,17 @@ button{cursor:pointer}
 .portfolio-position .portfolio-pnl{grid-column:1/-1}
 .portfolio-note{margin-top:10px;color:var(--faint);font:8px/1.55 var(--mono)}
 @media(max-width:720px){.portfolio-summary-inline{grid-template-columns:1fr}.wallet-status-line{align-items:flex-start;flex-direction:column;gap:4px}}
+
+/* Batch 5 — agent decision trace. */
+.agent-trace{margin:10px 0;padding:12px;border:1px solid rgba(197,154,67,.22);background:linear-gradient(180deg,rgba(197,154,67,.055),rgba(255,255,255,.012));}
+.agent-trace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.agent-trace-head h3{margin:3px 0 0;font:500 13px var(--sans);letter-spacing:-.01em;}
+.agent-trace-state{padding:5px 7px;border:1px solid rgba(197,154,67,.25);font:8px var(--mono);color:var(--gold);letter-spacing:.06em;white-space:nowrap;}
+.agent-trace-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);}
+.agent-trace-step{min-width:0;padding:9px;background:rgba(0,0,0,.2);display:grid;gap:4px;}
+.agent-trace-step span{font:8px var(--mono);color:var(--faint);letter-spacing:.05em;}
+.agent-trace-step strong{font:9px var(--mono);color:var(--text);}
+.agent-trace-step small{font:8px/1.45 var(--mono);color:var(--faint);}
+.agent-trace-step.complete strong{color:var(--green);}.agent-trace-step.blocked strong{color:var(--muted);}.agent-trace-step.skipped strong{color:var(--faint);}
+.agent-trace-note{margin-top:9px;color:var(--faint);font:8px/1.55 var(--mono);}
+@media(max-width:800px){.agent-trace-steps{grid-template-columns:1fr 1fr;}.agent-trace-step:last-child{grid-column:1/-1;}}
