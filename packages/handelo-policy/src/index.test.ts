@@ -18,10 +18,10 @@ test("allows an in-limit open-market transaction within the reference gap",()=>{
 });
 
 
-test("execution action normalizes invest to buy and rejects sell",()=>{
+test("execution action normalizes invest to buy and permits sell",()=>{
   assert.equal(executionAction("buy"),"buy");
   assert.equal(executionAction("invest"),"buy");
-  assert.equal(executionAction("sell"),null);
+  assert.equal(executionAction("sell"),"sell");
   assert.equal(executionAction("research"),null);
 });
 
