@@ -366,13 +366,12 @@ export class StrategyExecutionRejectedError extends Error {
   }
 }
 
-async function executeWithTimeout(
-  execute: () => Promise<void>,
+async function executeWithTimeout<T>(
+  execute: () => Promise<T>,
   timeoutMs?: number
-): Promise<void> {
+): Promise<T | void> {
   if (timeoutMs === undefined) {
-    await execute();
-    return;
+    return execute();
   }
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000) {
     throw new Error("Strategy execution timeout must be at least 1000ms.");
