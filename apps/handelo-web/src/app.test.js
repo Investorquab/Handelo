@@ -327,7 +327,7 @@ test("live portfolio uses the real API cash balance and token positions", () => 
   assert.match(liveWorkspaceSource, /totalValueUsd/);
   assert.match(liveWorkspaceSource, /balanceUsd/);
   assert.match(liveWorkspaceSource, /valueUsd/);
-  assert.match(liveWorkspaceSource, /Live Binance token balance/);
+  assert.match(liveWorkspaceSource, /Live BSC token balance/);
   assert.match(liveWorkspaceSource, /BNB is not included/);
 });
 
