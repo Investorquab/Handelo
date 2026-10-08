@@ -51,6 +51,101 @@ async function discoverMarketsCached(force = false): Promise<RwaAsset[]> {
     });
   return marketRefresh;
 }
+type LiveWorkspaceClient = {
+  id: number;
+  res: import("node:http").ServerResponse;
+  wallet: string | null;
+};
+
+const liveWorkspaceClients = new Map<number, LiveWorkspaceClient>();
+let nextLiveWorkspaceClientId = 1;
+let lastLivePortfolioBroadcastAt = 0;
+
+function pickLiveMarket(markets: RwaAsset[]): RwaAsset | null {
+  return markets.find(asset => asset.tokenSymbol.trim().toUpperCase() === "NVDAB")
+    ?? markets.find(asset => asset.underlyingTicker.trim().toUpperCase() === "NVDA")
+    ?? markets[0]
+    ?? null;
+}
+
+async function connectedWalletState(): Promise<{
+  status: "CONNECTED" | "UNCONNECTED" | "CREATING" | "UNAVAILABLE";
+  address: string | null;
+}> {
+  const status = await walletStatus();
+  if (status.status !== "CONNECTED") return { status: status.status, address: null };
+  const payload = await bawJson<{ addresses?: Array<{ binanceChainId?: string; address?: string }> }>(["wallet", "address"]);
+  const address = payload.addresses?.find(entry => entry.binanceChainId === "56")?.address?.trim() ?? null;
+  return { status: "CONNECTED", address: isEvmAddress(address ?? "") ? address : null };
+}
+
+async function workspaceAccount(walletAddress: string) {
+  const [portfolioResult, historyResult, strategyResult] = await Promise.allSettled([
+    portfolioSnapshot(walletAddress),
+    getMarket().transactions(walletAddress, 20),
+    listActiveStrategies(walletAddress)
+  ]);
+  return {
+    wallet: { status: "CONNECTED", address: walletAddress },
+    address: { connected: true, address: walletAddress },
+    portfolio: portfolioResult.status === "fulfilled" ? portfolioResult.value : null,
+    portfolioError: portfolioResult.status === "rejected" ? errorMessage(portfolioResult.reason) : null,
+    history: historyResult.status === "fulfilled" ? { wallet: walletAddress, transactions: historyResult.value } : null,
+    strategies: strategyResult.status === "fulfilled" ? strategyResult.value : [],
+    generatedAt: new Date().toISOString()
+  };
+}
+
+async function workspaceSnapshot(walletOverride?: string) {
+  const markets = await discoverMarketsCached();
+  const marketAsset = pickLiveMarket(markets);
+  if (!marketAsset) throw new MarketUpstreamError("No live NVDAB market data is available.");
+  let walletState: { status: "CONNECTED" | "UNCONNECTED" | "CREATING" | "UNAVAILABLE"; address: string | null };
+  if (walletOverride) walletState = { status: "CONNECTED", address: walletOverride };
+  else {
+    try { walletState = await connectedWalletState(); }
+    catch { walletState = { status: "UNAVAILABLE", address: null }; }
+  }
+  if (walletState.status === "CONNECTED" && walletState.address) {
+    return { market: marketAsset, ...await workspaceAccount(walletState.address) };
+  }
+  return {
+    market: marketAsset,
+    wallet: { status: walletState.status, address: null },
+    address: { connected: false, address: null },
+    portfolio: null,
+    portfolioError: null,
+    history: null,
+    strategies: [],
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function writeLiveWorkspaceEvent(client: LiveWorkspaceClient, payload: unknown) {
+  try { client.res.write("data: " + JSON.stringify(payload) + "\n\n"); }
+  catch { liveWorkspaceClients.delete(client.id); }
+}
+
+async function broadcastLiveMarket() {
+  if (!liveWorkspaceClients.size) return;
+  try {
+    const marketAsset = pickLiveMarket(await discoverMarketsCached(true));
+    if (!marketAsset) return;
+    for (const client of liveWorkspaceClients.values()) writeLiveWorkspaceEvent(client, { type: "market", data: marketAsset, generatedAt: new Date().toISOString() });
+  } catch {}
+}
+
+async function broadcastLiveAccounts() {
+  if (!liveWorkspaceClients.size) return;
+  const wallets = [...new Set([...liveWorkspaceClients.values()].map(client => client.wallet).filter((wallet): wallet is string => Boolean(wallet)))];
+  for (const wallet of wallets) {
+    try {
+      const account = await workspaceAccount(wallet);
+      for (const client of liveWorkspaceClients.values()) if (client.wallet === wallet) writeLiveWorkspaceEvent(client, { type: "account", data: account });
+    } catch {}
+  }
+}
+
 const wallet = new BinanceAgenticWalletAdapter();
 const strategyExecutionStore = new FileStrategyExecutionStore(
   process.env.HANDELO_STRATEGY_EXECUTION_STORE_PATH ?? "./data/strategy-executions.json"
@@ -265,6 +360,42 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "GET" && req.url?.startsWith("/api/workspace/snapshot")) {
+    const requestedWallet = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() || "";
+    if (requestedWallet && !isEvmAddress(requestedWallet)) return json(res, 400, { error: "wallet must be a valid EVM address" });
+    try {
+      return json(res, 200, await workspaceSnapshot(requestedWallet || undefined));
+    } catch (error) {
+      const status = marketErrorStatus(error);
+      return json(res, status ?? 500, { error: errorMessage(error) });
+    }
+  }
+
+  if (req.method === "GET" && req.url?.startsWith("/api/workspace/stream")) {
+    const requestedWallet = new URL(req.url, "http://localhost").searchParams.get("wallet")?.trim() || "";
+    if (requestedWallet && !isEvmAddress(requestedWallet)) return json(res, 400, { error: "wallet must be a valid EVM address" });
+    const clientId = nextLiveWorkspaceClientId++;
+    res.writeHead(200, {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "connection": "keep-alive",
+      "access-control-allow-origin": CORS_ORIGIN,
+      "access-control-allow-headers": "content-type, x-handando-api-key",
+      "x-accel-buffering": "no"
+    });
+    const client: LiveWorkspaceClient = { id: clientId, res, wallet: requestedWallet || null };
+    liveWorkspaceClients.set(clientId, client);
+    const heartbeat = setInterval(() => { try { res.write(": keep-alive\n\n"); } catch { clearInterval(heartbeat); } }, 15000);
+    req.on("close", () => { clearInterval(heartbeat); liveWorkspaceClients.delete(clientId); });
+    try {
+      const snapshot = await workspaceSnapshot(requestedWallet || undefined);
+      client.wallet = snapshot.address?.connected ? snapshot.address.address : null;
+      writeLiveWorkspaceEvent(client, { type: "snapshot", data: snapshot });
+    } catch (error) {
+      writeLiveWorkspaceEvent(client, { type: "error", error: errorMessage(error) });
+    }
+    return;
+  }
   if (req.method === "GET" && req.url === "/api/markets") {
     try {
       return json(res, 200, await discoverMarketsCached());
@@ -967,6 +1098,19 @@ if (
   strategyWorker.start();
   console.log("Handelo strategy worker enabled for the configured controlled wallet.");
 }
+
+const liveMarketTimer = setInterval(() => {
+  void broadcastLiveMarket();
+}, 2500);
+liveMarketTimer.unref?.();
+
+const liveAccountTimer = setInterval(() => {
+  const now = Date.now();
+  if (now - lastLivePortfolioBroadcastAt < 12000) return;
+  lastLivePortfolioBroadcastAt = now;
+  void broadcastLiveAccounts();
+}, 15000);
+liveAccountTimer.unref?.();
 
 server.listen(port, () => {
   console.log(`Handelo API listening on http://localhost:${port}`);

@@ -4,7 +4,8 @@
   const state = {
     market: null, portfolio: null, portfolioError: null, wallet: null, address: null,
     history: null, strategies: [], liveSamples: [], review: null, entered: false,
-    marketInFlight: false, accountInFlight: false, reviewInFlight: false, chatInFlight: false
+    marketInFlight: false, accountInFlight: false, reviewInFlight: false, chatInFlight: false,
+    streamSource: null, streamReconnectTimer: null, streamAttempt: 0
   };
 
   const $ = (id) => document.getElementById(id);
@@ -79,7 +80,59 @@
     } catch { return "#"; }
   }
 
-  function resetLiveSurface(){closeWalletMenu();
+  function closeLiveStream(){
+    if(state.streamReconnectTimer){clearTimeout(state.streamReconnectTimer);state.streamReconnectTimer=null;}
+    if(state.streamSource){state.streamSource.close();state.streamSource=null;}
+    state.streamAttempt=0;
+  }
+
+  function scheduleLiveStreamReconnect(){
+    if(!window.HANDELO_LIVE_WORKSPACE||state.streamReconnectTimer)return;
+    state.streamAttempt=Math.min(state.streamAttempt+1,6);
+    const delay=Math.min(10000,1000*Math.pow(2,state.streamAttempt-1));
+    state.streamReconnectTimer=setTimeout(()=>{
+      state.streamReconnectTimer=null;
+      if(window.HANDELO_LIVE_WORKSPACE)void connectWorkspaceStream();
+    },delay);
+  }
+
+  async function connectWorkspaceStream(){
+    if(!window.HANDELO_LIVE_WORKSPACE)return;
+    closeLiveStream();
+    const currentWallet=state.address?.connected?state.address.address:"";
+    const query=currentWallet?"?wallet="+encodeURIComponent(currentWallet):"";
+    try{
+      const snapshot=await get("/api/workspace/snapshot"+query,9000);
+      if(!window.HANDELO_LIVE_WORKSPACE)return;
+      applyWorkspaceSnapshot(snapshot);
+    }catch(error){
+      if($("msg"))$("msg").textContent="Live workspace snapshot delayed: "+(error.name==="AbortError"?"API timeout":error.message);
+    }
+    if(!window.EventSource||!window.HANDELO_LIVE_WORKSPACE)return;
+    const source=new EventSource(API_BASE+"/api/workspace/stream"+query);
+    state.streamSource=source;
+    source.onopen=()=>{
+      state.streamAttempt=0;
+      if($("msg"))$("msg").textContent="Live workspace connected";
+    };
+    source.onmessage=(event)=>{
+      try{
+        const message=JSON.parse(event.data);
+        if(message.type==="snapshot"){applyWorkspaceSnapshot(message.data);return;}
+        if(message.type==="market"){if(message.data)renderMarket(message.data);return;}
+        if(message.type==="account"){applyWorkspaceAccount(message.data);return;}
+      }catch(error){
+        if($("msg"))$("msg").textContent="Live stream message ignored: "+(error instanceof Error?error.message:String(error));
+      }
+    };
+    source.onerror=()=>{
+      source.close();
+      if(state.streamSource===source)state.streamSource=null;
+      if($("msg"))$("msg").textContent="Live stream reconnecting…";
+      scheduleLiveStreamReconnect();
+    };
+  }
+  function resetLiveSurface(){closeWalletMenu();closeLiveStream();
     if ($("ph")) $("ph").textContent = "Live order review";
     if ($("pform")) $("pform").hidden = false;
     if ($("rcpt")) $("rcpt").hidden = true;
@@ -109,8 +162,7 @@
     installLiveChatStyles();
     state.entered = true;
     resetLiveSurface();
-    void refreshAccount();
-    void refreshMarket();
+    void connectWorkspaceStream();
   }
 
   function addSample(market) {
@@ -185,7 +237,7 @@
   }
 
   function portfolioTotals(portfolio) {
-    const tokenTotal = Number(portfolio?.totalValueUsd), cash = Number(portfolio?.balanceUsd);
+    const tokenTotal = Number(portfolio?.totalValueUsd ?? portfolio?.totalEstimatedValueUsd), cash = Number(portfolio?.balanceUsd);
     return {
       tokenTotal: Number.isFinite(tokenTotal) && tokenTotal >= 0 ? tokenTotal : 0,
       cash: Number.isFinite(cash) && cash >= 0 ? cash : 0,
@@ -193,6 +245,39 @@
     };
   }
 
+  function applyWorkspaceAccount(account){
+    if(!account)return;
+    state.wallet=account.wallet||null;
+    state.address=account.address||{connected:false,address:null};
+    state.portfolio=account.portfolio||null;
+    state.portfolioError=account.portfolioError||null;
+    state.history=account.history||null;
+    state.strategies=Array.isArray(account.strategies)?account.strategies:[];
+    renderWalletAndPortfolio(state.address,state.portfolio);
+    renderStrategyCount();
+    renderPortfolioView();
+    renderHistoryView();
+  }
+
+  function applyWorkspaceSnapshot(snapshot){
+    if(!snapshot)return;
+    if(snapshot.market)renderMarket(snapshot.market);
+    applyWorkspaceAccount(snapshot.account||{
+      wallet:snapshot.wallet,
+      address:snapshot.address,
+      portfolio:snapshot.portfolio,
+      portfolioError:snapshot.portfolioError,
+      history:snapshot.history,
+      strategies:snapshot.strategies
+    });
+    if($("msg")){
+      $("msg").textContent=snapshot.account?.portfolioError
+        ?"Live market loaded · portfolio refresh failed: "+snapshot.account.portfolioError
+        :snapshot.address?.connected
+          ?"Live market + wallet data loaded"
+          :"Live market data loaded · wallet not connected";
+    }
+  }
   function renderWalletAndPortfolio(address, portfolio) {
     state.address = address; state.portfolio = portfolio;
     const connected = Boolean(address?.connected && address?.address);
@@ -243,7 +328,7 @@
     }
     const totals=portfolioTotals(state.portfolio), positions=Array.isArray(state.portfolio.positions)?state.portfolio.positions:[];
     const rows=positions.map((position)=>{
-      const value=Number(position.valueUsd), share=totals.total>0&&Number.isFinite(value)?value/totals.total*100:null;
+      const value=Number(position.valueUsd ?? position.estimatedValueUsd), share=totals.total>0&&Number.isFinite(value)?value/totals.total*100:null;
       return [position.tokenSymbol||"—",position.balance||"—",money(position.tokenPrice),money(value),pct(share),"Live BSC token balance"];
     });
     rows.push(["USDT","cash","$1.00",money(totals.cash),pct(totals.total>0?totals.cash/totals.total*100:null),"Live BSC token balance"]);
@@ -366,7 +451,7 @@
     if(button){button.disabled=true;button.textContent="Connecting…";button.setAttribute("aria-busy","true");}
     try{
       const data=await get("/api/wallet/auth",10000);
-      if(data.status==="SUCCESS"){await refreshAccount();return;}
+      if(data.status==="SUCCESS"){await connectWorkspaceStream();return;}
       if(data.status!=="WAITING") throw new Error(data.error||"Wallet connection could not be started.");
       showWalletAuth(data);
       if(authPoll)clearInterval(authPoll);
@@ -374,7 +459,7 @@
         try{
           const auth=await get("/api/wallet/auth",7000);
           if(auth.status==="SUCCESS"){
-            clearInterval(authPoll);authPoll=null;document.querySelector(".live-wallet-modal")?.remove();await refreshAccount();
+            clearInterval(authPoll);authPoll=null;document.querySelector(".live-wallet-modal")?.remove();await connectWorkspaceStream();
           }else if(auth.status==="FAILED"){
             clearInterval(authPoll);authPoll=null;document.querySelector(".live-wallet-modal")?.remove();
             if($("msg"))$("msg").textContent="Wallet connection failed: "+(auth.error||"Authentication failed.");
@@ -443,7 +528,7 @@
     const left=Math.max(12,Math.min(window.innerWidth-330,(rect?.right??330)-310));
     menu.style.top=top+"px";menu.style.left=left+"px";
     menu.querySelector("#live-wallet-copy").addEventListener("click",async()=>{const button=menu.querySelector("#live-wallet-copy");try{await navigator.clipboard.writeText(address);button.textContent="Copied";window.setTimeout(()=>{if(button.isConnected)button.textContent="Copy address";},1400);}catch{button.textContent="Copy failed";window.setTimeout(()=>{if(button.isConnected)button.textContent="Copy address";},1400);}});
-    menu.querySelector("#live-wallet-disconnect").addEventListener("click",async()=>{const button=menu.querySelector("#live-wallet-disconnect");button.disabled=true;button.textContent="Disconnecting…";try{await send("/api/wallet/signout",{},10000);closeWalletMenu();state.review=null;state.portfolio=null;state.history=null;state.strategies=[];state.portfolioError="Wallet disconnected.";await refreshAccount();if($("msg"))$("msg").textContent="Wallet disconnected.";}catch(error){button.disabled=false;button.textContent="Disconnect";if($("msg"))$("msg").textContent="Wallet disconnect failed: "+(error.name==="AbortError"?"API timeout":error.message);}});
+    menu.querySelector("#live-wallet-disconnect").addEventListener("click",async()=>{const button=menu.querySelector("#live-wallet-disconnect");button.disabled=true;button.textContent="Disconnecting…";try{await send("/api/wallet/signout",{},10000);closeWalletMenu();state.review=null;state.portfolio=null;state.history=null;state.strategies=[];state.portfolioError="Wallet disconnected.";await connectWorkspaceStream();if($("msg"))$("msg").textContent="Wallet disconnected.";}catch(error){button.disabled=false;button.textContent="Disconnect";if($("msg"))$("msg").textContent="Wallet disconnect failed: "+(error.name==="AbortError"?"API timeout":error.message);}});
     const outside=(event)=>{if(!menu.contains(event.target)&&event.target!==$("wal"))closeWalletMenu();};
     const escape=(event)=>{if(event.key==="Escape")closeWalletMenu();};
     menu._cleanup=()=>{document.removeEventListener("click",outside,true);document.removeEventListener("keydown",escape,true);};
@@ -519,7 +604,7 @@
       const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1)),tokenPrice=Number(state.market?.tokenPrice);
       const result=await send("/api/execute",{ticker:state.market?.underlyingTicker||"NVDA",amountUsd:qty*tokenPrice,fromToken:USDT,reviewToken:state.review.reviewToken,wallet:state.address.address,confirmed:true},25000);
       if($("msg"))$("msg").textContent=result?.result?.txHash?"Execution submitted · "+result.result.txHash:"Execution completed without a transaction hash.";
-      state.review=null;await Promise.all([refreshMarket(),refreshAccount()]);
+      state.review=null;await connectWorkspaceStream();
     }catch(error){
       if($("msg"))$("msg").textContent="Execution was not completed: "+error.message;
       if($("approve"))$("approve").disabled=false;
@@ -554,7 +639,7 @@
   }
 
   function syncView(view){if(!window.HANDELO_LIVE_WORKSPACE)return;if(view==="port")renderPortfolioView();if(view==="hist")renderHistoryView();}
-  function load(){if(!window.HANDELO_LIVE_WORKSPACE)return;if(!state.entered)enter();void refreshMarket();void refreshAccount();}
+  function load(){if(!window.HANDELO_LIVE_WORKSPACE)return;if(!state.entered)enter();else if(!state.streamSource)void connectWorkspaceStream();}
 
   document.addEventListener("click",interceptLiveClicks,true);
   document.addEventListener("input",interceptLiveInputs,true);
@@ -569,6 +654,7 @@
     if(location.hash.includes("mode=live")){const view=location.hash.split("?")[0].replace("#","");syncView(view==="workspace"?"work":view);load();}
   });
 
-  window.setInterval(()=>{if(window.HANDELO_LIVE_WORKSPACE)void refreshMarket();},5000);
-  window.setInterval(()=>{if(window.HANDELO_LIVE_WORKSPACE)void refreshAccount();},20000);
+  window.addEventListener("hashchange",()=>{
+    if(!window.HANDELO_LIVE_WORKSPACE)closeLiveStream();
+  });
 })();

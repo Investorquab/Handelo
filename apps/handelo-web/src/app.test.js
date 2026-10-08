@@ -387,3 +387,25 @@ test("live-only wallet and chat work remains isolated from Try Demo", () => {
   assert.match(indexSource, /\$\("tryd"\)\.addEventListener\("click",goDemo\)/);
   assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=false/);
 });
+
+test("live workspace uses one snapshot plus an SSE stream instead of independent polling", () => {
+  assert.match(liveWorkspaceSource, /\/api\/workspace\/snapshot/);
+  assert.match(liveWorkspaceSource, /\/api\/workspace\/stream/);
+  assert.match(liveWorkspaceSource, /new EventSource/);
+  assert.doesNotMatch(liveWorkspaceSource, /void refreshMarket\(\);/);
+  assert.doesNotMatch(liveWorkspaceSource, /void refreshAccount\(\);/);
+});
+test("live workspace consumes one coherent market and account snapshot", () => {
+  assert.match(liveWorkspaceSource, /function applyWorkspaceSnapshot\(snapshot\)/);
+  assert.match(liveWorkspaceSource, /function applyWorkspaceAccount\(account\)/);
+  assert.match(liveWorkspaceSource, /snapshot\.market/);
+  assert.match(liveWorkspaceSource, /snapshot\.account/);
+});
+test("live portfolio rendering accepts the real API snapshot fields", () => {
+  assert.match(liveWorkspaceSource, /totalValueUsd \?\? portfolio\?\.totalEstimatedValueUsd/);
+  assert.match(liveWorkspaceSource, /position\.valueUsd \?\? position\.estimatedValueUsd/);
+});
+test("live workspace closes its stream when leaving live mode", () => {
+  assert.match(liveWorkspaceSource, /if\(!window\.HANDELO_LIVE_WORKSPACE\)closeLiveStream\(\)/);
+  assert.match(liveWorkspaceSource, /function closeLiveStream\(\)/);
+});

@@ -83,3 +83,18 @@ test("wallet signout uses the official Agentic Wallet auth signout command", () 
   assert.match(source, /bawJson\(\["auth", "signout"\]\)/);
   assert.match(source, /status: "SIGNED_OUT"/);
 });
+
+test("live workspace exposes a coherent snapshot and SSE stream", () => {
+  assert.match(source, /\/api\/workspace\/snapshot/);
+  assert.match(source, /\/api\/workspace\/stream/);
+  assert.match(source, /text\/event-stream/);
+  assert.match(source, /type: "snapshot"/);
+  assert.match(source, /type: "market"/);
+  assert.match(source, /type: "account"/);
+});
+test("live market refresh is shared across workspace clients", () => {
+  assert.match(source, /liveWorkspaceClients/);
+  assert.match(source, /broadcastLiveMarket/);
+  assert.match(source, /2500/);
+  assert.match(source, /marketRefresh/);
+});
