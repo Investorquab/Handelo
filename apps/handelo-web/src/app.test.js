@@ -367,3 +367,23 @@ test("live order value and review are driven by the live market price", () => {
   assert.match(liveWorkspaceSource, /amountUsd:qty\*tokenPrice/);
   assert.match(liveWorkspaceSource, /state\.market\.tokenPrice/);
 });
+
+test("live workspace wallet menu supports copy and real disconnect", () => {
+  assert.match(liveWorkspaceSource, /live-wallet-copy/);
+  assert.match(liveWorkspaceSource, /navigator\.clipboard\.writeText\(address\)/);
+  assert.match(liveWorkspaceSource, /\/api\/wallet\/signout/);
+  assert.match(liveWorkspaceSource, /live-wallet-disconnect/);
+});
+
+test("live assistant output formats markdown professionally", () => {
+  assert.match(liveWorkspaceSource, /function formatLiveAssistantText\(rawText\)/);
+  assert.match(liveWorkspaceSource, /<strong>/);
+  assert.match(liveWorkspaceSource, /<ol>/);
+  assert.match(liveWorkspaceSource, /replace\(\/\\*\\*\/g, ""\)/);
+});
+
+test("live-only wallet and chat work remains isolated from Try Demo", () => {
+  assert.doesNotMatch(liveWorkspaceSource, /tryd/);
+  assert.match(indexSource, /\$\("tryd"\)\.addEventListener\("click",goDemo\)/);
+  assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=false/);
+});

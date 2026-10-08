@@ -228,6 +228,15 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (req.method === "POST" && req.url === "/api/wallet/signout") {
+    try {
+      await bawJson(["auth", "signout"]);
+      walletAuth = { status: "IDLE" };
+      return json(res, 200, { status: "SIGNED_OUT", connected: false });
+    } catch (error) {
+      return json(res, 503, { status: "SIGNOUT_FAILED", connected: true, error: walletServiceError(error) });
+    }
+  }
   if (req.method === "GET" && req.url === "/api/wallet/auth") {
     if (walletAuth.status === "WAITING" || walletAuth.status === "SUCCESS" || walletAuth.status === "FAILED") return json(res, 200, walletAuth);
 

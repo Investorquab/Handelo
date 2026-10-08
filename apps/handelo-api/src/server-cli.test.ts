@@ -77,3 +77,9 @@ test("review response exposes quote quality analysis without enabling execution"
   assert.match(source, /quoteQuality/);
   assert.match(source, /executionBlocked/);
 });
+
+test("wallet signout uses the official Agentic Wallet auth signout command", () => {
+  assert.match(source, /POST.*\/api\/wallet\/signout/);
+  assert.match(source, /bawJson\(\["auth", "signout"\]\)/);
+  assert.match(source, /status: "SIGNED_OUT"/);
+});

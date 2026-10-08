@@ -79,7 +79,7 @@
     } catch { return "#"; }
   }
 
-  function resetLiveSurface() {
+  function resetLiveSurface(){closeWalletMenu();
     if ($("ph")) $("ph").textContent = "Live order review";
     if ($("pform")) $("pform").hidden = false;
     if ($("rcpt")) $("rcpt").hidden = true;
@@ -106,6 +106,7 @@
 
   function enter() {
     if (!window.HANDELO_LIVE_WORKSPACE) return;
+    installLiveChatStyles();
     state.entered = true;
     resetLiveSurface();
     void refreshAccount();
@@ -397,10 +398,62 @@
     }
   }
 
+  function formatLiveAssistantText(rawText){
+    const source=String(rawText??"").replace(/\r\n?/g,"\n").replace(/^\s*```(?:markdown|md)?\s*/i,"").replace(/\s*```\s*$/i,"");
+    const blocks=[];let paragraph=[];let listType=null;let listItems=[];
+    const inline=(raw)=>{
+      let value=esc(raw);
+      value=value.replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/__([^_]+)__/g,"<strong>$1</strong>").replace(/\*([^*]+)\*/g,"<em>$1</em>").replace(/_([^_]+)_/g,"<em>$1</em>").replace(/\*\*/g,"").replace(/__/g,"");
+      return value;
+    };
+    const flushList=()=>{if(!listType||!listItems.length)return;blocks.push("<"+listType+">"+listItems.map((item)=>"<li>"+inline(item)+"</li>").join("")+"</"+listType+">");listType=null;listItems=[];};
+    const flushParagraph=()=>{if(!paragraph.length)return;blocks.push("<p>"+inline(paragraph.join(" "))+"</p>");paragraph=[];};
+    for(const rawLine of source.split("\n")){
+      const line=rawLine.trim();
+      if(!line){flushParagraph();flushList();continue;}
+      const heading=line.match(/^#{1,4}\s+(.+)$/);
+      if(heading){flushParagraph();flushList();blocks.push("<h4>"+inline(heading[1])+"</h4>");continue;}
+      const numbered=line.match(/^\d+[.)]\s+(.+)$/);
+      if(numbered){flushParagraph();if(listType!=="ol")flushList();listType="ol";listItems.push(numbered[1]);continue;}
+      const bullet=line.match(/^[-•]\s+(.+)$/);
+      if(bullet){flushParagraph();if(listType!=="ul")flushList();listType="ul";listItems.push(bullet[1]);continue;}
+      if(listType)flushList();paragraph.push(line);
+    }
+    flushParagraph();flushList();return blocks.join("");
+  }
+  function installLiveChatStyles(){
+    if(document.getElementById("live-chat-styles"))return;
+    const style=document.createElement("style");style.id="live-chat-styles";
+    style.textContent=".live-chat-rich{line-height:1.65;color:var(--ink)}.live-chat-rich p{margin:0 0 12px}.live-chat-rich h4{margin:14px 0 8px;font-size:14px;color:var(--gold);font-weight:600}.live-chat-rich ul,.live-chat-rich ol{margin:8px 0 14px 20px;padding:0}.live-chat-rich li{margin:5px 0}.live-chat-rich strong{color:var(--ink);font-weight:700}.live-chat-rich em{color:var(--gold)}.live-chat-rich code{font-family:monospace;font-size:.92em;border:1px solid var(--line);padding:1px 4px;border-radius:4px}";
+    document.head.appendChild(style);
+  }
+  function closeWalletMenu(){const menu=document.querySelector(".live-wallet-menu");if(!menu)return;if(menu._cleanup)menu._cleanup();menu.remove();}
+  function showWalletMenu(){
+    closeWalletMenu();
+    const address=state.address?.address;if(!state.address?.connected||!address)return;
+    const menu=document.createElement("div");menu.className="live-wallet-menu";
+    menu.style.cssText="position:fixed;z-index:120;min-width:310px;background:#110e0b;border:1px solid #3b3225;border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.55);padding:16px;color:#ede6d6;font-family:Manrope,sans-serif;";
+    menu.innerHTML='<div style="font-size:10px;letter-spacing:.13em;color:#8d8574;text-transform:uppercase;margin-bottom:10px">CONNECTED WALLET</div>'+
+      '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><span class="dot g"></span><span>Binance Agentic Wallet</span></div>'+
+      '<div style="font-family:monospace;font-size:12px;color:#b8b0a0;word-break:break-all;border:1px solid #272119;background:#0d0b09;border-radius:8px;padding:10px;margin-bottom:12px">'+esc(address)+'</div>'+
+      '<div style="display:flex;gap:8px"><button type="button" id="live-wallet-copy" style="flex:1;border:1px solid #3b3225;background:#17130f;color:#ede6d6;border-radius:7px;padding:10px 12px;cursor:pointer">Copy address</button>'+
+      '<button type="button" id="live-wallet-disconnect" style="flex:1;border:1px solid rgba(201,85,72,.55);background:rgba(201,85,72,.08);color:#e6a49b;border-radius:7px;padding:10px 12px;cursor:pointer">Disconnect</button></div>';
+    const rect=$("wal")?.getBoundingClientRect();
+    const top=Math.min(window.innerHeight-210,(rect?.bottom??70)+8);
+    const left=Math.max(12,Math.min(window.innerWidth-330,(rect?.right??330)-310));
+    menu.style.top=top+"px";menu.style.left=left+"px";
+    menu.querySelector("#live-wallet-copy").addEventListener("click",async()=>{const button=menu.querySelector("#live-wallet-copy");try{await navigator.clipboard.writeText(address);button.textContent="Copied";window.setTimeout(()=>{if(button.isConnected)button.textContent="Copy address";},1400);}catch{button.textContent="Copy failed";window.setTimeout(()=>{if(button.isConnected)button.textContent="Copy address";},1400);}});
+    menu.querySelector("#live-wallet-disconnect").addEventListener("click",async()=>{const button=menu.querySelector("#live-wallet-disconnect");button.disabled=true;button.textContent="Disconnecting…";try{await send("/api/wallet/signout",{},10000);closeWalletMenu();state.review=null;state.portfolio=null;state.history=null;state.strategies=[];state.portfolioError="Wallet disconnected.";await refreshAccount();if($("msg"))$("msg").textContent="Wallet disconnected.";}catch(error){button.disabled=false;button.textContent="Disconnect";if($("msg"))$("msg").textContent="Wallet disconnect failed: "+(error.name==="AbortError"?"API timeout":error.message);}});
+    const outside=(event)=>{if(!menu.contains(event.target)&&event.target!==$("wal"))closeWalletMenu();};
+    const escape=(event)=>{if(event.key==="Escape")closeWalletMenu();};
+    menu._cleanup=()=>{document.removeEventListener("click",outside,true);document.removeEventListener("keydown",escape,true);};
+    document.addEventListener("click",outside,true);document.addEventListener("keydown",escape,true);
+    document.body.appendChild(menu);
+  }
   function renderLiveChatMessage(role,text){
     const thread=$("thread"); if(!thread)return;
     const node=document.createElement("div"); node.className=role==="user"?"um":"ac";
-    node.innerHTML=role==="user"?esc(text):'<h3>Handelo</h3><p>'+esc(text)+'</p>';
+    node.innerHTML=role==="user"?esc(text):'<h3>Handelo</h3><div class="live-chat-rich">'+formatLiveAssistantText(text)+"</div>";
     thread.appendChild(node);thread.scrollTop=thread.scrollHeight;
   }
 
@@ -480,7 +533,7 @@
     if(!window.HANDELO_LIVE_WORKSPACE)return;
     const target=event.target instanceof Element?event.target.closest("button,[role='button']"):null;
     if(!target)return;
-    if(target.id==="wal"){event.preventDefault();event.stopImmediatePropagation();void connectLiveWallet();return;}
+    if(target.id==="wal"){event.preventDefault();event.stopImmediatePropagation();if(state.address?.connected){if(document.querySelector(".live-wallet-menu"))closeWalletMenu();else showWalletMenu();}else{void connectLiveWallet();}return;}
     if(target.id==="approve"){event.preventDefault();event.stopImmediatePropagation();if(state.review?.reviewToken)void executeLiveOrder();else void reviewLiveOrder();return;}
     if(target.id==="ag"){event.preventDefault();event.stopImmediatePropagation();openLiveChat("Compare NVDAB and NVDA using the latest live market data.");return;}
     if(target.id==="askb"||target.id==="askf"){event.preventDefault();event.stopImmediatePropagation();openLiveChat();return;}
