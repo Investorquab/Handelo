@@ -47,6 +47,8 @@ export interface StrategyAttribution {
   lastExecutionAt: string | null;
   nextExecutionAt: string | null;
   successfulPlannedUsd: number | null;
+  lastExecutionTxHash: string | null;
+  lastExecutionProvider: string | null;
 }
 
 export async function listStrategyAttribution(
@@ -71,7 +73,9 @@ export async function listStrategyAttribution(
       failedCount,
       lastExecutionAt: strategyRecords[0]?.finishedAt ?? strategyRecords[0]?.triggeredAt ?? null,
       nextExecutionAt: strategy.nextExecutionAt ?? null,
-      successfulPlannedUsd: strategy.amountUsd === undefined ? null : strategy.amountUsd * finishedCount
+      successfulPlannedUsd: strategy.amountUsd === undefined ? null : strategy.amountUsd * finishedCount,
+      lastExecutionTxHash: strategyRecords.find(record => record.executionReceipt?.txHash)?.executionReceipt?.txHash ?? null,
+      lastExecutionProvider: strategyRecords.find(record => record.executionReceipt?.provider)?.executionReceipt?.provider ?? null
     };
   });
 }
