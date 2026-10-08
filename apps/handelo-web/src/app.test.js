@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const appPath = fileURLToPath(new URL("./app.js", import.meta.url));
 const source = readFileSync(appPath, "utf8");
 const indexSource = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
-const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("../live-workspace.js", import.meta.url)), "utf8");
+const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("./live-workspace.js", import.meta.url)), "utf8");
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
 
 test("workspace Gap Radar renders cross-representation rows once", () => {
