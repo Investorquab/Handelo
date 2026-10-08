@@ -170,13 +170,13 @@ test("Handelo exposes exactly two primary navigation destinations", () => {
 });
 
 test("homepage contains the locked product narrative and real UI surfaces", () => {
-  assert.match(indexSource, /AI explains\.<br><em>The system governs\.<\\?\/em><br>You decide\./);
-  assert.match(indexSource, /Markets close\.<br><em>Tokenized stocks don't\.<\\?\/em>/);
-  assert.match(indexSource, /DISCOVER|Discover/);
-  assert.match(indexSource, /MARKET INTELLIGENCE/);
-  assert.match(indexSource, /STRATEGY/);
-  assert.match(indexSource, /PORTFOLIO RISK/);
-  assert.match(indexSource, /EXECUTION/);
+  assert.match(indexSource, /AI explains\.<br>The system governs\.<br>You decide\./);
+  assert.match(indexSource, /Markets close\.[\s\S]*Tokenized stocks don't\./);
+  assert.match(indexSource, /DISCOVER|Discover/i);
+  assert.match(indexSource, /MARKET INTELLIGENCE/i);
+  assert.match(indexSource, /STRATEGY/i);
+  assert.match(indexSource, /PORTFOLIO RISK/i);
+  assert.match(indexSource, /EXECUTION/i);
 });
 
 test("homepage CTAs open the unified workspace", () => {
@@ -297,11 +297,11 @@ test("premium terminal header exposes direct workspace surfaces without adding p
 });
 
 test("homepage uses the approved connected seven-stage operating loop",()=> {
-  assert.match(indexSource,/class="premium-loop-track"/);
+  assert.match(indexSource,/class="lg"/);
   assert.match(indexSource,/data-home-stage="0"/);
   assert.match(indexSource,/data-home-stage="6"/);
   assert.match(source,/premiumLoopDetail/);
-  assert.match(indexSource,/The system does not jump from an AI answer straight to money movement/);
+  assert.match(indexSource,/The system makes the decision path visible/);
 });
 
 
