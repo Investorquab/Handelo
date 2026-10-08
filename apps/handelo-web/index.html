@@ -1,51 +1,338 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#080807">
-  <meta name="description" content="Handelo — an AI operating layer for tokenized-stock markets on BNB Chain.">
-  <title>Handelo — AI operating layer for tokenized stocks</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./src/styles.css">
-  <link rel="stylesheet" href="./src/home-redesign.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Handelo workspace mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0a08;--ink:#ede6d6;--mute:#8d8574;--gold:#d4af37;--green:#23c94a;--amber:#e6af06;--red:#cf4125;--line:#272119;--panel:#110e0b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Manrope,system-ui,sans-serif;
+background-image:radial-gradient(ellipse 60% 40% at 25% 0%,rgba(212,175,55,.07),transparent 70%)}
+.num{font-family:"DM Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Instrument Serif",Georgia,serif;font-weight:400;margin:0;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+header{display:flex;align-items:center;gap:28px;padding:18px 32px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.logo{font-family:"Instrument Serif",serif;font-size:28px;color:var(--gold);margin-right:8px}
+nav{display:flex;gap:22px;overflow-x:auto}
+nav a{color:var(--mute);text-decoration:none;padding:4px 0;border-bottom:1px solid transparent;white-space:nowrap}
+nav a[aria-current]{color:var(--ink);border-color:var(--gold)}
+nav a:hover{color:var(--ink)}
+.hr{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;color:var(--mute);display:inline-flex;gap:8px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block}
+.dot.g{background:var(--green)}.dot.r{background:var(--red)}
+main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:56px;padding:36px 32px 24px;max-width:1360px;margin:0 auto}
+@media(max-width:960px){main{grid-template-columns:1fr;gap:40px;padding:24px 18px 24px}header{padding:14px 18px}.hr{margin-left:0}}
+.title{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{font-size:44px;line-height:1.05}
+h1 small{display:block;font:500 14px Manrope,sans-serif;color:var(--mute);letter-spacing:0;margin-top:8px}
+.price{text-align:right}
+.price b{font:400 40px "DM Mono",monospace;display:block;line-height:1}
+.price span{color:var(--gold);font-size:14px}
+.readout{display:flex;gap:26px;margin:26px 0 8px;min-height:48px;flex-wrap:wrap;align-items:flex-end}
+.readout div{font-size:13px;color:var(--mute)}
+.readout b{display:block;font:400 22px "DM Mono",monospace;color:var(--ink)}
+.readout .t b{color:var(--gold)}
+.chart{position:relative;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:22px;font-size:13px;color:var(--mute);margin:10px 0 0;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:8px}
+.stats{display:flex;margin-top:28px;flex-wrap:wrap}
+.stats div{padding:0 26px;border-left:1px solid var(--line);font-size:13px;color:var(--mute)}
+.stats div:first-child{padding-left:0;border:0}
+.stats b{display:block;font:400 18px "DM Mono",monospace;color:var(--ink);margin-top:2px}
+.acts{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
+.btn{border:1px solid var(--gold);background:transparent;color:var(--gold);border-radius:4px;padding:10px 18px;font-weight:600}
+.btn:hover{background:rgba(212,175,55,.12)}
+.btn.solid{background:var(--gold);color:#16120a}
+.btn.solid:hover{background:#e2be4a}
+.btn.quiet{border-color:var(--line);color:var(--ink)}
+.btn.quiet:hover{border-color:var(--mute);background:none}
+aside section{padding:0 0 28px;margin-bottom:28px;border-bottom:1px solid var(--line)}
+aside section:last-child{border:0;margin:0}
+h2{font-size:26px;margin-bottom:14px}
+.policy{background:var(--panel);border-left:2px solid var(--gold);padding:22px 22px 22px!important;border-bottom:0!important;border-radius:0 10px 10px 0}
+.order{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:16px;flex-wrap:wrap}
+.order b{font-weight:600}
+.checks{list-style:none;margin:0 0 18px;padding:0}
+.checks li{display:grid;grid-template-columns:14px 1fr auto;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.checks li:first-child{border:0}
+.checks small{display:block;color:var(--mute);font-size:12.5px}
+.checks .v{font-family:"DM Mono",monospace;font-size:13px;color:var(--mute)}
+.checks li.fail .v{color:var(--red)}
+.pf{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.sw{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mute)}
+.sw button{width:38px;height:22px;border-radius:99px;border:1px solid var(--mute);background:none;position:relative;padding:0}
+.sw button::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--mute);transition:transform .15s}
+.sw button[aria-checked=true]{border-color:var(--red)}
+.sw button[aria-checked=true]::after{transform:translateX(16px);background:var(--red)}
+#approve:disabled{background:transparent;border:1px solid var(--line);color:var(--mute);cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.total{font:400 28px "DM Mono",monospace}
+.bar{display:flex;height:10px;border-radius:2px;overflow:hidden;gap:2px;margin:14px 0 12px}
+.bar i{display:block}
+.pl{list-style:none;margin:0;padding:0;font-size:13.5px}
+.pl li{display:flex;justify-content:space-between;padding:3px 0;color:var(--mute)}
+.pl li span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:9px}
+.pl b{font:400 13px "DM Mono",monospace;color:var(--ink)}
+.gauge{width:100%;max-width:190px}
+.gv{font:400 26px "DM Mono",monospace;margin-top:-34px;text-align:center}
+.gl{text-align:center;font-size:13px;color:var(--green)}
+details{border-top:1px solid var(--line);padding:12px 0}
+details:first-of-type{border:0;padding-top:0}
+summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;list-style:none;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary span{font-weight:600}
+summary em{font-style:normal;font-size:13px;color:var(--mute)}
+details p{margin:8px 0 0;font-size:13.5px;color:var(--mute)}
+details[open] summary span{color:var(--gold)}
+.log{list-style:none;margin:0;padding:0 0 0 18px;border-left:1px solid var(--line)}
+.log li{position:relative;padding:0 0 16px 6px;font-size:14px}
+.log li::before{content:"";position:absolute;left:-23px;top:7px;width:9px;height:9px;border-radius:50%;background:var(--bg);border:1px solid var(--gold)}
+.log li.hold::before{border-color:var(--amber);background:var(--amber)}
+.log time{display:block;font:400 12px "DM Mono",monospace;color:var(--mute)}
+.lower{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:56px;padding:12px 32px 40px;max-width:1360px;margin:0 auto}
+.lower>section{border-top:1px solid var(--line);padding-top:28px}
+@media(max-width:960px){.lower{grid-template-columns:1fr;gap:32px;padding:8px 18px 40px}}
+.ask{position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;height:44px;min-width:44px;padding:0 11px;background:var(--panel);color:var(--gold);border:1px solid var(--gold);border-radius:99px;font-weight:600;font-size:13px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.6)}
+.ask span{max-width:0;opacity:0;white-space:nowrap;transition:max-width .2s,opacity .2s,margin .2s}
+.ask:hover span,.ask:focus-visible span{max-width:100px;opacity:1;margin-left:9px}
+.ask:hover{background:rgba(212,175,55,.14)}
+@media(prefers-reduced-motion:reduce){.ask span{transition:none}}
+.sim{display:flex;align-items:center;gap:6px;font-size:13px}
+.sim .num{color:var(--mute);margin-right:6px}
+.sb{border:1px solid var(--line);background:none;border-radius:4px;padding:4px 10px;font-size:12.5px;color:var(--mute)}
+.sb:hover{border-color:var(--mute);color:var(--ink)}
+.sb[aria-pressed=true],#play{color:var(--gold);border-color:var(--gold)}
+.order{align-items:center}
+.seg{display:flex}.seg button{border:1px solid var(--line);background:none;padding:6px 16px;font-weight:600;color:var(--mute)}
+.seg button:first-child{border-radius:4px 0 0 4px}.seg button:last-child{border-radius:0 4px 4px 0;border-left:0}
+.seg button[aria-pressed=true]{color:#16120a;background:var(--gold);border-color:var(--gold)}
+.qty{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute)}
+.qty input{width:64px;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:6px 8px;font:400 14px "DM Mono",monospace}
+.msg{margin:12px 0 0;font-size:13px;color:var(--mute);min-height:20px}
+[hidden]{display:none!important}
+.glow{border-color:var(--gold)!important;color:var(--gold);display:inline-flex;align-items:center;gap:9px;animation:gl 2.6s ease-in-out infinite}
+@keyframes gl{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0),0 0 10px rgba(212,175,55,.25)}50%{box-shadow:0 0 0 5px rgba(212,175,55,.1),0 0 26px rgba(212,175,55,.55)}}
+@media(prefers-reduced-motion:reduce){.glow{animation:none;box-shadow:0 0 18px rgba(212,175,55,.45)}}
+.pv{max-width:1360px;margin:0 auto;padding:36px 32px 120px}
+@media(max-width:960px){.pv{padding:24px 18px 120px}}
+.pv .bar{height:16px;margin:30px 0 24px}
+.tw{overflow-x:auto}
+.tb{width:100%;border-collapse:collapse;min-width:640px}
+.tb th{text-align:left;font-weight:500;font-size:13px;color:var(--mute);padding:0 12px 10px 0}
+.tb td{padding:14px 12px 14px 0;border-top:1px solid var(--line);font-size:14px}
+.tb td:first-child{font-weight:600}
+.mt{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:40px}
+@media(max-width:760px){.mt{grid-template-columns:1fr;gap:24px}}
+.mh{display:flex;justify-content:space-between;font-size:14px}
+.m small{display:block;margin-top:8px;color:var(--mute);font-size:12.5px}
+.tr{position:relative;height:8px;background:var(--line);border-radius:2px;margin-top:10px}
+.tr i{display:block;height:100%;border-radius:2px}
+.tr u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(8,6,4,.5);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;padding:20px}
+.ovp{width:min(720px,100%);height:min(78vh,700px);background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;box-shadow:0 30px 90px rgba(0,0,0,.7)}
+.ovh{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+.thread{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px}
+.hint{color:var(--mute);font-size:14px;margin:0}
+.um{align-self:flex-end;background:rgba(212,175,55,.12);border-radius:10px 10px 2px 10px;padding:8px 14px;max-width:80%;font-size:14px}
+.ac{border-left:2px solid var(--gold);padding-left:16px}
+.ac h3{font-size:22px}.ac p{margin:4px 0 10px;color:var(--mute);font-size:14px}
+.kv{display:flex;gap:26px;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--mute)}
+.kv b{display:block;font:400 18px "DM Mono",monospace;color:var(--ink)}
+.sp2{width:100%;max-width:340px;height:auto;margin:6px 0 12px}
+.aa{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.ac .btn{padding:7px 14px;font-size:13px}
+.qs{display:flex;gap:8px;flex-wrap:wrap;padding:0 20px 12px}
+.qc{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 14px;font-size:13px;color:var(--mute)}
+.qc:hover{border-color:var(--gold);color:var(--ink)}
+.qr{display:flex;gap:10px;padding:14px 20px 18px;border-top:1px solid var(--line)}
+.qr input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:11px 14px;font:inherit}
+.qr input:focus{border-color:var(--gold);outline:none}
+.acts{gap:10px}
+.acts .btn{padding:7px 14px;font-size:13px}
+.glow{gap:8px}
+.wal{background:none;color:var(--gold);border-color:var(--gold);cursor:pointer;font:600 13px Manrope,sans-serif}
+.wal:hover{background:rgba(212,175,55,.12)}
+.wal.on{color:var(--ink);border-color:var(--line);font:400 13px "DM Mono",monospace}
+.rh{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.rh h2{margin:0}.rh span{font-size:13px;color:var(--mute)}
+.rl{list-style:none;margin:16px 0 18px;padding:0}
+.rl li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.rl li span:first-child{color:var(--mute)}
+.ck path{stroke-dasharray:24;stroke-dashoffset:24;animation:dr .5s .1s forwards}
+@keyframes dr{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.ck path{animation:none;stroke-dashoffset:0}}
+.rh{gap:12px}
+.cov{max-width:1360px;margin:0 auto;padding:0 32px 120px;color:var(--mute);font-size:13px}
+.cov div{border-top:1px solid var(--line);padding-top:18px;max-width:640px}
+@media(max-width:960px){.cov{padding:0 18px 120px}}
+.tseg{display:flex}.tseg button{border:1px solid var(--line);background:none;padding:7px 16px;font-weight:600;color:var(--mute)}
+.tseg button:first-child{border-radius:4px 0 0 4px}.tseg button:last-child{border-radius:0 4px 4px 0;border-left:0}
+.tseg button[aria-pressed=true]{color:#16120a;background:var(--gold);border-color:var(--gold)}
+.ovp.bp{height:auto;max-height:90vh}
+.bb{padding:20px;display:flex;flex-direction:column;gap:18px}
+.bf{display:flex;flex-direction:column;gap:14px}
+.fl{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--mute)}
+.fl input{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:9px 12px;font:400 15px "DM Mono",monospace;width:100%}
+.fl input:focus{border-color:var(--gold);outline:none}
+.sa{display:flex;gap:8px;margin-top:10px}
+#bm:disabled{background:transparent;border:1px solid var(--line);color:var(--mute);cursor:not-allowed}
+.home nav,.home .hr,.home .ask{display:none}
+#openh{display:none;margin-left:auto}.home #openh{display:block}
+a.logo{text-decoration:none}
+.hero{max-width:1200px;margin:0 auto;padding:72px 32px 56px;display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(40px,6vw,72px);line-height:1}
+.lede{color:var(--mute);font-size:17px;max-width:460px;margin:22px 0 28px}
+.sec{max-width:1200px;margin:0 auto;padding:64px 32px;border-top:1px solid var(--line)}
+.sec h2{font-size:clamp(30px,4vw,44px);margin-bottom:12px}
+.sub{color:var(--mute);max-width:620px;margin:0 0 28px}
+.tl{margin:12px 0 4px}
+.tlb{position:relative;height:34px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden}
+.tlo{position:absolute;top:0;bottom:0;left:39.58%;width:27.08%;background:rgba(212,175,55,.28);border-left:1px solid var(--gold);border-right:1px solid var(--gold)}
+.tlm{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+.tl input{width:100%;accent-color:var(--gold);margin:12px 0 0}
+.tlk{position:relative;height:20px;font:12px "DM Mono",monospace;color:var(--mute)}
+.tlk span{position:absolute;transform:translateX(-50%)}
+.lp{list-style:none;display:flex;margin:28px 0 0;padding:0 0 8px;overflow-x:auto}
+.lp li{flex:1 0 104px;position:relative;text-align:center}
+.lp li:not(:last-child)::before{content:"";position:absolute;top:16px;left:50%;right:-50%;height:1px;background:var(--line)}
+.lp button{position:relative;background:none;border:0;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;font-weight:600;font-size:14px}
+.lp .n{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center;font:400 13px "DM Mono",monospace}
+.lp button:hover .n{border-color:var(--mute)}
+.lp button[aria-pressed=true]{color:var(--ink)}
+.lp button[aria-pressed=true] .n{background:var(--gold);color:#16120a;border-color:var(--gold)}
+.lpd{margin:22px 0 0;max-width:620px;font-size:17px;min-height:56px}
+.caps{display:grid;grid-template-columns:repeat(3,1fr)}
+.caps>div{padding:0 32px;border-left:1px solid var(--line)}.caps>div:first-child{padding-left:0;border:0}
+.caps h3{font-size:26px;margin-bottom:14px}.caps p{color:var(--mute);font-size:14px;margin:14px 0 0}
+.cov2{color:var(--mute);font-size:13px;margin-top:28px}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding:36px 18px 40px;gap:36px}.sec{padding:48px 18px}.caps{grid-template-columns:1fr;gap:36px}.caps>div{padding:28px 0 0;border-left:0;border-top:1px solid var(--line)}.caps>div:first-child{padding-top:0;border:0}}
+@media(max-width:700px){
+header{gap:10px 14px}nav{order:3;width:100%;gap:24px}.hr{margin-left:auto}
+.chip{padding:4px 10px;font-size:12px}
+h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-size:30px}
+.readout{gap:16px 22px}.readout b{font-size:18px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:18px 0}
+.stats div,.stats div:first-child{padding:0 0 0 14px;border-left:1px solid var(--line)}
+.stats div:nth-child(odd){padding-left:0;border:0}
+.acts .btn{flex:1 1 auto}
+.pf{flex-wrap:wrap;gap:14px}
+.policy{padding:18px!important}
+.ov{padding:0;align-items:flex-end}
+.ovp{width:100%;height:88dvh;border-radius:14px 14px 0 0}.ovp.bp{height:auto}
+.qs{flex-wrap:nowrap;overflow-x:auto}.qc{white-space:nowrap}
+.qr input,.fl input,.qty input{font-size:16px}
+.ask{right:14px}
+}
+.ey{font:11px "DM Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:18px}
+.loopsec{text-align:center}
+.loopsec h2{font-size:clamp(34px,5vw,60px);line-height:1.05;max-width:900px;margin:0 auto 14px}
+.loopsec .sub{margin:0 auto 44px}
+.lg{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.lc{flex:0 0 calc(25% - 8px);text-align:left;border:1px solid var(--line);background:var(--panel);padding:22px 22px 26px;min-height:160px}
+.lc:hover{border-color:#4a4132}
+.lc span{font:11px "DM Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.lc h3{font-size:30px;margin:26px 0 10px}.lc p{color:var(--mute);font-size:13px;margin:0}
+.rg{display:grid;grid-template-columns:repeat(3,1fr);margin-top:28px}
+.rg>div{padding:0 32px;border-left:1px solid var(--line)}.rg>div:first-child{padding-left:0;border:0}
+.rg h3{font-size:26px;margin-bottom:12px}.rg p{color:var(--mute);font-size:14px;margin:0}
+#hn{display:none;gap:28px;margin:0 auto}.home #hn{display:flex}
+.ft{border-top:1px solid var(--line)}
+.ftm{max-width:1200px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px}
+.ftm p{color:var(--mute);font-size:14px;max-width:360px;margin:16px 0 0}
+.ftm h4{font:400 11px "DM Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0 0 16px}
+.ftm a,.ftm span{display:block;color:var(--mute);font-size:14px;text-decoration:none;padding:5px 0}
+.ftm span{opacity:.65}.ftm a:hover{color:var(--ink)}
+.ftm .logo{font-size:32px;color:var(--ink);padding:0}
+.ftb{max-width:1200px;margin:0 auto;padding:22px 32px 48px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;font:11px/1.9 "DM Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+@media(max-width:900px){.lc{flex-basis:calc(50% - 8px)}.rg{grid-template-columns:1fr;gap:28px}.rg>div{padding:24px 0 0;border-left:0;border-top:1px solid var(--line)}.rg>div:first-child{padding-top:0;border:0}.ftm{grid-template-columns:1fr;padding:40px 18px 24px;gap:28px}.ftb{padding:20px 18px 40px}}
+@media(max-width:700px){.home #hn{display:none}.lc{flex-basis:100%}}
+::selection{background:rgba(212,175,55,.3)}
+*{scrollbar-width:thin;scrollbar-color:#3a3226 transparent}
+.btn,.sb,.qc{transition:background .15s,border-color .15s,color .15s}
+.btn:active,.sb:active{transform:translateY(1px)}
+.home header{position:sticky;top:0;z-index:20;background:rgba(12,10,8,.82);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.sec{scroll-margin-top:68px}
+.hero .acts .btn{padding:11px 22px;font-size:14px}
+.ftb .btn{padding:8px 16px;font-size:13px}
+@media(prefers-reduced-motion:reduce){.btn,.sb,.qc{transition:none}}
+.lc{font:inherit;color:inherit;cursor:pointer}
+.lc[aria-pressed=true]{border-color:var(--gold)}
+.lcd{max-width:720px;margin:26px auto 0;font-size:16px;min-height:72px;color:var(--ink)}
+.proof{max-width:1200px;margin:0 auto;padding:0 32px 56px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.proof b{display:block;font:400 36px "Instrument Serif",serif;margin-bottom:6px}
+.proof span{color:var(--mute);font-size:14px;display:block;max-width:300px}
+.two2{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:28px}
+.two2 h3,.fg h3{font-size:26px;margin-bottom:12px}
+.pl2{list-style:none;margin:0;padding:0}
+.pl2 li{padding:10px 0 10px 22px;border-top:1px solid var(--line);font-size:15px;position:relative}
+.pl2 li::before{content:"";position:absolute;left:2px;top:19px;width:8px;height:8px;border-radius:50%;border:1px solid var(--mute)}
+.pl2.ok li::before{background:var(--green);border-color:var(--green)}
+.sm{color:var(--mute);font-size:14px;margin:16px 0 0;max-width:560px}
+.bd{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin-top:48px;padding-top:28px;border-top:1px solid var(--line)}
+.bd h4{font:400 22px "Instrument Serif",serif;margin:0 0 8px}.bd p{color:var(--mute);font-size:13.5px;margin:0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:0 56px;margin-top:28px}
+.fg>div{padding:20px 0;border-top:1px solid var(--line)}.fg p{color:var(--mute);font-size:14px;margin:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.chips span{border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:12.5px;color:var(--mute)}
+.cb{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:16px 18px;font:13px/1.9 "DM Mono",monospace;overflow-x:auto;white-space:nowrap}
+.cb i{font-style:normal;color:var(--gold);display:inline-block;width:76px}
+.faq{max-width:820px;margin-top:24px}
+.faq details{padding:16px 0}.faq details:first-child{border-top:1px solid var(--line);padding-top:16px}
+.faq summary span{font-size:17px}
+.faq summary::after{content:"+";color:var(--gold);font:400 20px "DM Mono",monospace}
+.faq details[open] summary::after{content:"-"}
+.faq p{font-size:15px;max-width:680px}
+@media(max-width:900px){.proof{grid-template-columns:1fr;padding:0 18px 40px;gap:24px}.two2,.fg{grid-template-columns:1fr;gap:32px 0}.bd{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.bd{grid-template-columns:1fr}}
+.mh2{font:400 22px "Instrument Serif",serif;margin:0 0 10px;color:var(--ink)}
+#sl details{padding:10px 0}#sl .hint{padding:4px 0}
+.bb{overflow-y:auto;min-height:0}
+.cnt{background:var(--gold);color:#16120a;border-radius:99px;font:600 11px "DM Mono",monospace;padding:1px 7px;margin-left:8px}
+.cnt:empty{display:none}
+.phd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px}
+.phd h2{margin:0}.pc{font-size:13px}
+.toast{position:fixed;left:24px;bottom:calc(24px + env(safe-area-inset-bottom,0px));max-width:340px;background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:6px;padding:12px 16px;font-size:13.5px;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s;z-index:40}
+.toast.show{opacity:1;transform:none}.toast.hold{border-left-color:var(--amber)}
+@media(max-width:700px){.toast{left:14px;right:70px;max-width:none}}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
 </head>
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
-  <div class="shell">
-    <main class="main">
-      <header class="terminal-header" aria-label="Handelo navigation">
-  <a class="terminal-brand" href="#" id="brandHome" aria-label="Handelo home"><span class="brand-mark" aria-hidden="true">◆</span>HANDELO</a>
-  <nav class="terminal-nav" aria-label="Primary">
-    <button class="terminal-nav-item nav-item active" type="button" data-view="home" aria-current="page">Home</button>
-    <button class="terminal-nav-item nav-item" type="button" data-view="workspace">Workspace</button>
+<header>
+  <a class="logo" href="#home">Handelo</a>
+  <nav id="hn" aria-label="Sections"><a href="#home" data-s="tls">Markets</a><a href="#home" data-s="loop">System loop</a><a href="#home" data-s="caps">Capabilities</a></nav>
+  <nav aria-label="Primary">
+    <a href="#workspace" data-v="work" aria-current="page">Workspace</a><a href="#portfolio" data-v="port">Portfolio</a><a href="#history" data-v="hist">History</a>
   </nav>
-  <nav class="terminal-context-nav" aria-label="Workspace sections">
-    <button type="button" data-workspace-focus="workspaceMarket">Markets</button>
-    <button type="button" data-workspace-focus="workspacePortfolio">Portfolio</button>
-    <button type="button" data-workspace-focus="workspaceStrategies">Strategies</button>
-    <button type="button" data-workspace-focus="workspaceActivity">Activity</button>
-  </nav>
-  <div class="terminal-actions">
-    <span class="chain-chip"><span class="status-dot"></span> BNB CHAIN</span>
-    <button class="connect" id="connectButton" type="button">Connect wallet <span>↗</span></button>
-    <button class="terminal-build" type="button" data-workspace-focus="workspaceStrategies">Build Strategy</button>
-    <button class="terminal-ask" type="button" data-ask-handelo>Ask Handelo</button>
+  <div class="hr">
+    <span class="chip">BNB Chain</span>
+    <button class="chip wal" id="wal">Connect wallet</button>
   </div>
-  <span id="topbarLabel" class="sr-only">HANDELO / HOME</span>
+<button class="btn solid" id="openh">Open Handelo</button>
 </header>
-      
-<section class="view active home-view" id="view-home" aria-labelledby="home-title">
+
+<div id="v-home">
 <section class="hero">
   <div>
     <h1>AI explains.<br>The system governs.<br>You decide.</h1>
     <p class="lede">An AI operating layer for tokenized stocks on BNB Chain. It connects market intelligence, strategy, portfolio risk, policy, wallet permissions, execution and verification into one governed workflow.</p>
-    <div class="acts"><button class="btn solid" id="homeWorkspaceCta">Open Handelo</button><button class="btn quiet" data-home-scroll="premium-loop">See how it works</button></div>
+    <div class="acts"><button class="btn solid" id="oh1">Open Handelo</button><button class="btn quiet" id="how">See how it works</button></div>
   </div>
-  <div class="redesign-market-object"><div class="market-object-head"><span>MARKET RELATIONSHIP</span><span class="live-badge" id="homeMarketLiveStatus">READING LIVE DATA</span></div><div class="market-object-title"><div><strong id="homeReferenceTicker">NVDA</strong><small>REFERENCE</small><b id="homeReferencePrice">—</b></div><div class="relation-mark">↔</div><div><strong id="homeTokenSymbol">NVDAB</strong><small>ON-CHAIN / BSC</small><b id="homeTokenPrice">—</b></div></div><div class="home-market-reality" id="homeMarketReality" aria-live="polite" aria-busy="true"><div class="home-market-loading">Resolving current market relationship…</div></div><div class="home-preview-readout"><span id="homeMarketGap">GAP —</span><span>·</span><strong id="homeMarketState">MARKET STATE —</strong><small id="homeMarketProvenance">Live market data from Handelo's market layer.</small></div><div class="market-object-footer"><span><i class="legend-line reference"></i>reference price</span><span><i class="legend-line token"></i>on-chain price</span><span><i class="legend-block"></i>current representation gap</span></div><div class="market-object-note">This panel is populated from the same live market source used by the workspace. No simulated market state is shown.</div></div>
+  <div>
+    <div class="readout" id="hro"></div>
+    <div class="chart" id="hchart"></div>
+    <div class="legend"><span><i style="background:var(--ink)"></i>NVDA reference</span><span><i style="background:var(--gold)"></i>NVDAB token</span><span><i style="background:rgba(212,175,55,.35);height:8px"></i>Gap</span></div>
+  </div>
 </section>
 <section class="proof"><div><b>7 stages</b><span>Discover to Monitor, one governed path from market signal to verified outcome.</span></div><div><b>Chain ID 56</b><span>BNB Chain RWA data comes from Binance's market API, not a hardcoded stock list.</span></div><div><b>NVDA and NVDAB</b><span>One deeply validated market relationship, not a long list of unvalidated assets.</span></div></section>
 <section class="sec" id="tls">
@@ -55,12 +342,12 @@
   <div class="readout" id="tro"></div>
 </section>
 <section class="sec" id="problem"><h2>More than a buy button.</h2><div class="rg"><div><h3>Token and stock are two prices</h3><p>Tokenized stocks connect traditional reference markets to onchain representations, and users can struggle to see how the token price relates to the underlying asset.</p></div><div><h3>A trade carries context</h3><p>Market state, reference price gaps, portfolio exposure, liquidity, wallet authority and execution conditions all matter.</p></div><div><h3>Explanation is not authorization</h3><p>AI can explain an opportunity, but when an action could move funds there must be a clear boundary between analysis, policy, approval, execution and verification.</p></div></div></section>
-<section class="sec loopsec" id="premium-loop">
+<section class="sec loopsec" id="loop">
   <div class="ey">From signal to settlement</div>
   <h2>The system makes the decision path visible.</h2>
   <p class="sub">Seven connected stages turn a market signal into a controlled, verified outcome. Select a stage to see what happens inside it.</p>
-  <div class="lg"><button class="premium-loop-stage" data-home-stage="0" aria-pressed="false"><span>01 / Discover</span><h3>Discover</h3><p>Live market signals and tokenized-stock context enter the system.</p></button><button class="premium-loop-stage" data-home-stage="1" aria-pressed="false"><span>02 / Understand</span><h3>Understand</h3><p>AI explains price gaps, market state and what matters now.</p></button><button class="premium-loop-stage" data-home-stage="2" aria-pressed="false"><span>03 / Strategize</span><h3>Strategize</h3><p>Rules turn intent into deterministic DCA, recurring, conditional or rebalance plans.</p></button><button class="premium-loop-stage" data-home-stage="3" aria-pressed="false"><span>04 / Check risk</span><h3>Check risk</h3><p>Portfolio exposure, reserve, policy and market constraints are evaluated.</p></button><button class="premium-loop-stage" data-home-stage="4" aria-pressed="false"><span>05 / Approve</span><h3>Approve</h3><p>The user remains the decision-maker at the controlled approval boundary.</p></button><button class="premium-loop-stage" data-home-stage="5" aria-pressed="false"><span>06 / Execute</span><h3>Execute</h3><p>Execution passes through the scoped wallet boundary rather than the model.</p></button><button class="premium-loop-stage" data-home-stage="6" aria-pressed="false"><span>07 / Monitor</span><h3>Monitor</h3><p>Execution is verified, recorded and carried forward into portfolio context.</p></button></div>
-  <p class="lcd" id="premiumLoopDetail"></p>
+  <div class="lg"><button class="lc" data-i="0" aria-pressed="false"><span>01 / Discover</span><h3>Discover</h3><p>Live market signals and tokenized-stock context enter the system.</p></button><button class="lc" data-i="1" aria-pressed="false"><span>02 / Understand</span><h3>Understand</h3><p>AI explains price gaps, market state and what matters now.</p></button><button class="lc" data-i="2" aria-pressed="false"><span>03 / Strategize</span><h3>Strategize</h3><p>Rules turn intent into deterministic DCA, recurring, conditional or rebalance plans.</p></button><button class="lc" data-i="3" aria-pressed="false"><span>04 / Check risk</span><h3>Check risk</h3><p>Portfolio exposure, reserve, policy and market constraints are evaluated.</p></button><button class="lc" data-i="4" aria-pressed="false"><span>05 / Approve</span><h3>Approve</h3><p>The user remains the decision-maker at the controlled approval boundary.</p></button><button class="lc" data-i="5" aria-pressed="false"><span>06 / Execute</span><h3>Execute</h3><p>Execution passes through the scoped wallet boundary rather than the model.</p></button><button class="lc" data-i="6" aria-pressed="false"><span>07 / Monitor</span><h3>Monitor</h3><p>Execution is verified, recorded and carried forward into portfolio context.</p></button></div>
+  <p class="lcd" id="lcd"></p>
 </section>
 <section class="sec">
   <h2>Who does what</h2>
@@ -84,132 +371,244 @@
 <section class="sec end">
   <h2>See it working</h2>
   <p class="sub">Place an order, trip a policy check, build a strategy. Everything in the workspace runs on a live simulation.</p>
-  <button class="btn solid" id="homeFinalCta">Open Handelo</button>
+  <button class="btn solid" id="oh2">Open Handelo</button>
   <p class="cov2">Today Handelo supports NVDA and its token NVDAB on BNB Chain. Additional assets will be added as they are validated.</p>
 </section>
-<footer class="ft"><div class="ftm"><div><a class="logo" href="#home">Handelo</a><p>An AI operating layer for tokenized-stock markets. Understand the market, govern the decision path, and act with control.</p></div><div><h4>Product</h4><a href="#home" data-s="tls">Market intelligence</a><a href="#home" data-s="loop">System loop</a><a href="#home" data-s="caps">Capabilities</a><a href="#workspace">Workspace</a></div><div><h4>Resources</h4><span>Documentation</span><span>Architecture</span><span>GitHub</span><span>Developer resources</span></div><div><h4>Connect</h4><span>Contact</span><a href="https://www.bnbchain.org" target="_blank" rel="noopener">BNB Chain</a><span>Project updates</span></div></div><div class="ftb"><div>Handelo &middot; BNB Chain &middot; Tokenized stocks<br>AI explains &middot; System governs &middot; You decide</div><button class="btn glow" data-ask-handelo><svg width="14" height="14" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M7 4H4v14h3M15 4h3v14h-3"/><path d="M8.5 8.5L11 11l-2.5 2.5M12.5 14h2"/></svg>Ask Handelo</button></div></footer>
-</div></section>
+<footer class="ft"><div class="ftm"><div><a class="logo" href="#home">Handelo</a><p>An AI operating layer for tokenized-stock markets. Understand the market, govern the decision path, and act with control.</p></div><div><h4>Product</h4><a href="#home" data-s="tls">Market intelligence</a><a href="#home" data-s="loop">System loop</a><a href="#home" data-s="caps">Capabilities</a><a href="#workspace">Workspace</a></div><div><h4>Resources</h4><span>Documentation</span><span>Architecture</span><span>GitHub</span><span>Developer resources</span></div><div><h4>Connect</h4><span>Contact</span><a href="https://www.bnbchain.org" target="_blank" rel="noopener">BNB Chain</a><span>Project updates</span></div></div><div class="ftb"><div>Handelo &middot; BNB Chain &middot; Tokenized stocks<br>AI explains &middot; System governs &middot; You decide</div><button class="btn glow" id="fask"><svg width="14" height="14" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M7 4H4v14h3M15 4h3v14h-3"/><path d="M8.5 8.5L11 11l-2.5 2.5M12.5 14h2"/></svg>Ask Handelo</button></div></footer>
+</div>
+<div id="v-work"><main>
+  <div>
+    <div class="title">
+      <h1>NVDA and NVDAB<small>Reference stock against its BNB Chain token</small></h1>
+      <div class="price"><b id="tp">$189.10</b><span>NVDAB token, simulated</span></div>
+    </div>
+    <div class="readout" id="readout"></div>
+    <div class="chart" id="chart"></div>
+    <div class="legend"><span><i style="background:var(--ink)"></i>NVDA reference</span><span><i style="background:var(--gold)"></i>NVDAB token</span><span><i style="background:rgba(212,175,55,.35);height:8px"></i>Gap between them</span></div>
+    <div class="stats">
+      <div>Reference price<b id="sr">$187.40</b></div>
+      <div>Token price<b id="st">$189.10</b></div>
+      <div>Gap<b id="sg" style="color:var(--gold)">+0.91%</b></div>
+      <div>24h volume<b>$2.4M</b></div>
+      <div>Pool liquidity<b>$180K</b></div>
+      <div>US market<b id="sus" style="font-family:Manrope;font-size:15px"></b></div>
+      <div>Token market<b style="font-family:Manrope;font-size:15px"><span class="dot g"></span> Open</b></div>
+    </div>
+    <div class="acts">
+      <button class="btn solid" id="ag">Analyze gap</button>
+      <button class="btn" id="bs">Build strategy<span class="cnt" id="sc"></span></button>
+      <button class="btn quiet glow" id="askb"><svg width="14" height="14" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M7 4H4v14h3M15 4h3v14h-3"/><path d="M8.5 8.5L11 11l-2.5 2.5M12.5 14h2"/></svg>Ask Handelo</button>
+    </div>
+  </div>
 
-<section class="view" id="view-workspace" aria-labelledby="workspace-title">
-        <div class="workspace-grid">
-          <aside class="workspace-context" aria-label="Market and portfolio context">
-            <div class="workspace-intro"><div class="eyebrow">LIVE / BSC</div><h1 id="workspace-title">Market context, <em>at a glance.</em></h1><p>Handelo keeps the numbers visible while you work with the AI.</p></div>
-            <section class="context-panel first-stock-panel" id="workspaceOnboarding" aria-labelledby="workspaceOnboardingTitle"><div class="panel-head"><span>FIRST STOCK</span><span class="panel-muted">ONBOARDING</span></div><div id="workspaceOnboardingContent" aria-live="polite"><div class="workspace-empty">Choose a supported tokenized stock to start.</div></div></section><section class="context-panel earnings-panel" id="workspaceEarnings" aria-labelledby="workspaceEarningsTitle"><div class="panel-head"><span id="workspaceEarningsTitle">UPCOMING EARNINGS</span><span id="workspaceEarningsStatus" class="panel-muted" aria-live="polite">LIVE</span></div><div id="workspaceEarningsContent" aria-live="polite" aria-busy="false"><div class="workspace-empty">Checking Binance earnings signals…</div></div></section><section class="context-panel"><div class="panel-head"><span>SELECTED MARKET</span><span id="workspaceMarketStatus" aria-live="polite">—</span></div><div id="workspaceMarket" aria-live="polite"><div class="workspace-empty">Reading market data…</div></div></section>
-            <section class="context-panel"><div class="panel-head"><span>GAP RADAR</span><span id="workspaceGapRadarStatus" class="panel-muted" aria-live="polite">LIVE</span></div><div id="workspaceGapRadar" aria-live="polite" aria-busy="false"><div class="workspace-empty">Reading market gaps…</div></div></section>
-            <section class="context-panel wallet-center-panel"><div class="panel-head"><span>WALLET CENTER</span><button type="button" class="panel-action" id="workspaceWalletAction">Connect</button></div><div class="wallet-status-line"><span id="workspaceWalletStatus">NOT CONNECTED</span><span id="workspaceWalletProvider">BINANCE AGENTIC WALLET</span></div><div class="wallet-balance" id="workspaceWalletBalance"><small>AVAILABLE USDT</small><strong>—</strong></div><div class="wallet-address" id="workspaceWalletAddress">WALLET NOT CONNECTED</div><div id="workspaceWalletCenter" class="wallet-center" aria-live="polite" aria-busy="false"><div class="workspace-empty">Connect a wallet to view its BSC status and execution guardrails.</div></div></section>
-            <section class="context-panel"><div class="panel-head"><span>PORTFOLIO</span><button type="button" class="panel-action" id="workspacePortfolioRefresh">Refresh</button></div><div id="workspacePortfolioSummary" class="portfolio-summary-inline" aria-live="polite"><div><small>POSITION VALUE</small><strong>—</strong></div><div><small>AVAILABLE USDT</small><strong>—</strong></div><div><small>UNREALIZED P&amp;L</small><strong>NOT AVAILABLE</strong></div></div><div id="workspacePortfolio"><div class="workspace-empty">Connect a wallet to load positions and allocations.</div></div></section>
-            <section class="context-panel"><div class="panel-head"><span>ACTIVE STRATEGIES</span><span class="panel-muted">LOCAL</span></div><div id="workspaceStrategies"><div class="workspace-empty">No active strategies yet.</div></div></section>
-            <section class="context-panel"><div class="panel-head"><span>RISK</span><span id="workspaceRiskState" class="risk-state">—</span></div><div class="risk-meter"><span id="workspaceRiskBar"></span></div><div class="risk-copy" id="workspaceRiskCopy">Risk context will appear as strategies are created.</div></section>
-            <section class="context-panel"><div class="panel-head"><span>RECENT ACTIVITY</span><button type="button" class="panel-action" id="workspaceHistoryRefresh">Refresh</button></div><div id="workspaceActivity"><div class="workspace-empty">No recent activity loaded.</div></div></section>
-          </aside>
-          <div class="workspace-chat">
-        <div class="chat-layout">
-          <div class="conversation" id="conversation" aria-live="polite">
-            <div class="welcome" id="welcome">
-              <div class="eyebrow">HANDELO / BSC</div>
-              <h1 id="chat-title">What can I help you <em>understand?</em></h1>
-              <p>Ask about a tokenized stock, a market difference, or an opportunity. Handelo turns the moving pieces into a clear picture.</p>
-
-              <div class="suggestions">
-                <button data-prompt="What's happening with NVIDIA?">What's happening with NVIDIA?</button>
-                <button data-prompt="Why is a tokenized stock price different?">Why is the price different?</button>
-                <button data-prompt="I have $20. What should I look at?">I have $20. What should I look at?</button>
-              </div>
-            </div>
-          </div>
-
-          <form class="composer" id="composer">
-            <div class="composer-inner">
-              <span class="composer-mark">↳</span>
-              <input id="messageInput" autocomplete="off" placeholder="Ask Handelo anything..." aria-label="Message Handelo" required>
-              <button id="sendButton" type="submit" aria-label="Send message">↑</button>
-            </div>
-            <div class="composer-note">Handelo explains the market before it asks you to act.</div>
-          </form>        </div>
+  <aside>
+    <section class="policy" aria-labelledby="ph">
+      <div id="pform"><div class="phd"><h2 id="ph">Pending order</h2><span class="pc" id="pc"></span></div>
+      <div class="order"><div class="seg" role="group" aria-label="Side"><button data-side="buy" aria-pressed="true">Buy</button><button data-side="sell" aria-pressed="false">Sell</button></div><label class="qty">NVDAB<input id="qty" type="number" min="1" max="500" step="1" value="2"></label><span class="num" id="ordv"></span></div>
+      <ul class="checks" id="checks"></ul>
+      <div class="pf">
+        <button class="btn solid" id="approve">Approve order</button>
+        <div class="sw"><span id="swl">Push the token 1% higher (stress test)</span><button role="switch" aria-checked="false" aria-labelledby="swl" id="sim"></button></div>
       </div>
-      </section>
+      <p class="msg" id="msg" aria-live="polite"></p></div>
+      <div id="rcpt" hidden></div>
+    </section>
 
-      <section class="view" id="view-markets" aria-labelledby="markets-title">
-        <div class="section-heading">
-          <div>
-            <div class="eyebrow">LIVE / BSC</div>
-            <h2 id="markets-title">Markets</h2>
-          </div>
-          <span class="section-meta">REFERENCE + ON-CHAIN</span>
-        </div>
-        <div class="market-toolbar">
-          <label class="market-search">
-            <span aria-hidden="true">⌕</span>
-            <input id="marketSearch" type="search" autocomplete="off" placeholder="Search stocks or token symbols..." aria-label="Search markets">
-          </label>
-          <span class="market-count" id="marketCount" aria-live="polite"></span>
-        </div>
-        <div class="market-grid" id="marketGrid" aria-live="polite" aria-busy="true">
-          <div class="loading-card">Loading market context...</div>
-        </div>
-      </section>
+    <section class="two">
+      <div>
+        <h2>Portfolio</h2>
+        <div class="total" id="tot">$12,480</div>
+        <div class="bar" aria-hidden="true"><i id="bn" style="background:var(--gold)"></i><i id="bb" style="background:#a9742b"></i><i id="bu" style="background:#5c5546"></i></div>
+        <ul class="pl">
+          <li style="--c:var(--gold)"><span>NVDAB</span><b id="pn"></b></li>
+          <li style="--c:#a9742b"><span>BNB</span><b id="pb"></b></li>
+          <li style="--c:#5c5546"><span>USDT</span><b id="pu"></b></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Risk</h2>
+        <svg class="gauge" viewBox="0 0 140 80" role="img" aria-label="Portfolio risk 28 percent of a 60 percent limit">
+          <path d="M10 70 A60 60 0 0 1 130 70" fill="none" stroke="var(--line)" stroke-width="9" pathLength="100"/>
+          <path d="M10 70 A60 60 0 0 1 130 70" fill="none" id="gp" stroke="var(--green)" stroke-width="9" pathLength="100" stroke-dasharray="28 100"/>
+          <line x1="94" y1="22" x2="99" y2="13" stroke="var(--ink)" stroke-width="1.5"/>
+        </svg>
+        <div class="gv" id="gv">28%</div>
+        <div class="gl" id="gl">Within the 60% limit</div>
+      </div>
+    </section>
+  </aside>
+</main>
 
-      <section class="view" id="view-portfolio" aria-labelledby="portfolio-title">
-        <div class="section-heading">
-          <div>
-            <div class="eyebrow">YOUR POSITION</div>
-            <h2 id="portfolio-title">Portfolio</h2>
-          </div>
-        </div>
-        <div id="portfolioContent" aria-live="polite" aria-busy="false"><div class="empty-state">
-          <div class="empty-number">03</div>
-          <h3>Connect a wallet to see your portfolio.</h3>
-          <p>Handelo will keep the portfolio surface quiet until there is a wallet to read.</p>
-          <button class="primary-button" id="portfolioConnect" type="button">Connect wallet</button>
-        </div></div>
-      </section>
-
-      <section class="view" id="view-history" aria-labelledby="history-title">
-        <div class="section-heading">
-          <div>
-            <div class="eyebrow">ON-CHAIN / BSC</div>
-            <h2 id="history-title">History</h2>
-          </div>
-          <span class="section-meta">CONNECTED WALLET</span>
-        </div>
-        <div id="historyContent" aria-live="polite" aria-busy="false">
-          <div class="empty-state">
-            <div class="empty-number">04</div>
-            <h3>Connect a wallet to see transaction history.</h3>
-            <p>Handelo reads recent BSC transactions from the connected wallet.</p>
-            <button class="primary-button" id="historyConnect" type="button">Connect wallet</button>
-          </div>
-        </div>
-      </section>
-    </main>
+<footer class="cov"><div>Expanding coverage. Additional assets will be added as they are validated. They are not yet supported and cannot be traded.</div></footer></div>
+<div id="v-port" hidden><div class="pv"><div class="title"><h1>Portfolio<small>Everything Handelo holds, priced from the same simulated feed</small></h1><div class="price"><b id="pvt"></b><span>Total value, simulated</span></div></div><div id="pvc"></div></div></div>
+<div id="v-hist" hidden><div class="pv"><div class="title"><h1>History<small id="hs">Every order and strategy run, newest first</small></h1><div class="sim"><button class="sb" id="hf0" aria-pressed="true">All</button><button class="sb" id="hf1" aria-pressed="false">Held only</button></div></div><ul class="log" id="hl" style="margin-top:32px;max-width:760px"></ul></div></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="ov" id="bo" hidden role="dialog" aria-modal="true" aria-label="Strategies">
+  <div class="ovp bp">
+    <div class="ovh"><span class="logo">Strategies</span><button class="sb" id="box">Close</button></div>
+    <div class="bb">
+      <div><h4 class="mh2">Running strategies</h4><div id="sl"></div></div>
+      <h4 class="mh2">New strategy</h4>
+      <div class="tseg" id="bt" role="group" aria-label="Strategy type"><button data-t="buy" aria-pressed="true">Recurring buy</button><button data-t="tp" aria-pressed="false">Take profit</button></div>
+      <div id="bf" class="bf"></div>
+      <p class="hint" id="bp"></p>
+    </div>
+    <div class="qr"><button class="btn quiet" id="bc">Cancel</button><button class="btn solid" id="bm">Create strategy</button></div>
   </div>
-
-  <template id="userMessageTemplate">
-    <article class="message user-message">
-      <div class="message-label">YOU</div>
-      <div class="message-text"></div>
-    </article>
-  </template>
-
-  <template id="agentMessageTemplate">
-    <article class="message agent-message">
-      <div class="message-label">HANDELO</div>
-      <div class="message-text"></div>
-      <div class="market-context"></div>
-    </article>
-  </template>
-
-  <script type="module" src="./src/app.js"></script>
-</body>
-</html>
-    </main>
+</div>
+<div class="ov" id="ov" hidden role="dialog" aria-modal="true" aria-label="Ask Handelo">
+  <div class="ovp">
+    <div class="ovh"><span class="logo">Ask Handelo</span><button class="sb" id="ovx">Close</button></div>
+    <div class="thread" id="thread"><p class="hint">Ask about the price gap, your portfolio, the pending order or your strategies. Answers come from the live simulation.</p></div>
+    <div class="qs" id="qs"><button class="qc" data-q="What is happening with NVDAB?">What is happening with NVDAB?</button><button class="qc" data-q="Why was the last trade blocked?">Why was the last trade blocked?</button><button class="qc" data-q="How risky is my portfolio?">How risky is my portfolio?</button><button class="qc" data-q="How are my strategies doing?">How are my strategies doing?</button></div>
+    <div class="qr"><input id="qi" type="text" placeholder="Ask Handelo" aria-label="Ask Handelo" autocomplete="off"><button class="btn solid" id="send">Send</button></div>
   </div>
-  <template id="userMessageTemplate">
-    <article class="message user-message"><div class="message-label">YOU</div><div class="message-text"></div></article>
-  </template>
-  <template id="agentMessageTemplate">
-    <article class="message agent-message"><div class="message-label">HANDELO</div><div class="message-text"></div><div class="market-context"></div></article>
-  </template>
-  <script type="module" src="./src/app.js"></script>
+</div>
+
+<button class="ask" id="askf" aria-label="Ask Handelo">
+  <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M7 4H4v14h3M15 4h3v14h-3"/><path d="M8.5 8.5L11 11l-2.5 2.5M12.5 14h2"/></svg><span>Ask Handelo</span>
+</button>
+
+<script>
+/* TODO: swap the simulated feed for real price sources */
+var W=760,H=300,L=46,R=70,T=26,B=28;
+var $=function(i){return document.getElementById(i)},pad=function(n){return (n<10?"0":"")+n};
+function setH(i,h){var e=$(i);if(e._h!==h){e._h=h;e.innerHTML=h}}
+var S={d:1,t:15,sp:1,run:true,w:false,on:1041,done:null,st:null,side:"buy",usdt:1850,bnb:4.78,bnbp:600,nv:41,avg:182.2,str:[{id:1,type:"buy",q:1,on:true},{id:2,type:"tp",gain:10,sell:25,on:true,done:false,ph:false}],sid:2,hv:null,lo:185,hi:191,
+log:[["Day 1 14:05","Profit target checked. Below 10%, no action."],["Day 1 11:20","Sell order held: USDT reserve would fall below 10%.",1],["Day 1 09:31","US market opened. Gap narrowed to 0.12%."],["Day 1 00:00","Daily buy ran: 1 NVDAB at $186.30. Verified."]]};
+function G(d){return d==1?1.2:2.5}
+function B0(d){return 186.2+(d>1?1.2+2.5*(d-2):0)}
+function ref(t,d){var b=B0(d);if(t<9.5)return b;if(t>16)return b+G(d);var p=(t-9.5)/6.5;return b+G(d)*p+0.6*Math.sin(p*9.42)*(1-p)}
+function prem(t,d){var p0=d==1?0:1.7;if(t<9.5)return p0+(0.25-p0)*t/9.5+0.12*Math.sin(t*1.3);if(t<=16){var p=(t-9.5)/6.5;return(0.25+0.2*Math.sin(t*2.1))*(1-p)}var q=(t-16)/8;return 1.7*q+0.36*Math.sin(t*3)*q*(1-q)}
+function tok(t,d){return(ref(t,d)+prem(t,d))*(S.st!=null&&d*24+t>=S.st?1.01:1)}
+function us(t){return t>=9.5&&t<16}
+function px(){return{r:ref(S.t,S.d),k:tok(S.t,S.d)}}
+function ranges(){var a=[];for(var t=0;t<=24;t+=.25){a.push(ref(t,S.d),tok(t,S.d))}S.lo=Math.floor(Math.min.apply(0,a)-.5);S.hi=Math.ceil(Math.max.apply(0,a)+.5)}
+function ev(P,s,q){var c=q*P.k,nv=S.nv+(s=="buy"?q:-q),u=S.usdt+(s=="buy"?-c:c),v=nv*P.k,tot=v+S.bnb*S.bnbp+u;return{c:c,nv:nv,u:u,tot:tot,sh:v/tot,us:u/tot}}
+function risk(sh,g){return(sh-.34)*100+Math.max(0,g-1)*10}
+function checks(P,s,q){var e=ev(P,s,q),g=(P.k/P.r-1)*100,imp=e.c/1800,rk=risk(e.sh,g),cl=!us(S.t);
+return[["Price impact is 2% or less","Order size against pool depth",imp.toFixed(2)+"%",imp<=2],
+["Gap is 1.5% or less while US market is closed",cl?(g<=1.5?"Token is close enough to the reference":"Token is trading too far above the reference"):"US market is open, so the reference is live",g.toFixed(2)+"%",!cl||g<=1.5],
+["USDT reserve stays at 10% or more",e.u<0?"Not enough USDT for this order":"Reserve after this order",(e.us*100).toFixed(1)+"%",e.us>=.1],
+["No asset above 70%, no short sales",e.nv<0?"Not enough NVDAB to sell":"NVDAB share after this order",(e.sh*100).toFixed(1)+"%",e.nv>=0&&e.sh<=.7],
+["Portfolio risk stays at 60% or less","Risk after this order",Math.round(rk)+"%",rk<=60]]}
+function ts(){return"Day "+S.d+" "+pad(Math.floor(S.t))+":"+pad(Math.floor(S.t%1*60))}
+function log(m,h){S.log.unshift([ts(),m,h?1:0]);toast(m,h)}
+function toast(m,h){if(document.body.classList.contains("home"))return;var t=$("toast");t.textContent=m;t.className="toast show"+(h?" hold":"");clearTimeout(toast.t);toast.t=setTimeout(function(){t.className="toast"},4200)}
+function exec(s,q){var P=px();if(checks(P,s,q).some(function(c){return!c[3]}))return false;var e=ev(P,s,q);if(s=="buy")S.avg=(S.avg*S.nv+q*P.k)/(S.nv+q);S.nv=e.nv;S.usdt=e.u;return true}
+function daily(){S.str.forEach(function(x){if(x.type!="buy"||!x.on)return;var k=px().k.toFixed(2),ok=exec("buy",x.q);log(ok?"Daily buy ran: "+x.q+" NVDAB at $"+k+". Verified.":"Daily buy held: a policy check failed.",!ok)})}
+function profit(){S.str.forEach(function(x){if(x.type!="tp"||!x.on||x.done||S.nv<=0)return;var P=px();if(P.k/S.avg-1>=x.gain/100){var q=Math.max(1,Math.floor(S.nv*x.sell/100));if(exec("sell",q)){x.done=true;log("Take profit hit: sold "+q+" NVDAB at $"+P.k.toFixed(2)+".")}else if(!x.ph){x.ph=true;log("Take profit sale held: a policy check failed.",1)}}})}
+function step(){S.t+=S.sp/60;if(S.t>=24){S.t-=24;S.d++;S.str.forEach(function(x){x.ph=false});ranges();daily()}profit();render()}
+function X(t){return L+t/24*(W-L-R)}
+function Y(v){return T+(1-(v-S.lo)/(S.hi-S.lo))*(H-T-B)}
+function ser(f){var a=[],n=Math.floor(S.t*2);for(var i=0;i<=n;i++)a.push([i/2,f(i/2,S.d)]);a.push([S.t,f(S.t,S.d)]);return a}
+function pts(a){return a.map(function(p){return X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)})}
+function chart(){var iw=window.innerWidth,nr=iw<560;W=nr?Math.max(300,iw-36):760;H=nr?250:300;R=nr?54:70;var A=ser(ref),K=ser(tok),e=A.length-1,s='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="Reference and token price over the day">',m='font-family="Manrope" font-size="11.5"',n='font-family="DM Mono" font-size="11" fill="#8d8574"',h=H-T-B;
+s+='<rect x="'+X(0)+'" y="'+T+'" width="'+(X(9.5)-X(0))+'" height="'+h+'" fill="#fff" opacity=".035"/><rect x="'+X(16)+'" y="'+T+'" width="'+(X(24)-X(16))+'" height="'+h+'" fill="#fff" opacity=".035"/>';
+s+='<text x="'+(X(0)+8)+'" y="'+(T-9)+'" fill="#8d8574" '+m+'>'+(nr?"Closed":"US market closed")+'</text><text x="'+(X(9.5)+8)+'" y="'+(T-9)+'" fill="#d4af37" '+m+'>'+(nr?"Open":"US market open")+'</text><text x="'+(X(16)+8)+'" y="'+(T-9)+'" fill="#8d8574" '+m+'>'+(nr?"Token only":"Closed, token still trading")+'</text>';
+var st=S.hi-S.lo>8?2:1;for(var v=S.lo+st;v<S.hi;v+=st)s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#272119"/><text x="'+(L-8)+'" y="'+(Y(v)+4)+'" text-anchor="end" '+n+'>'+v+"</text>";
+for(var q=0;q<=24;q+=4)s+='<text x="'+X(q)+'" y="'+(H-8)+'" text-anchor="middle" '+n+">"+pad(q%24)+":00</text>";
+s+='<polygon points="'+pts(K).join(" ")+" "+pts(A).reverse().join(" ")+'" fill="#d4af37" opacity=".22"/><polyline points="'+pts(A).join(" ")+'" fill="none" stroke="#ede6d6" stroke-width="1.3"/><polyline points="'+pts(K).join(" ")+'" fill="none" stroke="#d4af37" stroke-width="1.8"/>';
+s+='<rect x="'+X(S.t)+'" y="'+T+'" width="'+(X(24)-X(S.t))+'" height="'+h+'" fill="#0c0a08" opacity=".6"/><line x1="'+X(S.t)+'" x2="'+X(S.t)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#d4af37" opacity=".5"/>';
+s+='<circle cx="'+X(S.t)+'" cy="'+Y(K[e][1])+'" r="4" fill="#d4af37"/><circle cx="'+X(S.t)+'" cy="'+Y(A[e][1])+'" r="3.5" fill="#ede6d6"/>';
+if(S.hv!=null)s+='<line x1="'+X(S.hv)+'" x2="'+X(S.hv)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#ede6d6" stroke-dasharray="3 4" opacity=".7"/>';
+var hs=s+"</svg>";if(!$("v-work").hidden)$("chart").innerHTML=hs;if(!$("v-home").hidden)$("hchart").innerHTML=hs}
+function ro(){var t=S.hv==null?S.t:S.hv,r=ref(t,S.d),k=tok(t,S.d),g=(k/r-1)*100;$("readout").innerHTML=$("hro").innerHTML="<div>"+(S.hv==null?"Now":"Time (ET)")+"<b>"+pad(Math.floor(t))+":"+pad(Math.floor(t%1*60))+"</b></div><div>NVDA reference<b>"+r.toFixed(2)+'</b></div><div class="t">NVDAB token<b>'+k.toFixed(2)+"</b></div><div>Gap<b>"+(g>=0?"+":"")+g.toFixed(2)+"%</b></div>"}
+function qty(){return Math.max(1,Math.min(500,parseInt($("qty").value)||1))}
+function policy(P){var q=qty(),c=checks(P,S.side,q),bad=c.filter(function(x){return!x[3]}).length;
+$("pc").textContent=(c.length-bad)+" of "+c.length+" checks pass";$("pc").style.color=bad?"var(--red)":"var(--green)";$("ordv").textContent="$"+(q*P.k).toFixed(2)+" at $"+P.k.toFixed(2);
+setH("checks",c.map(function(x){return'<li class="'+(x[3]?"":"fail")+'"><span class="dot '+(x[3]?"g":"r")+'"></span><span>'+x[0]+"<small>"+x[1]+'</small></span><span class="v">'+x[2]+"</span></li>"}).join(""));
+var a=$("approve");a.disabled=bad>0;a.title=bad?"Blocked: "+bad+" policy "+(bad>1?"checks":"check")+" failed":"";a.textContent=bad?"Blocked by "+bad+(bad>1?" checks":" check"):S.w?"Approve order":"Connect wallet to approve"}
+function render(){var P=px(),g=(P.k/P.r-1)*100,o=us(S.t),nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),c=rk<40?"var(--green)":rk<=60?"var(--amber)":"var(--red)";
+$("tp").textContent=$("st").textContent="$"+P.k.toFixed(2);$("sr").textContent="$"+P.r.toFixed(2);$("sg").textContent=(g>=0?"+":"")+g.toFixed(2)+"%";
+$("sus").innerHTML='<span class="dot '+(o?"g":"r")+'"></span> '+(o?"Open":"Closed");
+chart();ro();
+$("tot").textContent="$"+Math.round(tot).toLocaleString("en-US");
+[["bn","pn",nv],["bb","pb",bv],["bu","pu",S.usdt]].forEach(function(x){$(x[0]).style.width=(x[2]/tot*100)+"%";$(x[1]).textContent=Math.round(x[2]/tot*100)+"%"});
+$("gp").setAttribute("stroke-dasharray",Math.max(0,Math.min(100,rk))+" 100");$("gp").setAttribute("stroke",c);$("gv").textContent=Math.round(rk)+"%";
+$("gl").textContent=rk<40?"Within the 60% limit":rk<=60?"Close to the 60% limit":"Over the 60% limit";$("gl").style.color=c;
+strl(P);
+policy(P);if(!$("v-port").hidden)rp();if(!$("v-hist").hidden)rh();if(!$("v-home").hidden)rl()}
+$("chart").addEventListener("mousemove",function(e){var b=$("chart").firstChild.getBoundingClientRect(),t=((e.clientX-b.left)/b.width*W-L)/(W-L-R)*24;S.hv=Math.max(0,Math.min(S.t,Math.round(t*2)/2));chart();ro()});
+$("chart").addEventListener("mouseleave",function(){S.hv=null;chart();ro()});
+document.querySelectorAll(".seg button").forEach(function(b){b.addEventListener("click",function(){S.side=b.dataset.side;document.querySelectorAll(".seg button").forEach(function(x){x.setAttribute("aria-pressed",x==b)});$("msg").textContent="";render()})});
+$("qty").addEventListener("input",render);
+
+$("sim").addEventListener("click",function(){var on=this.getAttribute("aria-checked")!="true";this.setAttribute("aria-checked",on);S.st=on?S.d*24+S.t:null;log(on?"Stress test on: token price pushed 1% higher.":"Stress test off.",on);ranges();render()});
+var money=function(n){return"$"+Math.round(n).toLocaleString("en-US")};
+function view(v){["home","work","port","hist"].forEach(function(k){$("v-"+k).hidden=k!=v});document.body.classList.toggle("home",v=="home");if(v=="home"){rl();tlr()}document.querySelectorAll("nav a").forEach(function(a){if(a.dataset.v==v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});if(v=="port")rp();if(v=="hist")rh();window.scrollTo(0,0)}
+function route(){var v=(location.hash||"").slice(1);view(v=="portfolio"?"port":v=="history"?"hist":v=="workspace"?"work":"home")}
+window.addEventListener("hashchange",route);
+function meter(n,v,l,max){var c=max?(v<=l*.85?"var(--green)":v<=l?"var(--amber)":"var(--red)"):(v>=l*1.3?"var(--green)":v>=l?"var(--amber)":"var(--red)");return'<div class="m"><div class="mh"><span>'+n+'</span><b class="num">'+Math.round(v)+'%</b></div><div class="tr"><i style="width:'+Math.min(100,v)+"%;background:"+c+'"></i><u style="left:'+l+'%"></u></div><small>'+(max?"Limit ":"Minimum ")+l+"%</small></div>"}
+function rp(){var P=px(),g=(P.k/P.r-1)*100,nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),pl=(P.k-S.avg)*S.nv,pc=(P.k/S.avg-1)*100,sh=function(x){return x/tot*100};
+$("pvt").textContent=money(tot);
+var rows=[["NVDAB",S.nv,"$"+P.k.toFixed(2),nv,sh(nv),"$"+S.avg.toFixed(2),(pl>=0?"+":"-")+"$"+Math.abs(pl).toFixed(0)+" ("+(pc>=0?"+":"")+pc.toFixed(1)+"%)"],["BNB",S.bnb.toFixed(2),"$"+S.bnbp,bv,sh(bv),"Not tracked","Not tracked"],["USDT",Math.round(S.usdt).toLocaleString("en-US"),"$1.00",S.usdt,sh(S.usdt),"Cash","Cash"]];
+$("pvc").innerHTML='<div class="bar">'+[[nv,"var(--gold)"],[bv,"#a9742b"],[S.usdt,"#5c5546"]].map(function(x){return'<i style="width:'+sh(x[0])+"%;background:"+x[1]+'"></i>'}).join("")+'</div><div class="tw"><table class="tb"><thead><tr><th>Asset</th><th>Holding</th><th>Price</th><th>Value</th><th>Share</th><th>Average cost</th><th>Unrealised</th></tr></thead><tbody>'+rows.map(function(r){return"<tr><td>"+r[0]+'</td><td class="num">'+r[1]+'</td><td class="num">'+r[2]+'</td><td class="num">'+money(r[3])+'</td><td class="num">'+Math.round(r[4])+'%</td><td class="num">'+r[5]+'</td><td class="num">'+r[6]+"</td></tr>"}).join("")+'</tbody></table></div><div class="mt">'+meter("NVDAB exposure",sh(nv),70,1)+meter("USDT reserve",sh(S.usdt),10,0)+meter("Portfolio risk",rk,60,1)+"</div>"}
+function rh(){var hn=S.log.filter(function(l){return l[2]}).length;$("hs").textContent=S.log.length+" entries, "+hn+" held. Newest first.";$("hl").innerHTML=S.log.filter(function(l){return!S.hf||l[2]}).map(function(l){return'<li class="'+(l[2]?"hold":"")+'"><time>'+l[0]+"</time>"+l[1]+"</li>"}).join("")||'<li><time></time>No held actions yet.</li>'}
+[["hf0",0],["hf1",1]].forEach(function(x){$(x[0]).addEventListener("click",function(){S.hf=!!x[1];$("hf0").setAttribute("aria-pressed",!x[1]);$("hf1").setAttribute("aria-pressed",!!x[1]);rh()})});
+function card(t,sub,body,acts){return'<div class="ac"><h3>'+t+"</h3><p>"+sub+"</p>"+body+'<div class="aa">'+acts.map(function(a){return'<button class="btn" data-a="'+a[1]+'">'+a[0]+"</button>"}).join("")+"</div></div>"}
+function spark(){var A=ser(ref).slice(-40),K=ser(tok).slice(-40),v=A.concat(K).map(function(p){return p[1]}),lo=Math.min.apply(0,v),hi=Math.max.apply(0,v),x0=A[0][0],x1=A[A.length-1][0];function f(a){return a.map(function(p){return(((p[0]-x0)/((x1-x0)||1))*300).toFixed(1)+","+(52-((p[1]-lo)/((hi-lo)||1))*48).toFixed(1)}).join(" ")}return'<svg viewBox="0 0 300 56" class="sp2"><polyline points="'+f(A)+'" fill="none" stroke="#ede6d6" stroke-width="1.2"/><polyline points="'+f(K)+'" fill="none" stroke="#d4af37" stroke-width="1.6"/></svg>'}
+function ans(q){q=q.toLowerCase();var P=px(),g=(P.k/P.r-1)*100,nv=S.nv*P.k,tot=nv+S.bnb*S.bnbp+S.usdt,rk=risk(nv/tot,g),pc=(P.k/S.avg-1)*100;
+if(/block|held|policy|check|approve|order/.test(q)){var c=checks(P,S.side,qty()),bad=c.filter(function(x){return!x[3]}).length,h=S.log.filter(function(l){return l[2]})[0];
+return card("Pending order: "+S.side+" "+qty()+" NVDAB",bad?"Blocked by "+bad+(bad>1?" checks":" check"):"All five checks pass",(h?"<p>Last held action, "+h[0]+": "+h[1]+"</p>":"")+'<ul class="checks">'+c.map(function(x){return'<li class="'+(x[3]?"":"fail")+'"><span class="dot '+(x[3]?"g":"r")+'"></span><span>'+x[0]+"<small>"+x[1]+'</small></span><span class="v">'+x[2]+"</span></li>"}).join("")+"</ul>",[["Review order","order"]])}
+if(/portfolio|risk|position|exposure|balance|worth/.test(q))return card("Portfolio: "+money(tot),"NVDAB is "+Math.round(nv/tot*100)+"% of it. Risk is "+Math.round(rk)+"% against a 60% limit.",'<div class="bar"><i style="width:'+nv/tot*100+'%;background:var(--gold)"></i><i style="width:'+S.bnb*S.bnbp/tot*100+'%;background:#a9742b"></i><i style="width:'+S.usdt/tot*100+'%;background:#5c5546"></i></div>',[["Open portfolio","port"]]);
+if(/strateg|daily|profit|target/.test(q))return card("Strategies",S.str.length?S.str.length+" running through the same policy checks as a manual order.":"None yet.",S.str.map(function(x){var t=!x.on?"paused":x.type=="buy"?"next run at 00:00 ET":x.done?"target hit":"up "+Math.max(0,pc).toFixed(1)+"% of "+x.gain+"%";return"<p>"+nm(x)+": "+t+".</p>"}).join(""),[["Build strategy","bs"],["Open history","hist"]]);
+if(/asset|support|coverage|stock|other/.test(q))return card("Supported assets","NVDAB is the only validated asset today.","<p>It represents NVIDIA (NVDA) on BNB Chain. Additional assets will be added as they are validated. Until then they are not supported and cannot be traded.</p>",[]);
+if(/compare|gap|nvda|happen|price|market/.test(q))return card("NVDAB against NVDA","The token is "+(g>=0?"above":"below")+" the reference by "+Math.abs(g).toFixed(2)+"%.",'<div class="kv"><div>NVDA reference<b>$'+P.r.toFixed(2)+"</b></div><div>NVDAB token<b>$"+P.k.toFixed(2)+"</b></div><div>Gap<b>"+(g>=0?"+":"")+g.toFixed(2)+"%</b></div></div>"+spark()+"<p>"+(us(S.t)?"The US market is open, so the gap follows the live reference.":"The US market is closed. The token keeps trading, so the gap can widen until the open. Policy allows up to 1.5% in this window.")+"</p>",[["View chart","chart"],["Review order","order"]]);
+return card("I can answer these","Ask about the price gap, your portfolio and risk, the pending order or your strategies.","",[])}
+var lastF=null;
+function openAsk(q){lastF=document.activeElement;$("ov").hidden=false;$("qi").focus();if(q)ask(q)}
+function closeAsk(){$("ov").hidden=true;if(lastF)lastF.focus()}
+function ask(q){q=(q||$("qi").value).trim();if(!q)return;$("qi").value="";var u=document.createElement("div");u.className="um";u.textContent=q;$("thread").appendChild(u);$("thread").insertAdjacentHTML("beforeend",ans(q));$("thread").scrollTop=1e5}
+["askb","askf"].forEach(function(i){$(i).addEventListener("click",function(){openAsk()})});
+$("ag").addEventListener("click",function(){openAsk("Compare NVDAB and NVDA")});
+$("ovx").addEventListener("click",closeAsk);$("ov").addEventListener("click",function(e){if(e.target==this)closeAsk()});
+document.addEventListener("keydown",function(e){if(e.key=="Escape"){if(!$("ov").hidden)closeAsk();if(!$("bo").hidden)closeB()}});
+$("qi").addEventListener("keydown",function(e){if(e.key=="Enter")ask()});$("qs").addEventListener("click",function(e){if(e.target.dataset.q)ask(e.target.dataset.q)});
+$("send").addEventListener("click",function(){ask()});
+$("thread").addEventListener("click",function(e){var a=e.target.dataset.a;if(!a)return;closeAsk();if(a=="bs"){openB();return}if(a=="port")location.hash="portfolio";else if(a=="hist")location.hash="history";else{location.hash="workspace";route();if(a=="order")document.querySelector(".policy").scrollIntoView({behavior:"smooth",block:"center"})}});
+route();
+function wal(){var w=$("wal");w.innerHTML=S.w?'<span class="dot g"></span>0x7a3f...91c2':"Connect wallet";w.className="chip wal"+(S.w?" on":"");w.title=S.w?"Disconnect wallet":""}
+$("wal").addEventListener("click",function(){S.w=!S.w;wal();render()});
+function rcpt(){var d=S.done;$("pform").hidden=!!d;$("rcpt").hidden=!d;if(!d)return;
+var rows=[["Order","#"+d.id],["Price","$"+d.k.toFixed(2)],["Time",d.t+" ET"],["Transaction",d.h],["Policy","5 of 5 checks passed"],["NVDAB position",d.nv+" ("+Math.round(d.sh)+"% of portfolio)"],["USDT reserve",d.us.toFixed(1)+"%"]];
+$("rcpt").innerHTML='<div class="rh"><svg class="ck" width="20" height="20" viewBox="0 0 34 34" fill="none" stroke="#23c94a" stroke-width="3" aria-hidden="true"><circle cx="17" cy="17" r="15"/><path d="M10 17.5l5 5 9-10" stroke-linecap="square"/></svg><div><h2>Order completed</h2><span>Filled on BNB Chain</span></div></div><div class="order"><span><b>'+(d.s=="buy"?"Bought ":"Sold ")+d.q+' NVDAB</b></span><span class="num">$'+(d.q*d.k).toFixed(2)+'</span></div><ul class="rl">'+rows.map(function(r){return"<li><span>"+r[0]+'</span><span class="num">'+r[1]+"</span></li>"}).join("")+'</ul><div class="pf"><button class="btn quiet" id="rh">View in history</button><button class="btn solid" id="rn">Place another order</button></div>';
+$("rh").onclick=function(){location.hash="history"};$("rn").onclick=function(){S.done=null;rcpt();render()}}
+$("approve").addEventListener("click",function(){if(!S.w){S.w=true;wal();render();return}var q=qty(),s=S.side,P=px(),k=P.k,t0=ts();if(exec(s,q)){log("Order filled: "+(s=="buy"?"bought ":"sold ")+q+" NVDAB at $"+k.toFixed(2)+". Verified.");var tot=S.nv*k+S.bnb*S.bnbp+S.usdt;S.on++;S.done={id:"HX-"+S.on,s:s,q:q,k:k,t:t0,h:"0x"+Math.random().toString(16).slice(2,6)+"..."+Math.random().toString(16).slice(2,6),nv:S.nv,sh:S.nv*k/tot*100,us:S.usdt/tot*100};rcpt();render()}});
+document.addEventListener("keydown",function(e){if(e.key=="f"&&e.target.tagName!="INPUT"){S.sp=S.sp==1?6:S.sp==6?24:1}});
+function nm(x){return x.type=="buy"?"Daily buy of "+x.q+" NVDAB":"Take profit at +"+x.gain+"%"}
+function strl(P){S.str.forEach(function(x){var e=$("sx"+x.id);if(e)e.textContent=!x.on?"Paused":x.type=="buy"?"Active, next run 00:00":x.done?"Done, target hit":"Active, at "+Math.max(0,(P.k/S.avg-1)*100).toFixed(1)+"% of "+x.gain+"%"})}
+function strRender(){$("sl").innerHTML=S.str.map(function(x){return'<details><summary><span>'+nm(x)+'</span><em id="sx'+x.id+'"></em></summary><p>'+(x.type=="buy"?"Buys "+x.q+" NVDAB every day at 00:00 ET. Skips the run if any policy check fails.":"Sells "+x.sell+"% of the NVDAB position once it is up "+x.gain+"% from average cost.")+'</p><div class="sa"><button class="sb" data-id="'+x.id+'" data-k="p">'+(x.on?"Pause":"Resume")+'</button><button class="sb" data-id="'+x.id+'" data-k="d">Remove</button></div></details>'}).join("")||'<p class="hint">No strategies yet. Build one to automate buys or profit taking.</p>';$("sc").textContent=S.str.length||"";strl(px())}
+$("sl").addEventListener("click",function(e){var id=+e.target.dataset.id,k=e.target.dataset.k;if(!id)return;var i=S.str.findIndex(function(x){return x.id==id});if(i<0)return;if(k=="p"){S.str[i].on=!S.str[i].on;log("Strategy "+(S.str[i].on?"resumed":"paused")+": "+nm(S.str[i])+".")}else{log("Strategy removed: "+nm(S.str[i])+".");S.str.splice(i,1)}strRender()});
+var bt="buy";
+function bv(i,lo,hi,d){var v=parseInt($(i)&&$(i).value);return isNaN(v)?d:Math.max(lo,Math.min(hi,v))}
+function bp(){$("bp").textContent=S.str.length>=5?"You have 5 strategies, the maximum. Remove one to add another.":bt=="buy"?"Buys "+bv("b1",1,50,1)+" NVDAB every day at 00:00 ET. Every run goes through the same policy checks as a manual order.":"Sells "+bv("b2",1,100,25)+"% of your NVDAB once it is up "+bv("b1",1,100,10)+"% from average cost, then stops."}
+function bf(){$("bf").innerHTML=bt=="buy"?'<label class="fl">NVDAB bought each day<input id="b1" type="number" min="1" max="50" value="1"></label>':'<label class="fl">Trigger when the position is up (%)<input id="b1" type="number" min="1" max="100" value="10"></label><label class="fl">Sell this share of the position (%)<input id="b2" type="number" min="1" max="100" value="25"></label>';bp()}
+function openB(){lastF=document.activeElement;bt="buy";document.querySelectorAll("#bt button").forEach(function(x){x.setAttribute("aria-pressed",x.dataset.t=="buy")});bf();$("bm").disabled=S.str.length>=5;$("bo").hidden=false;$("b1").focus()}
+function closeB(){$("bo").hidden=true;if(lastF)lastF.focus()}
+document.querySelectorAll("#bt button").forEach(function(b){b.addEventListener("click",function(){bt=b.dataset.t;document.querySelectorAll("#bt button").forEach(function(x){x.setAttribute("aria-pressed",x==b)});bf()})});
+$("bf").addEventListener("input",bp);$("bs").addEventListener("click",openB);$("box").addEventListener("click",closeB);$("bc").addEventListener("click",closeB);
+$("bo").addEventListener("click",function(e){if(e.target==this)closeB()});
+$("bm").addEventListener("click",function(){var x=bt=="buy"?{type:"buy",q:bv("b1",1,50,1)}:{type:"tp",gain:bv("b1",1,100,10),sell:bv("b2",1,100,25),done:false,ph:false};x.id=++S.sid;x.on=true;S.str.push(x);log("Strategy created: "+nm(x)+".");closeB();strRender();render();$("sl").scrollIntoView({behavior:"smooth",block:"center"})});
+strRender();
+function tlr(){var t=+$("ts").value,r=ref(t,1),k=r+prem(t,1),g=(k/r-1)*100;$("tlm").style.left=t/24*100+"%";$("tro").innerHTML="<div>Time (ET)<b>"+pad(Math.floor(t))+":"+(t%1?"30":"00")+'</b></div><div>US market<b style="font-family:Manrope;font-size:16px"><span class="dot '+(us(t)?"g":"r")+'"></span> '+(us(t)?"Open":"Closed")+"</b></div><div>NVDA reference<b>"+r.toFixed(2)+'</b></div><div class="t">NVDAB token<b>'+k.toFixed(2)+"</b></div><div>Gap<b>"+(g>=0?"+":"")+g.toFixed(2)+"%</b></div>"}
+$("ts").addEventListener("input",tlr);
+function rl(){var P=px(),nv=S.nv*P.k,tot=nv+S.bnb*S.bnbp+S.usdt,b="";for(var i=0;i<14;i++){var h=i==9;b+='<rect x="'+(i*17+2)+'" y="'+(h?8:4)+'" width="10" height="'+(h?24:32)+'" fill="'+(h?"none":"#d4af37")+'"'+(h?' stroke="#e6af06"':"")+"/>"}
+$("c1").innerHTML=spark();setH("c2",'<svg viewBox="0 0 240 40" class="sp2">'+b+"</svg>");setH("c3",meter("NVDAB exposure",nv/tot*100,70,1))}
+function go(){location.hash="workspace"}
+["oh1","oh2","openh"].forEach(function(i){$(i).addEventListener("click",go)});
+$("how").addEventListener("click",function(){$("loop").scrollIntoView({behavior:"smooth"})});
+window.addEventListener("resize",chart);
+tlr();rl();
+$("fask").addEventListener("click",function(){openAsk()});
+document.addEventListener("click",function(e){var a=e.target.closest("[data-s]");if(!a)return;e.preventDefault();var t=$(a.dataset.s);if(t)t.scrollIntoView({behavior:"smooth"})});
+if(window.IntersectionObserver){var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting)document.querySelectorAll("#hn a[data-s]").forEach(function(a){if(a.dataset.s==en.target.id)a.setAttribute("aria-current","true");else a.removeAttribute("aria-current")})})},{rootMargin:"-40% 0px -50% 0px"});["tls","loop","caps"].forEach(function(i){io.observe($(i))})}
+var LD=["Handelo starts with the market, not the chatbot. The market package ingests BNB Chain RWA data from Binance's RWA market API and resolves the tokenized asset and its underlying reference asset.", 'Market data becomes a structured view: token price, reference price, price gap, market state, volume and asset metadata, so you understand the relationship before acting.', 'Intent becomes a governed strategy rather than an instruction to an AI. Strategies have a lifecycle, triggers, recurring and conditional runs, DCA, rebalance logic, pause and resume, cancellation, retries and history.', 'Deterministic rules and portfolio conditions are evaluated first: transaction limits, market state, reference price gap, portfolio exposure, minimum cash reserve and other configured conditions.', 'You stay part of the authorization boundary. A scoped wallet session holds the owner wallet, agent wallet, BNB Chain context, permissions, spending limits, asset scope, minimum reserve, expiry and revocation state.', 'Only after every required gate passes can a request reach the wallet execution boundary, through the Binance Agentic Wallet provider boundary. Confirmation, wallet context, policy, portfolio risk, security checks and quote freshness stay required.', 'A submitted order is not a finished one. Handelo records execution state and moves through verification, completion or failure, recovery, retries and idempotency handling, then schedules the next strategy run.'];
+function lcs(n){document.querySelectorAll(".lc").forEach(function(b){b.setAttribute("aria-pressed",+b.dataset.i==n)});$("lcd").textContent=LD[n]}
+document.querySelector(".lg").addEventListener("click",function(e){var b=e.target.closest(".lc");if(b)lcs(+b.dataset.i)});lcs(3);
+setInterval(function(){if(S.run)step()},100);
+ranges();render();
+</script>
+<script src="./src/handelo-adapter.js"></script>
 </body>
 </html>
