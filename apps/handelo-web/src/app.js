@@ -1390,3 +1390,48 @@ document.querySelector("#historyConnect")?.addEventListener("click", () => conne
 
 
 refreshWorkspaceContext();
+
+
+// Batch 1 presentation navigation: keep the unified workspace while making its major surfaces directly reachable.
+document.querySelectorAll("[data-workspace-focus]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showView("workspace");
+    const target = document.getElementById(button.dataset.workspaceFocus || "");
+    if (target) {
+      window.setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+    }
+  });
+});
+document.querySelectorAll("[data-home-scroll]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = document.getElementById(button.dataset.homeScroll || "");
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+});
+document.querySelectorAll("[data-ask-handelo]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showView("workspace");
+    window.setTimeout(() => document.querySelector("#messageInput")?.focus(), 0);
+  });
+});
+document.querySelector("#brandHome")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  showView("home");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+document.querySelectorAll("[data-home-stage]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-home-stage]").forEach((item) => item.classList.toggle("active", item === button));
+    const detail = document.querySelector("#premiumLoopDetail");
+    const copy = [
+      "Discover brings the market signal and tokenized-stock representation into Handelo.",
+      "Understand turns market state, reference price and representation gaps into an explanation.",
+      "Strategize converts intent into deterministic DCA, recurring, conditional or rebalance rules.",
+      "Check Risk evaluates policy, portfolio exposure, reserve and market constraints.",
+      "Approve keeps the user at the authorization boundary before anything can move funds.",
+      "Execute passes the approved action through the scoped wallet/provider boundary.",
+      "Monitor records and verifies the outcome before a strategy can continue to its next run."
+    ][Number(button.dataset.homeStage)];
+    if (detail && copy) detail.textContent = copy;
+  });
+});

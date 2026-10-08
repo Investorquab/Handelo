@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080807">
-  <meta name="description" content="Handelo understands the market for you.">
-  <title>Handelo — Market intelligence for tokenized stocks</title>
+  <meta name="description" content="Handelo — an AI operating layer for tokenized-stock markets on BNB Chain.">
+  <title>Handelo — AI operating layer for tokenized stocks</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,123 +14,94 @@
 <body>
   <div class="ambient ambient-one"></div>
   <div class="ambient ambient-two"></div>
-
   <div class="shell">
-    <aside class="sidebar" aria-label="Handelo navigation">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true">◆</span>
-        <span>HANDELO</span>
-      </div>
-
-      <nav class="nav" aria-label="Primary">
-        <button class="nav-item active" data-view="home" aria-current="page">
-          <span>01</span>
-          <strong>Home</strong>
-        </button>
-        <button class="nav-item" data-view="workspace">
-          <span>02</span>
-          <strong>Workspace</strong>
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="network"><span class="status-dot"></span><span>BSC MAINNET</span></div>
-        <div class="wallet-state" aria-live="polite">WALLET NOT CONNECTED</div>
-      </div>
-    </aside>
-
     <main class="main">
-      <header class="topbar">
-        <div class="topbar-label" id="topbarLabel">HANDELO / HOME</div>
-        <button class="connect" id="connectButton" type="button">Connect wallet <span>↗</span></button>
-      </header>
+      <header class="terminal-header" aria-label="Handelo navigation">
+  <a class="terminal-brand" href="#" id="brandHome" aria-label="Handelo home"><span class="brand-mark" aria-hidden="true">◆</span>HANDELO</a>
+  <nav class="terminal-nav" aria-label="Primary">
+    <button class="terminal-nav-item active" type="button" data-view="home" aria-current="page">Home</button>
+    <button class="terminal-nav-item" type="button" data-view="workspace">Workspace</button>
+  </nav>
+  <nav class="terminal-context-nav" aria-label="Workspace sections">
+    <button type="button" data-workspace-focus="workspaceMarket">Markets</button>
+    <button type="button" data-workspace-focus="workspacePortfolio">Portfolio</button>
+    <button type="button" data-workspace-focus="workspaceStrategies">Strategies</button>
+    <button type="button" data-workspace-focus="workspaceActivity">Activity</button>
+  </nav>
+  <div class="terminal-actions">
+    <span class="chain-chip"><span class="status-dot"></span> BNB CHAIN</span>
+    <button class="connect" id="connectButton" type="button">Connect wallet <span>↗</span></button>
+    <button class="terminal-build" type="button" data-workspace-focus="workspaceStrategies">Build Strategy</button>
+    <button class="terminal-ask" type="button" data-ask-handelo>Ask Handelo</button>
+  </div>
+  <span id="topbarLabel" class="sr-only">HANDELO / HOME</span>
+</header>
+      
+<section class="hero">
+  <div>
+    <h1>AI explains.<br>The system governs.<br>You decide.</h1>
+    <p class="lede">An AI operating layer for tokenized stocks on BNB Chain. It connects market intelligence, strategy, portfolio risk, policy, wallet permissions, execution and verification into one governed workflow.</p>
+    <div class="acts"><button class="btn solid" id="homeWorkspaceCta">Open Handelo</button><button class="secondary-button" type="button" data-home-scroll="loop">See how it works</button>  </div>
+  <div>
+    <div class="home-preview-readout"><span>NVDA / REFERENCE</span><span>↔</span><strong>NVDAB / ON-CHAIN</strong><small>Visual relationship preview · live values enter in the market workspace</small></div>
+    <div class="chart home-market-preview" id="homeMarketGraphic" aria-label="Market relationship visual preview">
+    <svg viewBox="0 0 760 300" role="img" aria-label="Illustrative relationship between an underlying reference asset and its tokenized representation">
+      <path d="M0 215 C75 188 100 120 170 142 S255 230 330 164 S430 78 500 126 S585 190 650 122 S700 92 760 68" fill="none" stroke="var(--gold)" stroke-width="3"/>
+      <path d="M0 226 C75 202 102 137 170 154 S255 240 330 176 S430 96 500 140 S585 205 650 136 S700 106 760 82" fill="none" stroke="var(--text)" stroke-width="2" opacity=".82"/>
+      <path d="M0 215 C75 188 100 120 170 142 S255 230 330 164 S430 78 500 126 S585 190 650 122 S700 92 760 68 L760 300 L0 300Z" fill="url(#homeGoldFade)" opacity=".25"/>
+      <defs><linearGradient id="homeGoldFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--gold)" stop-opacity=".42"/><stop offset="1" stop-color="var(--gold)" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" y1="240" x2="760" y2="240" stroke="var(--text)" opacity=".08"/>
+      <line x1="0" y1="175" x2="760" y2="175" stroke="var(--text)" opacity=".06"/>
+      <line x1="0" y1="110" x2="760" y2="110" stroke="var(--text)" opacity=".06"/>
+    </svg>
+  </div>
+    <div class="legend"><span><i style="background:var(--ink)"></i>NVDA reference</span><span><i style="background:var(--gold)"></i>NVDAB token</span><span><i style="background:rgba(212,175,55,.35);height:8px"></i>Gap</span></div>
+  </div>
+</section>
+<section class="proof"><div><b>7 stages</b><span>Discover to Monitor, one governed path from market signal to verified outcome.</span></div><div><b>Chain ID 56</b><span>BNB Chain RWA data comes from Binance's market API, not a hardcoded stock list.</span></div><div><b>NVDA and NVDAB</b><span>One deeply validated market relationship, not a long list of unvalidated assets.</span></div></section>
+<section class="sec" id="tls">
+  <h2>Markets close. Tokenized stocks don't.</h2>
+  <p class="sub">The US session runs from 09:30 to 16:00 ET. NVDAB trades around the clock, so the gap to NVDA keeps moving while the reference stands still. Drag to replay a day.</p>
+  <div class="tl"><div class="tlb"><i class="tlo"></i><i class="tlm" id="homeMarketTimelineMarker"></i></div><input type="range" id="homeMarketTimelineSlider" min="0" max="24" step="0.5" value="22" aria-label="Time of day in Eastern time"><div class="tlk"><span style="left:0;transform:none">00:00</span><span style="left:39.58%">09:30</span><span style="left:66.67%">16:00</span><span style="left:100%;transform:translateX(-100%)">24:00</span></div></div>
+  <div class="readout" id="homeMarketTimeline"></div>
+</section>
+<section class="sec" id="problem"><h2>More than a buy button.</h2><div class="rg"><div><h3>Token and stock are two prices</h3><p>Tokenized stocks connect traditional reference markets to onchain representations, and users can struggle to see how the token price relates to the underlying asset.</p></div><div><h3>A trade carries context</h3><p>Market state, reference price gaps, portfolio exposure, liquidity, wallet authority and execution conditions all matter.</p></div><div><h3>Explanation is not authorization</h3><p>AI can explain an opportunity, but when an action could move funds there must be a clear boundary between analysis, policy, approval, execution and verification.</p></div></div></section>
+<section class="sec loopsec" id="loop">
+  <div class="ey">From signal to settlement</div>
+  <h2>The system makes the decision path visible.</h2>
+  <p class="sub">Seven connected stages turn a market signal into a controlled, verified outcome. Select a stage to see what happens inside it.</p>
+  <div class="lg"><button class="lc" data-i="0" aria-pressed="false"><span>01 / Discover</span><h3>Discover</h3><p>Live market signals and tokenized-stock context enter the system.</p></button><button class="lc" data-i="1" aria-pressed="false"><span>02 / Understand</span><h3>Understand</h3><p>AI explains price gaps, market state and what matters now.</p></button><button class="lc" data-i="2" aria-pressed="false"><span>03 / Strategize</span><h3>Strategize</h3><p>Rules turn intent into deterministic DCA, recurring, conditional or rebalance plans.</p></button><button class="lc" data-i="3" aria-pressed="false"><span>04 / Check risk</span><h3>Check risk</h3><p>Portfolio exposure, reserve, policy and market constraints are evaluated.</p></button><button class="lc" data-i="4" aria-pressed="false"><span>05 / Approve</span><h3>Approve</h3><p>The user remains the decision-maker at the controlled approval boundary.</p></button><button class="lc" data-i="5" aria-pressed="false"><span>06 / Execute</span><h3>Execute</h3><p>Execution passes through the scoped wallet boundary rather than the model.</p></button><button class="lc" data-i="6" aria-pressed="false"><span>07 / Monitor</span><h3>Monitor</h3><p>Execution is verified, recorded and carried forward into portfolio context.</p></button></div>
+  <p class="lcd" id="homeLoopDetail"></p>
+</section>
+<section class="sec">
+  <h2>Who does what</h2>
+  <p class="sub">Built for people who want to understand and manage tokenized-stock opportunities without handing an AI chat interface unrestricted trading power.</p>
+  <div class="rg">
+    <div><h3>AI explains</h3><p>Price gaps, market state and what matters now, in plain language. The model reads the market. It does not hold the wallet.</p></div>
+    <div><h3>The system governs</h3><p>Rules turn intent into deterministic plans: DCA, recurring, conditional or rebalance. Exposure, reserve, policy and market constraints are checked before anything moves.</p></div>
+    <div><h3>You decide</h3><p>You stay the decision-maker at the approval boundary. Execution passes through a scoped wallet, then is verified, recorded and carried into your portfolio.</p></div>
+  </div>
+</section>
+<section class="sec" id="safety"><h2>Intelligence is separated from authority.</h2><p class="sub">The AI helps you understand what would happen. It never receives a private key and never moves money directly.</p><div class="two2"><div><h3>What the AI can do</h3><ul class="pl2 "><li>Interpret your request and identify the intended action</li><li>Resolve the relevant market information</li><li>Explain the opportunity before anything executes</li><li>Prepare structured intent for the rest of the system</li></ul></div><div><h3>What the AI cannot do</h3><ul class="pl2 "><li>Hold a private key or control funds</li><li>Move money directly</li><li>Skip rules, approval or the wallet boundary</li></ul><p class="sm">Every AI-generated instruction passes through deterministic application logic and the configured execution gates before it can reach the wallet provider.</p></div></div><div class="bd"><div><h4>Rules and policy</h4><p>Deterministic constraints decide what is safe, not the model: spending limits, market state, reference price gaps, portfolio exposure and minimum reserve.</p></div><div><h4>User approval</h4><p>Approval is an explicit boundary. A review returns PASS, REVIEW or BLOCK, with reasons instead of a bare green or red light.</p></div><div><h4>Scoped wallet</h4><p>Your wallet and the agent wallet are separate. A session is scoped by chain, permissions, spending limits, allowed assets, reserve, expiry and revocation. Requests outside it are rejected.</p></div><div><h4>Audit trail</h4><p>Strategy execution state is recorded across trigger, risk check, execution, verification, completion or failure, and retry and recovery.</p></div></div></section>
+<section class="sec" id="features"><h2>What is built.</h2><div class="fg"><div><h3>Market intelligence for NVDA and NVDAB</h3><p>An end-to-end validated market experience around NVIDIA and its bStock token on BNB Chain.</p></div><div><h3>Reference price analysis</h3><p>The token is compared with its underlying reference asset, and the gap feeds the review workflow.</p></div><div><h3>Deterministic policy engine</h3><p>Spending limits, market state and reference price thresholds are checked before execution can proceed.</p></div><div><h3>Portfolio risk controls</h3><p>Projected exposure and available cash, including the minimum reserve, are evaluated before the risk gate passes.</p></div><div><h3>Scoped agent wallet</h3><p>Permissions, spending limits, asset scope, expiry and revocation constrain every agent action.</p></div><div><h3>Strategy runtime</h3><p>Lifecycle states, triggers, recurring and conditional runs, retries, recovery, pause, cancel and idempotency.</p></div><div><h3>Execution verification</h3><p>An execution moves from executing to verifying before it counts as finished, so a failed verification is rejected.</p></div><div><h3>Quote and execution quality</h3><p>Provider quotes inform price impact and slippage during review, so not every executable price is treated as equal.</p></div></div></section>
+<section class="sec caps" id="caps">
+  <div><h3>Market intelligence</h3><div id="c1"></div><p>One feed for NVDA and NVDAB, with the gap between them calculated, not guessed.</p></div>
+  <div><h3>Strategy</h3><div id="c2"></div><p>Rules that run on their own. A run is held when any policy check fails.</p></div>
+  <div><h3>Risk</h3><div id="c3"></div><p>Exposure, reserve and risk are measured against limits before any order is approved.</p></div>
+</section>
+<section class="sec" id="status"><h2>What is validated, and what is not yet.</h2><p class="sub">Passing code, tests or mocks is not the same as passing live validation, and Handelo does not present it as such.</p><div class="two2"><div><h3>Validated today</h3><ul class="pl2 ok"><li>NVDA and NVDAB tested against Binance's BNB Chain RWA API, including the live market representation and the token audit response</li><li>Automated engineering gates passed across wallet, strategy, portfolio, policy, market, AI, execution and adversarial validation work</li><li>A local API flow from AI intent through market resolution to policy and execution gating</li><li>Failure paths: insufficient balance, wrong wallet context, expired or revoked permissions, stale data, malformed AI output, execution failure, duplicate triggers, runtime recovery and idempotency</li></ul></div><div><h3>Still to come</h3><ul class="pl2 no"><li>Additional assets, each validated end to end</li><li>Provider-backed live agent wallet creation</li><li>Funding from a personal wallet to the agent wallet</li><li>Mined onchain confirmation</li><li>Provider-backed withdrawal</li><li>The complete live provider and session flow</li><li>Controlled real-money validation</li><li>Final adversarial validation</li></ul><p class="sm">Additional assets will be added as they are validated.</p></div></div></section>
+<section class="sec" id="tech"><h2>Built as a modular TypeScript system.</h2><div class="two2"><div><p class="sm">A TypeScript and pnpm monorepo with separate packages for the web application, core logic, AI layer, policy engine, execution, market data, strategy runtime, portfolio intelligence, API, SDK, MCP and Telegram integration.</p><div class="chips"><span>Next.js</span><span>Fastify</span><span>PostgreSQL</span><span>Redis</span><span>Socket.IO</span><span>TypeScript</span></div></div><div><div class="cb"><div><i>Base</i>https://web3.binance.com/build</div><div><i>Request</i>GET /api/v1/dex/market/rwa/tokens</div><div><i>Chain</i>BNB Chain, ID 56</div></div><p class="sm">Each asset carries its token contract address, platform, symbol, decimals, underlying ticker and name, token to share ratio, token price, reference price, 24 hour volume, market cap and market status. Handelo does not hardcode a stock list. The resolver matches by token symbol or underlying ticker, and only NVDA and NVDAB are validated end to end.</p></div></div></section>
+<section class="sec" id="faq"><h2>Questions, answered plainly.</h2><div class="faq"><details><summary><span>Is Handelo a chatbot?</span></summary><p>No. The AI is an intelligence and command layer inside a broader system of market data, strategy, portfolio, policy, wallet, execution and verification.</p></details><details><summary><span>Can the AI directly move my money?</span></summary><p>No. The model never receives private keys and does not control the wallet. Execution passes through deterministic application logic and the wallet provider boundary.</p></details><details><summary><span>Does Handelo hold my private key?</span></summary><p>The intended architecture does not require a private key or seed phrase. Handelo works with wallet context and a scoped agent wallet at the provider boundary.</p></details><details><summary><span>What stock does Handelo support today?</span></summary><p>NVIDIA (NVDA), represented by the bStock token NVDAB on BNB Chain. It is the only asset validated end to end.</p></details><details><summary><span>Does it support every bStock Binance returns?</span></summary><p>Not yet as a validated claim. Ingestion is provider driven and can consume Binance BNB Chain RWA assets, but each additional asset must be validated before it is presented as supported.</p></details><details><summary><span>What happens if a risk check fails?</span></summary><p>The transaction is blocked. The review shows the reasons, so you can see what prevented execution.</p></details><details><summary><span>Does passing the AI review mean a trade will happen?</span></summary><p>No. Policy, portfolio risk, wallet authorization, security checks, quote freshness, explicit confirmation, execution configuration and verification all still apply.</p></details><details><summary><span>Is Handelo live with real-money autonomous trading?</span></summary><p>No. Substantial engineering and local validation is complete. Controlled real-money validation and the remaining live provider checks are later gates.</p></details></div></section>
+<section class="sec end">
+  <h2>See it working</h2>
+  <p class="sub">Open the workspace to work with the connected market, portfolio, strategies, risk and execution surfaces.</p>
+  <button class="btn solid" id="homeFinalCta">Open Handelo</button>
+  <p class="cov2">Today Handelo supports NVDA and its token NVDAB on BNB Chain. Additional assets will be added as they are validated.</p>
+</section>
+<footer class="ft"><div class="ftm"><div><a class="logo" href="#home">Handelo</a><p>An AI operating layer for tokenized-stock markets. Understand the market, govern the decision path, and act with control.</p></div><div><h4>Product</h4><a href="#home" data-s="tls">Market intelligence</a><a href="#home" data-s="loop">System loop</a><a href="#home" data-s="caps">Capabilities</a><a href="#workspace">Workspace</a></div><div><h4>Resources</h4><span>Documentation</span><span>Architecture</span><span>GitHub</span><span>Developer resources</span></div><div><h4>Connect</h4><span>Contact</span><a href="https://www.bnbchain.org" target="_blank" rel="noopener">BNB Chain</a><span>Project updates</span></div></div><div class="ftb"><div>Handelo &middot; BNB Chain &middot; Tokenized stocks<br>AI explains &middot; System governs &middot; You decide</div><button class="btn glow" id="fask"><svg width="14" height="14" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M7 4H4v14h3M15 4h3v14h-3"/><path d="M8.5 8.5L11 11l-2.5 2.5M12.5 14h2"/></svg>Ask Handelo</button></div></footer>
+</div>
 
-      <section class="view active home-view" id="view-home" aria-labelledby="home-title">
-        <div class="home-hero">
-          <div class="eyebrow">AI OPERATING LAYER / BSC</div>
-          <h1 id="home-title">Understand.<br><em>Strategize. Execute.</em></h1>
-          <p>Handelo turns tokenized-stock market data, portfolio context, strategy rules, and execution risk into one decision surface.</p>
-          <div class="home-actions">
-            <button class="primary-button home-cta" id="homeWorkspaceCta" type="button">Open Workspace ↗</button>
-            <span class="home-proof">LIVE MARKET CONTEXT · HUMAN APPROVAL · BSC MAINNET</span>
-          </div>
-        </div>
-
-        <section class="home-problem">
-          <div class="eyebrow">THE MARKET GAP</div>
-          <div>
-            <h2>Markets close.<br><em>Tokenized stocks don't.</em></h2>
-            <p>Handelo helps you see the difference between a reference market and its on-chain representation, then turns that context into deterministic, risk-aware actions.</p>
-          </div>
-        </section>
-
-        <section class="home-flow" aria-labelledby="home-flow-title">
-          <div class="home-section-head">
-            <div class="eyebrow">THE OPERATING LOOP</div>
-            <h2 id="home-flow-title">From signal to settlement.</h2>
-          </div>
-          <div class="home-flow-grid">
-            <div><span>01</span><strong>Discover</strong><p>Find market and representation gaps.</p></div>
-            <div><span>02</span><strong>Understand</strong><p>Ask Handelo to explain what changed.</p></div>
-            <div><span>03</span><strong>Strategize</strong><p>Turn intent into deterministic rules.</p></div>
-            <div><span>04</span><strong>Check Risk</strong><p>Test exposure before activation.</p></div>
-            <div><span>05</span><strong>Approve</strong><p>Review the exact transaction.</p></div>
-            <div><span>06</span><strong>Execute</strong><p>Pass the approved action to the wallet.</p></div>
-            <div><span>07</span><strong>Monitor</strong><p>Keep portfolio and activity in context.</p></div>
-          </div>
-        </section>
-
-        <section class="home-capabilities" aria-labelledby="home-capabilities-title">
-          <div class="home-section-head">
-            <div class="eyebrow">WHAT HANDELO OPERATES</div>
-            <h2 id="home-capabilities-title">One surface. Seven capabilities.</h2>
-          </div>
-          <div class="home-capability-grid">
-            <article class="home-capability-card">
-              <div class="message-label">MARKET INSIGHT</div>
-              <h3>See the representation gap.</h3>
-              <div class="home-ui-snippet"><span>NVDAB</span><b>ON-CHAIN</b><strong>REFERENCE ↔ $178.42</strong><i>+1.84%</i></div>
-            </article>
-            <article class="home-capability-card">
-              <div class="message-label">STRATEGY PREVIEW</div>
-              <h3>Make intent deterministic.</h3>
-              <div class="home-ui-snippet"><span>WEEKLY DCA</span><b>$10 / MONDAY</b><strong>MAX EXPOSURE 35%</strong><i>DRAFT</i></div>
-            </article>
-            <article class="home-capability-card">
-              <div class="message-label">RISK RESULT</div>
-              <h3>Govern the action.</h3>
-              <div class="home-ui-snippet"><span>PORTFOLIO RISK</span><b>PASS / BLOCK</b><strong>EXPOSURE + RESERVE CHECK</strong><i>SERVER-SIDE</i></div>
-            </article>
-            <article class="home-capability-card">
-              <div class="message-label">TRANSACTION PREVIEW</div>
-              <h3>Know what gets signed.</h3>
-              <div class="home-ui-snippet"><span>BUY NVDAB</span><b>BSC</b><strong>QUOTE · WALLET · SECURITY</strong><i>PENDING</i></div>
-            </article>
-          </div>
-        </section>
-
-        <section class="home-how" aria-labelledby="home-how-title">
-          <div>
-            <div class="eyebrow">HOW IT WORKS</div>
-            <h2 id="home-how-title">The AI explains.<br><em>The system governs.</em></h2>
-          </div>
-          <div class="home-how-copy">
-            <p>Handelo combines market intelligence, deterministic strategy construction, portfolio constraints, and wallet execution behind a persistent AI control surface.</p>
-            <div class="home-principles">
-              <span>LIVE DATA</span><span>DETERMINISTIC RULES</span><span>SERVER-SIDE RISK</span><span>HUMAN APPROVAL</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="home-final">
-          <div class="eyebrow">READY WHEN YOU ARE</div>
-          <h2>Bring the market into focus.</h2>
-          <p>Open the workspace and let Handelo build the context before you decide what to do.</p>
-          <button class="primary-button home-cta" id="homeFinalCta" type="button">Enter Handelo Workspace ↗</button>
-        </section>
-      </section>
-
-      <section class="view" id="view-workspace" aria-labelledby="workspace-title">
+<section class="view" id="view-workspace" aria-labelledby="workspace-title">
         <div class="workspace-grid">
           <aside class="workspace-context" aria-label="Market and portfolio context">
             <div class="workspace-intro"><div class="eyebrow">LIVE / BSC</div><h1 id="workspace-title">Market context, <em>at a glance.</em></h1><p>Handelo keeps the numbers visible while you work with the AI.</p></div>
@@ -239,6 +210,17 @@
     </article>
   </template>
 
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
+    </main>
+  </div>
+  <template id="userMessageTemplate">
+    <article class="message user-message"><div class="message-label">YOU</div><div class="message-text"></div></article>
+  </template>
+  <template id="agentMessageTemplate">
+    <article class="message agent-message"><div class="message-label">HANDELO</div><div class="message-text"></div><div class="market-context"></div></article>
+  </template>
   <script type="module" src="./src/app.js"></script>
 </body>
 </html>
