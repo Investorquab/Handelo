@@ -256,6 +256,12 @@ export function evaluateStrategyTrigger(
   };
 }
 
+export interface StrategyExecutionReceipt {
+  txHash: string;
+  network: "BSC";
+  provider: "BINANCE_AGENTIC_WALLET";
+}
+
 export interface StrategyExecutionRecord {
   runId: string;
   strategyId: string;
@@ -268,6 +274,7 @@ export interface StrategyExecutionRecord {
   error?: string | null;
   retryable?: boolean;
   nextRetryAt?: string | null;
+  executionReceipt?: StrategyExecutionReceipt | null;
 }
 
 export function createExecutionKey(
@@ -299,7 +306,8 @@ export function createStrategyExecutionRecord(
     executionKey: createExecutionKey(strategy.id, triggerAt),
     error: null,
     retryable: false,
-    nextRetryAt: null
+    nextRetryAt: null,
+    executionReceipt: null
   };
 }
 
@@ -652,7 +660,7 @@ export interface StrategyRuntimeDependencies {
   store: StrategyExecutionStore;
   now?: () => string;
   riskCheck: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
-  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<void>;
+  execute: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<StrategyExecutionReceipt | void>;
   verify?: (strategy: StrategyDefinition, record: StrategyExecutionRecord) => Promise<boolean>;
   maxAttempts?: number;
   executionTimeoutMs?: number;
@@ -716,10 +724,17 @@ export async function runTriggeredStrategy(
       current = beginStrategyExecution(current, now());
       await dependencies.store.update(current);
 
-      await executeWithTimeout(
+      const receipt = await executeWithTimeout(
         () => dependencies.execute(strategy, current),
         dependencies.executionTimeoutMs
       );
+      if (receipt) {
+        current = {
+          ...current,
+          executionReceipt: receipt
+        };
+        await dependencies.store.update(current);
+      }
 
       current = {
         ...current,
@@ -796,10 +811,17 @@ export async function retryPersistedStrategyExecution(
 
       current = beginStrategyExecution(current, now());
       await dependencies.store.update(current);
-      await executeWithTimeout(
+      const receipt = await executeWithTimeout(
         () => dependencies.execute(strategy, current),
         dependencies.executionTimeoutMs
       );
+      if (receipt) {
+        current = {
+          ...current,
+          executionReceipt: receipt
+        };
+        await dependencies.store.update(current);
+      }
       current = {
         ...current,
         status: transitionStrategyExecution(current.status, "VERIFYING")
