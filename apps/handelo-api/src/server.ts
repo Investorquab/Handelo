@@ -871,10 +871,13 @@ const server = createServer(async (req, res) => {
         quoteQuality,
         quoteError,
         quoteToken: fromToken || null,
-        reviewToken: quote && riskDecision === "PASS" ? createReviewToken({
-          ticker: asset.underlyingTicker,
+        fundingToken: fundingSymbol,
+        fundingTokenQty: fromTokenQty,
+        reviewToken: quote && riskDecision === "PASS" && fromTokenQty ? createReviewToken({
+          ticker: asset.tokenSymbol,
           amountUsd,
           fromToken,
+          fromTokenQty,
           contract: asset.tokenContractAddress,
           slippage,
           wallet: walletAddress,
