@@ -408,7 +408,7 @@ test("live portfolio rendering accepts the real API snapshot fields", () => {
 });
 test("live workspace closes its stream when leaving live mode", () => {
   assert.match(liveWorkspaceSource, /if\(!window\.HANDELO_LIVE_WORKSPACE\)closeLiveStream\(\)/);
-  assert.match(liveWorkspaceSource, /function closeLiveStream\(\)/);
+  assert.match(liveWorkspaceSource, /function closeLiveStream\(resetAttempt = true\)/);
 });
 
 test("live stream reconnect keeps exponential backoff state", () => {
