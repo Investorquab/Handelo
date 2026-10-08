@@ -163,9 +163,11 @@ Never commit secrets or private keys.
 
 ## Current validation status
 
-The repository uses GitHub Actions for TypeScript checks, frontend syntax checks and the full workspace test suite. The current implementation includes regression coverage for market intelligence, strategy construction, portfolio/risk checks, transaction review, execution gating, baskets, homepage architecture, SDK behavior, Telegram handling and workspace resilience.
+The repository uses GitHub Actions for TypeScript checks, frontend syntax checks and the full workspace test suite. The current web workspace is backed by live market data, real wallet status/address/guardrails, live BSC portfolio reconciliation, deterministic policy/risk review, security-audit gating and explicit execution boundaries.
 
-The next engineering gate is the Agent Wallet Architecture validation, followed by the autonomous Strategy Runtime. Local/live browser testing and controlled real-money validation remain explicit later phases.
+The transaction review surface is server-authoritative through `/api/review`: the browser does not run a second policy engine. PASS/READY, confirmation-required and BLOCK outcomes, policy reasons, quote quality and security-audit failures are surfaced from the runtime. Incomplete or unavailable token-security audit results fail closed before execution.
+
+P&L is displayed only when trustworthy acquisition cost basis is available. Handelo does not infer historical cost from current balances. Local/live browser validation and controlled real-money validation remain explicit later gates.
 
 ## Hackathon direction
 

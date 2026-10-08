@@ -102,7 +102,7 @@ export const TOKEN_AUDIT_HEADERS={
 } as const;
 
 export function assertTokenAuditSafe(audit: TokenAudit): void {
-  if (!audit.isSupported) {
+  if (!audit.hasResult || !audit.isSupported) {
     throw new Error("Token security audit data is unavailable for the requested token; execution is blocked.");
   }
   if (typeof audit.riskLevel === "number" && audit.riskLevel >= 4) {

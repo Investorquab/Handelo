@@ -359,3 +359,22 @@ test("portfolio presentation has no fabricated demo balance", () => {
   assert.doesNotMatch(indexSource, /12,480/);
   assert.doesNotMatch(source, /\$12,480/);
 });
+
+test("order review is server-authoritative and has no browser policy engine", () => {
+  assert.match(source, /API_BASE \+ "\/api\/review"/);
+  assert.doesNotMatch(source, /function evaluatePolicy/);
+  assert.doesNotMatch(source, /evaluatePolicy\(/);
+  assert.match(source, /policy\.decision/);
+  assert.match(source, /policy\.reasons/);
+  assert.match(source, /READY FOR CONFIRMATION/);
+  assert.match(source, /CONFIRM REQUIRED/);
+  assert.match(source, /BLOCKED/);
+});
+
+test("order review surfaces security-audit state and fail-closed execution", () => {
+  assert.match(source, /data\.securityAudit/);
+  assert.match(source, /securityAuditError/);
+  assert.match(source, /executionBlocked/);
+  assert.match(source, /SECURITY CHECK UNAVAILABLE — EXECUTION BLOCKED/);
+  assert.match(source, /Binance security audit reports high risk/);
+});
