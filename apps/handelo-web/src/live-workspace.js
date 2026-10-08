@@ -3,7 +3,7 @@
   const USDT = "0x55d398326f99059fF775485246999027B3197955";
   const state = {
     market: null, portfolio: null, portfolioError: null, wallet: null, address: null,
-    history: null, strategies: [], liveSamples: [], review: null, entered: false,
+    walletBalances: [], walletBalancesError: null, history: null, strategies: [], liveSamples: [], review: null, entered: false,
     marketInFlight: false, accountInFlight: false, reviewInFlight: false, chatInFlight: false,
     streamSource: null, streamReconnectTimer: null, streamAttempt: 0
   };
@@ -152,7 +152,7 @@
     if ($("gl")) { $("gl").textContent = "Waiting for live portfolio data"; $("gl").style.color = "var(--mute)"; }
     if ($("chart")) $("chart").innerHTML = '<div class="msg">LIVE API · waiting for first market sample…</div>';
     state.market = null; state.portfolio = null; state.portfolioError = null; state.wallet = null; state.address = null;
-    state.history = null; state.strategies = []; state.review = null; state.liveSamples = [];
+    state.walletBalances = []; state.walletBalancesError = null; state.history = null; state.strategies = []; state.review = null; state.liveSamples = [];
     const small = document.querySelector("#v-port .title small");
     if (small) small.textContent = "Live BSC balances from the Handelo API";
   }
@@ -251,9 +251,12 @@
     state.address=account.address||{connected:false,address:null};
     state.portfolio=account.portfolio||null;
     state.portfolioError=account.portfolioError||null;
+    state.walletBalances=Array.isArray(account.walletBalances)?account.walletBalances:[];
+    state.walletBalancesError=account.walletBalancesError||null;
     state.history=account.history||null;
     state.strategies=Array.isArray(account.strategies)?account.strategies:[];
     renderWalletAndPortfolio(state.address,state.portfolio);
+    renderLiveBalances();
     renderStrategyCount();
     renderPortfolioView();
     renderHistoryView();
@@ -267,6 +270,8 @@
       address:snapshot.address,
       portfolio:snapshot.portfolio,
       portfolioError:snapshot.portfolioError,
+      walletBalances:snapshot.walletBalances,
+      walletBalancesError:snapshot.walletBalancesError,
       history:snapshot.history,
       strategies:snapshot.strategies
     });
@@ -278,6 +283,53 @@
           :"Live market data loaded · wallet not connected";
     }
   }
+  function liveBalanceTotal(){
+    return state.walletBalances.reduce((sum,balance)=>{
+      const value=Number(balance?.value);
+      return sum+(Number.isFinite(value)&&value>0?value:0);
+    },0);
+  }
+
+  function renderLiveBalances(){
+    const portfolioSection=document.querySelector("#v-work .two");
+    if(!portfolioSection)return;
+    let host=document.getElementById("live-balance-list");
+    if(!host){
+      host=document.createElement("div");
+      host.id="live-balance-list";
+      host.style.cssText="grid-column:1/-1;margin-top:8px;border-top:1px solid var(--line);padding-top:18px;";
+      portfolioSection.appendChild(host);
+    }
+    if(!state.address?.connected){
+      host.innerHTML='<div class="hint">Connect the wallet to load live BSC balances.</div>';
+      return;
+    }
+    const balances=state.walletBalances.filter(balance=>String(balance?.binanceChainId||"56")==="56");
+    if(!balances.length){
+      host.innerHTML='<div class="hint">'+esc(state.walletBalancesError||"No BSC token balances worth $0.01 or more were returned by Binance Agentic Wallet.")+'</div>';
+      return;
+    }
+    const total=liveBalanceTotal();
+    host.innerHTML=
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px">'+
+        '<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)">Live BSC balances</div>'+
+        '<div style="font-family:monospace;font-size:12px;color:var(--mute)">'+esc(money(total))+'</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+
+      balances.map(balance=>{
+        const value=Number(balance.value), share=total>0&&Number.isFinite(value)?value/total*100:null;
+        const symbol=String(balance.symbol||"—").toUpperCase();
+        return '<div style="border:1px solid var(--line);background:#0e0c0a;border-radius:8px;padding:12px">'+
+          '<div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:7px"><b>'+esc(symbol)+'</b><span style="color:var(--gold);font-family:monospace">'+esc(money(value))+'</span></div>'+
+          '<div style="font-family:monospace;color:var(--ink);font-size:12px;margin-bottom:6px">'+esc(balance.balance||"—")+'</div>'+
+          '<div style="font-family:monospace;color:var(--mute);font-size:10px;word-break:break-all;margin-bottom:7px">'+esc(balance.address||"—")+'</div>'+
+          '<div style="color:var(--mute);font-size:11px">Price '+esc(money(balance.price))+' · '+esc(pct(share))+'</div>'+
+        '</div>';
+      }).join("")+
+      '</div>'+
+      '<div class="hint" style="margin-top:10px">Source: Binance Agentic Wallet · BNB Smart Chain. Provider omits balances below $0.01.</div>';
+  }
+
   function renderWalletAndPortfolio(address, portfolio) {
     state.address = address; state.portfolio = portfolio;
     const connected = Boolean(address?.connected && address?.address);
@@ -301,44 +353,77 @@
       return;
     }
     const totals=portfolioTotals(portfolio), positions=Array.isArray(portfolio.positions)?portfolio.positions:[];
-    const nvdabValue=positions.filter((p)=>String(p.tokenSymbol||"").toUpperCase()==="NVDAB").reduce((sum,p)=>sum+(Number(p.valueUsd)||0),0);
-    const usdtShare=totals.total>0?totals.cash/totals.total*100:0, nvdabShare=totals.total>0?nvdabValue/totals.total*100:0;
-    if ($("tot")) $("tot").textContent=money(totals.total);
+    const walletTotal=liveBalanceTotal();
+    const displayTotal=walletTotal>0?walletTotal:totals.total;
+    const nvdabValue=state.walletBalances.filter((b)=>String(b.symbol||"").toUpperCase()==="NVDAB").reduce((sum,b)=>sum+(Number(b.value)||0),0);
+    const bnbValue=state.walletBalances.filter((b)=>String(b.symbol||"").toUpperCase()==="BNB").reduce((sum,b)=>sum+(Number(b.value)||0),0);
+    const usdtValue=state.walletBalances.filter((b)=>String(b.symbol||"").toUpperCase()==="USDT").reduce((sum,b)=>sum+(Number(b.value)||0),0);
+    const nvdabShare=displayTotal>0?nvdabValue/displayTotal*100:0;
+    const bnbShare=displayTotal>0?bnbValue/displayTotal*100:0;
+    const usdtShare=displayTotal>0?usdtValue/displayTotal*100:0;
+    if ($("tot")) $("tot").textContent=money(displayTotal);
     if ($("pn")) $("pn").textContent=pct(nvdabShare);
-    if ($("pb")) $("pb").textContent="—";
+    if ($("pb")) $("pb").textContent=pct(bnbShare);
     if ($("pu")) $("pu").textContent=pct(usdtShare);
     if ($("bn")) $("bn").style.width=Math.max(0,Math.min(100,nvdabShare))+"%";
-    if ($("bb")) $("bb").style.width="0%";
+    if ($("bb")) $("bb").style.width=Math.max(0,Math.min(100,bnbShare))+"%";
     if ($("bu")) $("bu").style.width=Math.max(0,Math.min(100,usdtShare))+"%";
     if ($("gp")) $("gp").setAttribute("stroke-dasharray","0 100");
     if ($("gv")) $("gv").textContent="—";
-    if ($("gl")) { $("gl").textContent="Live portfolio · risk score is calculated server-side during review"; $("gl").style.color="var(--mute)"; }
+    if ($("gl")) {
+      $("gl").textContent=state.walletBalancesError
+        ?"Live balances partially unavailable: "+state.walletBalancesError
+        :"Live BSC balances · risk score is calculated server-side during review";
+      $("gl").style.color="var(--mute)";
+    }
+    renderLiveBalances();
     renderPortfolioView();
   }
 
   function renderPortfolioView() {
     if (!$("pvt") || $("v-port")?.hidden) return;
     const subtitle=document.querySelector("#v-port .title small"), totalLabel=$("pvt")?.nextElementSibling;
-    if (subtitle) subtitle.textContent="Live BSC balances from the Handelo API";
-    if (totalLabel) totalLabel.textContent="LIVE API · token balances + USDT cash";
-    if (!state.portfolio || !state.address?.connected) {
+    if (subtitle) subtitle.textContent="Live BSC balances from Binance Agentic Wallet";
+    if (totalLabel) totalLabel.textContent="LIVE API · all BSC balances";
+
+    if (!state.address?.connected) {
       $("pvt").textContent="—";
-      $("pvc").innerHTML='<p class="hint">'+esc(state.portfolioError || "Connect a wallet to load live portfolio data.")+'</p>';
+      $("pvc").innerHTML='<p class="hint">Connect a wallet to load live BSC balances.</p>';
       return;
     }
-    const totals=portfolioTotals(state.portfolio), positions=Array.isArray(state.portfolio.positions)?state.portfolio.positions:[];
-    const rows=positions.map((position)=>{
-      const value=Number(position.valueUsd ?? position.estimatedValueUsd), share=totals.total>0&&Number.isFinite(value)?value/totals.total*100:null;
-      return [position.tokenSymbol||"—",position.balance||"—",money(position.tokenPrice),money(value),pct(share),"Live BSC token balance"];
+
+    const balances=state.walletBalances.filter(item=>String(item?.binanceChainId||"56")==="56");
+    if (!balances.length) {
+      $("pvt").textContent="—";
+      $("pvc").innerHTML='<p class="hint">'+esc(state.walletBalancesError||"No BSC token balances worth $0.01 or more were returned by Binance Agentic Wallet.")+'</p>';
+      return;
+    }
+
+    const total=liveBalanceTotal();
+    const rows=balances.map(balance=>{
+      const value=Number(balance.value);
+      const share=total>0&&Number.isFinite(value)?value/total*100:null;
+      return [
+        balance.symbol||"—",
+        balance.balance||"—",
+        money(balance.price),
+        money(value),
+        pct(share),
+        "Binance Agentic Wallet",
+        balance.address||"—"
+      ];
     });
-    rows.push(["USDT","cash","$1.00",money(totals.cash),pct(totals.total>0?totals.cash/totals.total*100:null),"Live BSC token balance"]);
-    $("pvt").textContent=money(totals.total);
-    $("pvc").innerHTML='<div class="bar">'+rows.map((row)=>{
-      const share=parseFloat(row[4]),width=Number.isFinite(share)?share:0,background=row[0]==="NVDAB"?"var(--gold)":row[0]==="USDT"?"#5c5546":"#a9742b";
-      return '<i style="width:'+Math.max(0,Math.min(100,width))+'%;background:'+background+'"></i>';
-    }).join("")+'</div><div class="tw"><table class="tb"><thead><tr><th>Asset</th><th>Holding</th><th>Price</th><th>Value</th><th>Share</th><th>Source</th></tr></thead><tbody>'+
+
+    $("pvt").textContent=money(total);
+    $("pvc").innerHTML=
+      '<div class="bar">'+rows.map((row)=>{
+        const share=parseFloat(row[4]),width=Number.isFinite(share)?share:0;
+        const background=String(row[0]).toUpperCase()==="NVDAB"?"var(--gold)":String(row[0]).toUpperCase()==="BNB"?"#a9742b":String(row[0]).toUpperCase()==="USDT"?"#5c5546":"#7d6b48";
+        return '<i style="width:'+Math.max(0,Math.min(100,width))+'%;background:'+background+'"></i>';
+      }).join("")+
+      '</div><div class="tw"><table class="tb"><thead><tr><th>Asset</th><th>Balance</th><th>Price</th><th>Value</th><th>Share</th><th>Source</th><th>Contract</th></tr></thead><tbody>'+
       rows.map((row)=>"<tr>"+row.map((cell)=>"<td>"+esc(cell)+"</td>").join("")+"</tr>").join("")+
-      '</tbody></table></div><p class="hint">As of '+esc(state.portfolio.asOf||"—")+'. BNB is shown as unavailable until the backend exposes a native BNB balance source; no BNB number is fabricated.</p>';
+      '</tbody></table></div><p class="hint">Real-time BSC wallet balances. Binance Agentic Wallet omits balances below $0.01.</p>';
   }
 
   function renderHistoryView() {

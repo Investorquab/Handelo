@@ -105,3 +105,15 @@ test("live workspace snapshot returns portfolio before history and strategy enri
   assert.match(source, /type: "snapshot"/);
   assert.match(source, /type: "account"/);
 });
+
+test("live workspace loads Binance Agentic Wallet BSC balances", () => {
+  assert.match(source, /wallet", "balance", "--binanceChainId", "56"/);
+  assert.match(source, /walletBalances/);
+  assert.match(source, /walletBalancesError/);
+});
+test("live workspace fast snapshot loads portfolio and wallet balances in parallel", () => {
+  assert.match(source, /workspacePortfolioFast/);
+  assert.match(source, /Promise\.allSettled\(\[/);
+  assert.match(source, /portfolioSnapshot\(walletAddress\)/);
+  assert.match(source, /liveWalletBalances\(\)/);
+});

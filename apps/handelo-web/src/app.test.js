@@ -415,3 +415,17 @@ test("live stream reconnect keeps exponential backoff state", () => {
   assert.match(liveWorkspaceSource, /closeLiveStream\(false\)/);
   assert.match(liveWorkspaceSource, /Math\.min\(10000,1000\*Math\.pow\(2,state\.streamAttempt-1\)\)/);
 });
+
+test("live workspace renders all provider-returned BSC balances", () => {
+  assert.match(liveWorkspaceSource, /walletBalances/);
+  assert.match(liveWorkspaceSource, /renderLiveBalances/);
+  assert.match(liveWorkspaceSource, /liveBalanceTotal/);
+  assert.match(liveWorkspaceSource, /balance\.symbol/);
+  assert.match(liveWorkspaceSource, /balance\.address/);
+  assert.match(liveWorkspaceSource, /balance\.value/);
+});
+test("live portfolio view is not limited to NVDAB and USDT", () => {
+  assert.match(liveWorkspaceSource, /all BSC balances/);
+  assert.match(liveWorkspaceSource, /balances\.map\(balance=>/);
+  assert.match(liveWorkspaceSource, /<th>Contract<\/th>/);
+});

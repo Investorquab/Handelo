@@ -79,9 +79,28 @@ async function connectedWalletState(): Promise<{
   return { status: "CONNECTED", address: isEvmAddress(address ?? "") ? address : null };
 }
 
+type WalletBalanceRow = {
+  symbol?: string;
+  address?: string;
+  binanceChainId?: string;
+  balance?: string;
+  price?: string;
+  value?: string;
+};
+
+async function liveWalletBalances(): Promise<WalletBalanceRow[]> {
+  const balances = await bawJson<WalletBalanceRow[]>([
+    "wallet", "balance", "--binanceChainId", "56"
+  ]);
+  return balances
+    .filter(balance => String(balance.binanceChainId ?? "56") === "56")
+    .sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0));
+}
+
 async function workspaceAccount(walletAddress: string) {
-  const [portfolioResult, historyResult, strategyResult] = await Promise.allSettled([
+  const [portfolioResult, balancesResult, historyResult, strategyResult] = await Promise.allSettled([
     portfolioSnapshot(walletAddress),
+    liveWalletBalances(),
     getMarket().transactions(walletAddress, 20),
     listActiveStrategies(walletAddress)
   ]);
@@ -90,6 +109,8 @@ async function workspaceAccount(walletAddress: string) {
     address: { connected: true, address: walletAddress },
     portfolio: portfolioResult.status === "fulfilled" ? portfolioResult.value : null,
     portfolioError: portfolioResult.status === "rejected" ? errorMessage(portfolioResult.reason) : null,
+    walletBalances: balancesResult.status === "fulfilled" ? balancesResult.value : [],
+    walletBalancesError: balancesResult.status === "rejected" ? errorMessage(balancesResult.reason) : null,
     history: historyResult.status === "fulfilled" ? { wallet: walletAddress, transactions: historyResult.value } : null,
     strategies: strategyResult.status === "fulfilled" ? strategyResult.value : [],
     generatedAt: new Date().toISOString()
@@ -97,28 +118,21 @@ async function workspaceAccount(walletAddress: string) {
 }
 
 async function workspacePortfolioFast(walletAddress: string) {
-  try {
-    const portfolio = await portfolioSnapshot(walletAddress);
-    return {
-      wallet: { status: "CONNECTED", address: walletAddress },
-      address: { connected: true, address: walletAddress },
-      portfolio,
-      portfolioError: null,
-      history: null,
-      strategies: [],
-      generatedAt: new Date().toISOString()
-    };
-  } catch (error) {
-    return {
-      wallet: { status: "CONNECTED", address: walletAddress },
-      address: { connected: true, address: walletAddress },
-      portfolio: null,
-      portfolioError: errorMessage(error),
-      history: null,
-      strategies: [],
-      generatedAt: new Date().toISOString()
-    };
-  }
+  const [portfolioResult, balancesResult] = await Promise.allSettled([
+    portfolioSnapshot(walletAddress),
+    liveWalletBalances()
+  ]);
+  return {
+    wallet: { status: "CONNECTED", address: walletAddress },
+    address: { connected: true, address: walletAddress },
+    portfolio: portfolioResult.status === "fulfilled" ? portfolioResult.value : null,
+    portfolioError: portfolioResult.status === "rejected" ? errorMessage(portfolioResult.reason) : null,
+    walletBalances: balancesResult.status === "fulfilled" ? balancesResult.value : [],
+    walletBalancesError: balancesResult.status === "rejected" ? errorMessage(balancesResult.reason) : null,
+    history: null,
+    strategies: [],
+    generatedAt: new Date().toISOString()
+  };
 }
 
 async function workspaceSnapshot(walletOverride?: string) {
