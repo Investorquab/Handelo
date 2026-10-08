@@ -304,6 +304,31 @@ h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-s
 .toast.show{opacity:1;transform:none}.toast.hold{border-left-color:var(--amber)}
 @media(max-width:700px){.toast{left:14px;right:70px;max-width:none}}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
+
+.docintro{max-width:820px}
+.docintro .sub{max-width:780px}
+.docindex{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+.docindex span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;font:12px "DM Mono",monospace;color:var(--mute)}
+.docgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 56px;margin-top:34px}
+.docgrid>div{padding:22px 0;border-top:1px solid var(--line)}
+.docgrid>div:nth-child(-n+2){border-top:0}
+.docgrid span,.docevidence span{font:11px "DM Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.docgrid h3{font-size:26px;margin:10px 0 10px}
+.docgrid p{color:var(--mute);font-size:14px;margin:0}
+.doclist{list-style:none;margin:0;padding:0}
+.doclist li{padding:10px 0 10px 22px;border-top:1px solid var(--line);font-size:14px;position:relative}
+.doclist li:first-child{border-top:0}
+.doclist li::before{content:"";position:absolute;left:2px;top:17px;width:8px;height:8px;border-radius:50%;border:1px solid var(--mute)}
+.doclist.ok li::before{background:var(--green);border-color:var(--green)}
+.docevidence{margin-top:34px;padding-top:28px;border-top:1px solid var(--line)}
+.docevidence h3{font-size:26px;margin:10px 0 12px}
+.docevidence p{color:var(--mute);font-size:14px;margin:0 0 14px;max-width:760px}
+.dochint{margin-top:18px!important;font:12.5px/1.7 "DM Mono",monospace!important;color:var(--mute)!important}
+.doclinks{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+.doclinks a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:3px;font-size:13.5px}
+.doclinks a:hover{border-color:var(--gold)}
+.doccode{margin-top:20px;white-space:pre-wrap!important;line-height:1.65}
+@media(max-width:900px){.docgrid{grid-template-columns:1fr;gap:0}.docgrid>div:nth-child(2){border-top:1px solid var(--line)}}
 </style>
 
 </head>
@@ -367,6 +392,149 @@ h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-s
 </section>
 <section class="sec" id="status"><h2>What is validated, and what is not yet.</h2><p class="sub">Passing code, tests or mocks is not the same as passing live validation, and Handelo does not present it as such.</p><div class="two2"><div><h3>Validated today</h3><ul class="pl2 ok"><li>NVDA and NVDAB tested against Binance's BNB Chain RWA API, including the live market representation and the token audit response</li><li>Automated engineering gates passed across wallet, strategy, portfolio, policy, market, AI, execution and adversarial validation work</li><li>A local API flow from AI intent through market resolution to policy and execution gating</li><li>Failure paths: insufficient balance, wrong wallet context, expired or revoked permissions, stale data, malformed AI output, execution failure, duplicate triggers, runtime recovery and idempotency</li></ul></div><div><h3>Still to come</h3><ul class="pl2 no"><li>Additional assets, each validated end to end</li><li>Provider-backed live agent wallet creation</li><li>Funding from a personal wallet to the agent wallet</li><li>Mined onchain confirmation</li><li>Provider-backed withdrawal</li><li>The complete live provider and session flow</li><li>Controlled real-money validation</li><li>Final adversarial validation</li></ul><p class="sm">Additional assets will be added as they are validated.</p></div></div></section>
 <section class="sec" id="tech"><h2>Built as a modular TypeScript system.</h2><div class="two2"><div><p class="sm">A TypeScript and pnpm monorepo with separate packages for the web application, core logic, AI layer, policy engine, execution, market data, strategy runtime, portfolio intelligence, API, SDK, MCP and Telegram integration.</p><div class="chips"><span>Next.js</span><span>Fastify</span><span>PostgreSQL</span><span>Redis</span><span>Socket.IO</span><span>TypeScript</span></div></div><div><div class="cb"><div><i>Base</i>https://web3.binance.com/build</div><div><i>Request</i>GET /api/v1/dex/market/rwa/tokens</div><div><i>Chain</i>BNB Chain, ID 56</div></div><p class="sm">Each asset carries its token contract address, platform, symbol, decimals, underlying ticker and name, token to share ratio, token price, reference price, 24 hour volume, market cap and market status. Handelo does not hardcode a stock list. The resolver matches by token symbol or underlying ticker, and only NVDA and NVDAB are validated end to end.</p></div></div></section>
+
+<section class="sec" id="documentation">
+  <div class="docintro">
+    <div class="ey">Living product &amp; build documentation</div>
+    <h2>Why Handelo exists, how it works, and what we learned building it.</h2>
+    <p class="sub">Handelo is an AI operating layer for tokenized-stock markets on BNB Chain. This section records the product story, architecture, implementation boundaries, validation scope and builder evidence behind the system. It is designed to stay useful to a judge, a developer or a future contributor without pretending that unvalidated work is finished.</p>
+    <div class="docindex"><span>WHY</span><span>PROBLEM</span><span>ARCHITECTURE</span><span>IMPLEMENTATION</span><span>VALIDATION</span><span>BUILDER EVIDENCE</span></div>
+  </div>
+
+  <div class="docgrid">
+    <div>
+      <span>01 / Why we built Handelo</span>
+      <h3>Markets close. Tokenized stocks do not.</h3>
+      <p>Traditional market references can stop moving while their onchain representations continue trading. That creates a decision problem: a user needs the token price, the underlying reference, the size of the gap, market state, portfolio exposure and execution conditions in the same decision path.</p>
+    </div>
+    <div>
+      <span>02 / The problem</span>
+      <h3>A tokenized-stock trade carries context.</h3>
+      <p>A buy button alone does not explain whether the market is open, whether the token is trading away from its reference, whether the order changes portfolio risk, whether wallet authority is sufficient, or whether the execution should actually be allowed.</p>
+    </div>
+    <div>
+      <span>03 / The solution</span>
+      <h3>Understand. Strategize. Execute.</h3>
+      <p>Handelo connects market intelligence, AI explanation, strategy construction, deterministic policy, portfolio risk, wallet permissions, execution and verification into one governed workflow: Discover → Understand → Strategize → Check Risk → Review → Approve → Execute → Monitor.</p>
+    </div>
+    <div>
+      <span>04 / The design principle</span>
+      <h3>Intelligence is separated from authority.</h3>
+      <p>The AI can interpret intent and explain the market, but it is not the signing boundary. Private keys stay outside the LLM and browser UI. Deterministic application logic, policy, wallet scope, approval and verification remain authoritative.</p>
+    </div>
+  </div>
+
+  <div class="two2">
+    <div>
+      <h3>What Handelo is responsible for</h3>
+      <ul class="doclist ok">
+        <li>Resolve tokenized-stock market context from Binance-backed BSC data.</li>
+        <li>Compare the onchain token representation with its underlying reference.</li>
+        <li>Turn natural-language intent into a structured strategy or transaction path.</li>
+        <li>Apply deterministic policy and portfolio-risk checks before execution.</li>
+        <li>Keep wallet authority scoped and separate from the AI reasoning layer.</li>
+        <li>Record execution lifecycle and verification state rather than assuming success.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What Handelo refuses to pretend</h3>
+      <ul class="doclist">
+        <li>Additional tokenized stocks are not called supported until they are individually validated.</li>
+        <li>Passing tests or mocks is not presented as proof of live execution.</li>
+        <li>A wallet connection is not treated as unrestricted spending authority.</li>
+        <li>A generated or client-side transaction hash is not treated as proof of settlement.</li>
+        <li>P&amp;L is not inferred from current balances when trustworthy cost basis is unavailable.</li>
+        <li>Unverified wallet, security or provider behavior remains a blocking condition.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="docevidence">
+    <span>05 / Architecture</span>
+    <h3>The README architecture is the source of truth.</h3>
+    <p>Handelo separates the personal wallet from the agent execution context and places intelligence, strategies and portfolio context behind a deterministic Risk Governor, authorization and execution boundary.</p>
+    <div class="cb doccode"><code>HANDELO
+       |
+   +---+-------------------+
+   |                       |
+Personal Wallet       Agent Wallet
+   |                  within policy
+   +---------+-------------+
+             |
+        Handelo Core
+             |
+     +-------+-------+
+     |       |       |
+Intelligence Strategy Portfolio
+     +-------+-------+
+             |
+        Risk Governor
+             |
+       Authorization
+             |
+         Execution
+             |
+            BSC</code></div>
+    <div class="doclinks"><a href="https://github.com/Investorquab/Handelo#architecture" target="_blank" rel="noopener">Open Architecture in README ↗</a><a href="https://github.com/Investorquab/Handelo/blob/main/docs/AGENT-WALLET-ARCHITECTURE.md" target="_blank" rel="noopener">Agent wallet architecture ↗</a></div>
+  </div>
+
+  <div class="two2 docevidence">
+    <div>
+      <span>06 / What we built</span>
+      <h3>Current implementation surface</h3>
+      <ul class="doclist ok">
+        <li>Live market snapshot, caching and workspace streaming.</li>
+        <li>NVDA / NVDAB reference-price and onchain-price comparison.</li>
+        <li>Deterministic policy and portfolio-risk review.</li>
+        <li>Personal wallet context plus scoped Agentic Wallet boundary.</li>
+        <li>Strategy lifecycle, persisted execution records, recurring scheduling, idempotency and recovery paths.</li>
+        <li>Server-authoritative transaction review and explicit execution verification.</li>
+      </ul>
+    </div>
+    <div>
+      <span>07 / Current validated scope</span>
+      <h3>One market relationship, validated deeply.</h3>
+      <p>NVIDIA (NVDA), represented by NVDAB on BNB Chain, is the asset relationship currently validated end to end. The market ingestion architecture is provider-driven and generic, but additional assets remain unvalidated until they pass their own live checks.</p>
+      <p class="dochint">Current chain target: BNB Chain mainnet · Chain ID 56 · Spot tokenized-stock flow.</p>
+    </div>
+  </div>
+
+  <div class="two2 docevidence">
+    <div>
+      <span>08 / Builder evidence</span>
+      <h3>Evidence first, narrative second.</h3>
+      <p>The hackathon requires a Developer Experience Report worth 25% of the score. The report must be specific and builder-authored, so this page separates permanent product documentation from the evidence register used to write that report.</p>
+      <ul class="doclist">
+        <li>Record the exact documentation page and section where an instruction fails.</li>
+        <li>Record the exact Binance endpoint, request shape, response, error and observed latency.</li>
+        <li>Record actual tokenized-stock observations: liquidity, slippage, market-hours behavior and representation differences.</li>
+        <li>Record the real Agentic Wallet / CLI experience, including failed attempts and missing capabilities.</li>
+        <li>Record the redesign and API capabilities we would request from the platform team.</li>
+      </ul>
+      <p class="dochint">Recorded build observation: during local Binance API validation, a request returned HTTP 401 with the exact message “API Key is required.” We keep this kind of observation as evidence rather than filling unknown fields with invented numbers.</p>
+    </div>
+    <div>
+      <span>09 / What remains</span>
+      <h3>Unvalidated work stays visibly unvalidated.</h3>
+      <ul class="doclist">
+        <li>Additional tokenized-stock assets, each validated end to end.</li>
+        <li>The remaining provider-backed agent-wallet lifecycle checks.</li>
+        <li>Personal-wallet funding and agent-wallet transfer semantics where required.</li>
+        <li>Mined onchain confirmation and provider-backed withdrawal.</li>
+        <li>Final live provider/session validation and controlled real-money validation.</li>
+        <li>Final adversarial validation and submission packaging.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="docevidence">
+    <span>10 / Developer entry point</span>
+    <h3>Build from the repository, not from screenshots.</h3>
+    <p>Handelo is a TypeScript and pnpm monorepo. The repository contains the web application, API, core logic, market layer, policy, execution, strategy runtime, SDK, MCP and Telegram integrations, with GitHub Actions used as an engineering gate.</p>
+    <div class="doclinks"><a href="https://github.com/Investorquab/Handelo" target="_blank" rel="noopener">Repository ↗</a><a href="https://github.com/Investorquab/Handelo#local-development" target="_blank" rel="noopener">Local development ↗</a><a href="https://github.com/Investorquab/Handelo/blob/main/docs/AGENT-WALLET-ARCHITECTURE.md" target="_blank" rel="noopener">Wallet architecture ↗</a></div>
+  </div>
+</section>
+
 <section class="sec" id="faq"><h2>Questions, answered plainly.</h2><div class="faq"><details><summary><span>Is Handelo a chatbot?</span></summary><p>No. The AI is an intelligence and command layer inside a broader system of market data, strategy, portfolio, policy, wallet, execution and verification.</p></details><details><summary><span>Can the AI directly move my money?</span></summary><p>No. The model never receives private keys and does not control the wallet. Execution passes through deterministic application logic and the wallet provider boundary.</p></details><details><summary><span>Does Handelo hold my private key?</span></summary><p>The intended architecture does not require a private key or seed phrase. Handelo works with wallet context and a scoped agent wallet at the provider boundary.</p></details><details><summary><span>What stock does Handelo support today?</span></summary><p>NVIDIA (NVDA), represented by the bStock token NVDAB on BNB Chain. It is the only asset validated end to end.</p></details><details><summary><span>Does it support every bStock Binance returns?</span></summary><p>Not yet as a validated claim. Ingestion is provider driven and can consume Binance BNB Chain RWA assets, but each additional asset must be validated before it is presented as supported.</p></details><details><summary><span>What happens if a risk check fails?</span></summary><p>The transaction is blocked. The review shows the reasons, so you can see what prevented execution.</p></details><details><summary><span>Does passing the AI review mean a trade will happen?</span></summary><p>No. Policy, portfolio risk, wallet authorization, security checks, quote freshness, explicit confirmation, execution configuration and verification all still apply.</p></details><details><summary><span>Is Handelo live with real-money autonomous trading?</span></summary><p>No. Substantial engineering and local validation is complete. Controlled real-money validation and the remaining live provider checks are later gates.</p></details></div></section>
 <section class="sec end">
   <h2>See it working</h2>
