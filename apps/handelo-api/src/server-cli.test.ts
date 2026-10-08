@@ -117,3 +117,15 @@ test("live workspace fast snapshot loads portfolio and wallet balances in parall
   assert.match(source, /portfolioSnapshot\(walletAddress\)/);
   assert.match(source, /liveWalletBalances\(\)/);
 });
+
+test("live review supports BNB and USDT funding tokens", () => {
+  assert.match(source, /resolveFundingBalance/);
+  assert.match(source, /fundingQtyForUsd/);
+  assert.doesNotMatch(source, /currently requires the BSC USDT quote token/);
+});
+test("live review and execution bind the exact funding quantity", () => {
+  assert.match(source, /fundingTokenQty/);
+  assert.match(source, /fromTokenQty,/);
+  assert.match(source, /fromTokenQty: reviewedToken\?\.fromTokenQty/);
+  assert.match(source, /ticker === "NVDA" \? "NVDAB" : ticker/);
+});

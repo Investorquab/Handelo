@@ -6,6 +6,7 @@ const input: ReviewTokenInput = {
   ticker: "NVDA",
   amountUsd: 20,
   fromToken: "0x55d398326f99059fF775485246999027B3197955",
+  fromTokenQty: "20",
   contract: "0x0000000000000000000000000000000000000001",
   slippage: "0.50",
   wallet: "0x0000000000000000000000000000000000000003"
@@ -92,4 +93,10 @@ test("quote drift guard blocks material price movement", () => {
 test("quote drift guard defaults to a one percent tolerance when review omitted slippage", () => {
   assert.equal(quoteDriftWithinTolerance(100, 100.9), true);
   assert.equal(quoteDriftWithinTolerance(100, 101.1), false);
+});
+
+test("review token rejects a changed funding quantity", () => {
+  const now = 1_000_000;
+  const token = createReviewToken(input, now);
+  assert.equal(verifyReviewToken(token, { ...input, fromTokenQty: "0.5" }, now + 1_000), false);
 });

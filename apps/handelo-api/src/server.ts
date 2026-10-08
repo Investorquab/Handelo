@@ -89,12 +89,33 @@ type WalletBalanceRow = {
 };
 
 async function liveWalletBalances(): Promise<WalletBalanceRow[]> {
-  const balances = await bawJson<WalletBalanceRow[]>([
-    "wallet", "balance", "--binanceChainId", "56"
-  ]);
+  const balances = await bawJson<WalletBalanceRow[]>(["wallet", "balance", "--binanceChainId", "56"]);
   return balances
     .filter(balance => String(balance.binanceChainId ?? "56") === "56")
     .sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0));
+}
+
+const BSC_NATIVE_TOKEN = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+function resolveFundingBalance(balances: WalletBalanceRow[], tokenAddress: string, targetAddress: string) {
+  const normalized=tokenAddress.trim().toLowerCase();
+  if(!normalized)throw new Error("A funding token is required.");
+  if(normalized===targetAddress.trim().toLowerCase())throw new Error("NVDAB cannot be used as its own funding token.");
+  const balance=balances.find(item=>String(item.address??"").trim().toLowerCase()===normalized);
+  if(!balance)throw new Error("The selected funding token is not available in the connected BSC wallet.");
+  const price=Number(balance.price),value=Number(balance.value);
+  if(!Number.isFinite(price)||price<=0)throw new Error("Live USD price is unavailable for the selected funding token.");
+  if(!Number.isFinite(value)||value<=0)throw new Error("The selected funding token has no available balance.");
+  return balance;
+}
+
+function fundingQtyForUsd(amountUsd:number,balance:WalletBalanceRow):string{
+  const price=Number(balance.price),value=Number(balance.value);
+  if(!Number.isFinite(price)||price<=0)throw new Error("Live funding-token price is unavailable.");
+  if(!Number.isFinite(value)||value<=0||amountUsd>value+1e-9)throw new Error("The selected funding-token balance is insufficient for this purchase.");
+  const qty=amountUsd/price;
+  if(!Number.isFinite(qty)||qty<=0)throw new Error("Could not calculate a valid funding-token quantity.");
+  return qty.toFixed(18).replace(/\.0+$/,"").replace(/(\.\d*?)0+$/,"$1");
 }
 
 async function workspaceAccount(walletAddress: string) {
@@ -738,7 +759,11 @@ const server = createServer(async (req, res) => {
       if (!isEvmAddress(walletAddress)) {
         return json(res, 400, { error: "A valid connected wallet address is required for transaction review." });
       }
-      const asset = await getMarket().find(ticker);
+      const connectedForReview = await connectedWalletState();
+      if (!connectedForReview.address || connectedForReview.address.toLowerCase() !== walletAddress.toLowerCase()) {
+        return json(res, 409, { error: "The connected Binance Agentic Wallet does not match the wallet supplied for review." });
+      }
+      const asset = await getMarket().find(ticker === "NVDA" ? "NVDAB" : ticker);
       if (!isExecutableMarketAsset(asset)) {
         return json(res, 422, { error: "Live market data is invalid for this tokenized stock, so Handelo will not create an executable review." });
       }
@@ -794,21 +819,23 @@ const server = createServer(async (req, res) => {
       if (slippageResult.error) return json(res, 400, { error: slippageResult.error });
       const slippage = slippageResult.value;
       let quoteError: string | null = null;
+      let fromTokenQty: string | null = null;
+      let fundingSymbol: string | null = null;
 
       if (fromToken && policy.decision !== "BLOCK" && riskDecision === "PASS") {
         try {
-          if (fromToken.toLowerCase() !== DEFAULT_BSC_QUOTE_TOKEN.toLowerCase()) {
-            throw new Error("Handelo's USD-notional execution path currently requires the BSC USDT quote token.");
-          }
-          quote = await wallet.quote({
-            fromTokenQty: String(amountUsd),
+          const funding=resolveFundingBalance(await liveWalletBalances(),fromToken,asset.tokenContractAddress);
+          fromTokenQty=fundingQtyForUsd(amountUsd,funding);
+          fundingSymbol=funding.symbol??null;
+          quote=await wallet.quote({
+            fromTokenQty,
             fromToken,
-            toToken: asset.tokenContractAddress,
-            binanceChainId: "56",
+            toToken:asset.tokenContractAddress,
+            binanceChainId:"56",
             slippage
           });
-        } catch (error) {
-          quoteError = error instanceof Error ? error.message : String(error);
+        }catch(error){
+          quoteError=error instanceof Error?error.message:String(error);
         }
       }
 
@@ -951,11 +978,7 @@ const server = createServer(async (req, res) => {
         });
       }
 
-      if (fromToken.toLowerCase() !== DEFAULT_BSC_QUOTE_TOKEN.toLowerCase()) {
-        return json(res, 400, { error: "Handelo's USD-notional execution path currently requires the BSC USDT quote token." });
-      }
-
-      const asset = await getMarket().find(ticker);
+      const asset = await getMarket().find(ticker === "NVDA" ? "NVDAB" : ticker);
       if (!isExecutableMarketAsset(asset)) {
         return json(res, 422, { error: "Live market data is invalid for this tokenized stock, so execution is blocked." });
       }
@@ -968,6 +991,7 @@ const server = createServer(async (req, res) => {
         ticker: asset.underlyingTicker,
         amountUsd: amount,
         fromToken,
+        fromTokenQty: reviewedToken?.fromTokenQty ?? "",
         contract: asset.tokenContractAddress,
         slippage,
         wallet: walletAddress,
@@ -1046,7 +1070,7 @@ const server = createServer(async (req, res) => {
       }
 
       const reviewedQuote = await wallet.quote({
-        fromTokenQty: String(amount),
+        fromTokenQty: reviewedToken?.fromTokenQty ?? "",
         fromToken,
         toToken: asset.tokenContractAddress,
         binanceChainId: "56",

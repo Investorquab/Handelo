@@ -432,3 +432,20 @@ test("live portfolio view is not limited to NVDAB and USDT", () => {
   assert.match(liveWorkspaceSource, /balances\.map\(balance=>/);
   assert.match(liveWorkspaceSource, /<th>Contract<\/th>/);
 });
+
+test("live buy uses a real connected-wallet funding token selector", () => {
+  assert.match(liveWorkspaceSource, /live-funding-token/);
+  assert.match(liveWorkspaceSource, /Pay with/);
+  assert.match(liveWorkspaceSource, /selectedFundingBalance/);
+  assert.match(liveWorkspaceSource, /walletBalances/);
+  assert.match(liveWorkspaceSource, /BNB/);
+  assert.match(liveWorkspaceSource, /USDT/);
+});
+test("live buy explicitly targets the NVDAB representation", () => {
+  assert.match(liveWorkspaceSource, /ticker:state\.market\.tokenSymbol\|\|"NVDAB"/);
+  assert.doesNotMatch(liveWorkspaceSource, /ticker:state\.market\.underlyingTicker\|\|"NVDA"/);
+});
+test("live buy displays the selected funding-token equivalent", () => {
+  assert.match(liveWorkspaceSource, /sourceQty=usd\/Number\(funding\.price\)/);
+  assert.match(liveWorkspaceSource, /funding\.symbol/);
+});

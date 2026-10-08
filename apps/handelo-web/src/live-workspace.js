@@ -132,6 +132,50 @@
       scheduleLiveStreamReconnect();
     };
   }
+  function ensureLiveFundingControl(){
+    if(document.getElementById("live-funding-wrap"))return;
+    const order=document.querySelector(".policy .order");
+    if(!order)return;
+    const wrap=document.createElement("label");
+    wrap.id="live-funding-wrap";
+    wrap.style.cssText="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--mute);";
+    wrap.innerHTML='<span>Pay with</span><select id="live-funding-token" aria-label="Funding token" style="flex:1;min-width:145px;background:#0d0b09;border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:6px 8px;font:12px monospace"></select>';
+    order.parentElement.insertBefore(wrap,order.nextSibling);
+    $("live-funding-token")?.addEventListener("change",()=>{
+      state.review=null;
+      updateLiveOrderValue();
+      if($("approve"))$("approve").textContent=state.address?.connected?"Review live order":"Connect wallet to review";
+    });
+  }
+
+  function selectedFundingBalance(){
+    const address=String($("live-funding-token")?.value||"").toLowerCase();
+    return state.walletBalances.find(balance=>String(balance?.address||"").toLowerCase()===address)||null;
+  }
+
+  function renderFundingOptions(){
+    ensureLiveFundingControl();
+    const select=$("live-funding-token");
+    if(!select)return;
+    const current=select.value;
+    const target=String(state.market?.tokenSymbol||"NVDAB").toUpperCase();
+    const balances=state.walletBalances.filter(balance=>{
+      const symbol=String(balance?.symbol||"").toUpperCase();
+      const value=Number(balance?.value), price=Number(balance?.price);
+      return String(balance?.binanceChainId||"56")==="56"&&symbol!==target&&Number.isFinite(value)&&value>0&&Number.isFinite(price)&&price>0;
+    });
+    select.innerHTML=balances.map(balance=>'<option value="'+esc(balance.address||"")+'">'+esc(String(balance.symbol||"").toUpperCase())+" · "+esc(String(balance.balance||"0"))+" · "+esc(money(balance.value))+"</option>").join("");
+    const same=balances.find(balance=>String(balance.address||"").toLowerCase()===String(current).toLowerCase());
+    if(same)select.value=same.address;
+    else{
+      const usdt=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="USDT");
+      const bnb=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="BNB");
+      const first=usdt||bnb||balances[0];
+      if(first)select.value=first.address;
+    }
+    if(!balances.length)select.innerHTML='<option value="">No funded token available</option>';
+  }
+
   function resetLiveSurface(){closeWalletMenu();closeLiveStream();
     if ($("ph")) $("ph").textContent = "Live order review";
     if ($("pform")) $("pform").hidden = false;
@@ -143,6 +187,8 @@
     if (stress) stress.hidden = true;
     if ($("approve")) { $("approve").disabled = false; $("approve").textContent = "Connect wallet to review"; $("approve").title = ""; }
     if ($("ordv")) $("ordv").textContent = "—";
+    ensureLiveFundingControl();
+    if ($("live-funding-token")) $("live-funding-token").innerHTML='<option value="">Waiting for wallet balances…</option>';
     if ($("checks")) $("checks").innerHTML = '<li><span class="dot"></span><span>Connect your wallet to review a real order<small>Handelo will use the backend policy, portfolio, security and provider quote services.</small></span><span class="v">WAITING</span></li>';
     if ($("msg")) $("msg").textContent = "Connecting to Handelo API…";
     if ($("sus")) $("sus").innerHTML = '<span class="dot"></span> Connecting';
@@ -204,10 +250,18 @@
       '</svg>';
   }
 
-  function updateLiveOrderValue() {
-    const qty = Math.max(1, Math.min(500, parseInt($("qty")?.value, 10) || 1));
-    const tokenPrice = Number(state.market?.tokenPrice);
-    if ($("ordv")) $("ordv").textContent = Number.isFinite(tokenPrice) ? "$"+(qty*tokenPrice).toFixed(2)+" at "+money(tokenPrice) : "—";
+  function updateLiveOrderValue(){
+    const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
+    const tokenPrice=Number(state.market?.tokenPrice);
+    const funding=selectedFundingBalance();
+    if($("ordv")&&!Number.isFinite(tokenPrice)){$("ordv").textContent="—";return;}
+    const usd=qty*tokenPrice;
+    if($("ordv")&&funding&&Number(funding.price)>0){
+      const sourceQty=usd/Number(funding.price);
+      $("ordv").textContent=money(usd)+" · ≈ "+sourceQty.toFixed(8)+" "+String(funding.symbol||"").toUpperCase();
+    }else if($("ordv")){
+      $("ordv").textContent=money(usd)+" · choose funding token";
+    }
   }
 
   function renderMarket(market) {
@@ -233,6 +287,7 @@
       '<div class="t">'+esc(market.tokenSymbol || "NVDAB")+' token<b>'+money(token)+'</b></div>' +
       '<div>Gap<b>'+ (Number.isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2)+"%":"—") +'</b></div>';
     renderLiveChart();
+    renderFundingOptions();
     updateLiveOrderValue();
   }
 
@@ -257,6 +312,7 @@
     state.strategies=Array.isArray(account.strategies)?account.strategies:[];
     renderWalletAndPortfolio(state.address,state.portfolio);
     renderLiveBalances();
+    renderFundingOptions();
     renderStrategyCount();
     renderPortfolioView();
     renderHistoryView();
@@ -666,13 +722,28 @@
   async function reviewLiveOrder(){
     if(state.reviewInFlight||!state.market)return;
     if(!state.address?.connected){await connectLiveWallet();return;}
-    const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1)), tokenPrice=Number(state.market.tokenPrice);
+    const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
+    const tokenPrice=Number(state.market.tokenPrice);
+    const funding=selectedFundingBalance();
     if(!Number.isFinite(tokenPrice)||tokenPrice<=0)return;
-    state.reviewInFlight=true;state.review=null;updateLiveOrderValue();
+    if(!funding){
+      if($("msg"))$("msg").textContent="Choose a funded BSC token to pay for NVDAB.";
+      return;
+    }
+    state.reviewInFlight=true;
+    state.review=null;
+    updateLiveOrderValue();
     if($("approve")){$("approve").disabled=true;$("approve").textContent="Reviewing live order…";}
     try{
       const side=document.querySelector(".seg button[aria-pressed='true']")?.dataset.side==="sell"?"sell":"buy";
-      const data=await send("/api/review",{ticker:state.market.underlyingTicker||"NVDA",amountUsd:qty*tokenPrice,action:side,fromToken:USDT,wallet:state.address.address},18000);
+      const data=await send("/api/review",{
+        ticker:state.market.tokenSymbol||"NVDAB",
+        amountUsd:qty*tokenPrice,
+        action:side,
+        fromToken:String(funding.address||""),
+        wallet:state.address.address
+      },18000);
+      data.fromToken=String(funding.address||"");
       renderReview(data);
     }catch(error){
       state.review=null;
@@ -682,14 +753,24 @@
     }finally{state.reviewInFlight=false;}
   }
 
-  async function executeLiveOrder(){
+async function executeLiveOrder(){
     if(!state.review?.reviewToken||!state.address?.connected)return;
-    state.reviewInFlight=true;if($("approve")){$("approve").disabled=true;$("approve").textContent="Executing…";}
+    state.reviewInFlight=true;
+    if($("approve")){$("approve").disabled=true;$("approve").textContent="Executing…";}
     try{
-      const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1)),tokenPrice=Number(state.market?.tokenPrice);
-      const result=await send("/api/execute",{ticker:state.market?.underlyingTicker||"NVDA",amountUsd:qty*tokenPrice,fromToken:USDT,reviewToken:state.review.reviewToken,wallet:state.address.address,confirmed:true},25000);
+      const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
+      const tokenPrice=Number(state.market?.tokenPrice);
+      const result=await send("/api/execute",{
+        ticker:state.market?.tokenSymbol||"NVDAB",
+        amountUsd:qty*tokenPrice,
+        fromToken:state.review.fromToken||selectedFundingBalance()?.address||"",
+        reviewToken:state.review.reviewToken,
+        wallet:state.address.address,
+        confirmed:true
+      },25000);
       if($("msg"))$("msg").textContent=result?.result?.txHash?"Execution submitted · "+result.result.txHash:"Execution completed without a transaction hash.";
-      state.review=null;await connectWorkspaceStream();
+      state.review=null;
+      await connectWorkspaceStream();
     }catch(error){
       if($("msg"))$("msg").textContent="Execution was not completed: "+error.message;
       if($("approve"))$("approve").disabled=false;
