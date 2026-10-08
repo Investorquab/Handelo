@@ -378,7 +378,7 @@ test("live workspace wallet menu supports copy and real disconnect", () => {
 test("live assistant output formats markdown professionally", () => {
   assert.match(liveWorkspaceSource, /function formatLiveAssistantText\(rawText\)/);
   assert.match(liveWorkspaceSource, /<strong>/);
-  assert.match(liveWorkspaceSource, /<ol>/);
+  assert.match(liveWorkspaceSource, /listType="ol"/);
   assert.match(liveWorkspaceSource, /replace\(\/\\*\\*\/g, ""\)/);
 });
 
