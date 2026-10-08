@@ -389,8 +389,8 @@ h1{font-size:32px}.hero h1{font-size:40px}.price{text-align:left}.price b{font-s
       <div>Reference price<b id="sr">$187.40</b></div>
       <div>Token price<b id="st">$189.10</b></div>
       <div>Gap<b id="sg" style="color:var(--gold)">+0.91%</b></div>
-      <div>24h volume<b id="sv">—</b></div>
-      <div>Pool liquidity<b id="slq">—</b></div>
+      <div>24h volume<b>$2.4M</b></div>
+      <div>Pool liquidity<b>$180K</b></div>
       <div>US market<b id="sus" style="font-family:Manrope;font-size:15px"></b></div>
       <div>Token market<b style="font-family:Manrope;font-size:15px"><span class="dot g"></span> Open</b></div>
     </div>
@@ -519,7 +519,7 @@ function policy(P){var q=qty(),c=checks(P,S.side,q),bad=c.filter(function(x){ret
 $("pc").textContent=(c.length-bad)+" of "+c.length+" checks pass";$("pc").style.color=bad?"var(--red)":"var(--green)";$("ordv").textContent="$"+(q*P.k).toFixed(2)+" at $"+P.k.toFixed(2);
 setH("checks",c.map(function(x){return'<li class="'+(x[3]?"":"fail")+'"><span class="dot '+(x[3]?"g":"r")+'"></span><span>'+x[0]+"<small>"+x[1]+'</small></span><span class="v">'+x[2]+"</span></li>"}).join(""));
 var a=$("approve");a.disabled=bad>0;a.title=bad?"Blocked: "+bad+" policy "+(bad>1?"checks":"check")+" failed":"";a.textContent=bad?"Blocked by "+bad+(bad>1?" checks":" check"):S.w?"Approve order":"Connect wallet to approve"}
-function render(){if(window.HANDELO_LIVE_WORKSPACE){return}var P=px(),g=(P.k/P.r-1)*100,o=us(S.t),nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),c=rk<40?"var(--green)":rk<=60?"var(--amber)":"var(--red)";
+function render(){var P=px(),g=(P.k/P.r-1)*100,o=us(S.t),nv=S.nv*P.k,bv=S.bnb*S.bnbp,tot=nv+bv+S.usdt,rk=risk(nv/tot,g),c=rk<40?"var(--green)":rk<=60?"var(--amber)":"var(--red)";
 $("tp").textContent=$("st").textContent="$"+P.k.toFixed(2);$("sr").textContent="$"+P.r.toFixed(2);$("sg").textContent=(g>=0?"+":"")+g.toFixed(2)+"%";
 $("sus").innerHTML='<span class="dot '+(o?"g":"r")+'"></span> '+(o?"Open":"Closed");
 chart();ro();
@@ -569,12 +569,12 @@ $("send").addEventListener("click",function(){ask()});
 $("thread").addEventListener("click",function(e){var a=e.target.dataset.a;if(!a)return;closeAsk();if(a=="bs"){openB();return}if(a=="port")location.hash="portfolio";else if(a=="hist")location.hash="history";else{location.hash="workspace";route();if(a=="order")document.querySelector(".policy").scrollIntoView({behavior:"smooth",block:"center"})}});
 route();
 function wal(){var w=$("wal");w.innerHTML=S.w?'<span class="dot g"></span>0x7a3f...91c2':"Connect wallet";w.className="chip wal"+(S.w?" on":"");w.title=S.w?"Disconnect wallet":""}
-$("wal").addEventListener("click",function(){if(window.HANDELO_LIVE_WORKSPACE)return;S.w=!S.w;wal();render()});
+$("wal").addEventListener("click",function(){S.w=!S.w;wal();render()});
 function rcpt(){var d=S.done;$("pform").hidden=!!d;$("rcpt").hidden=!d;if(!d)return;
 var rows=[["Order","#"+d.id],["Price","$"+d.k.toFixed(2)],["Time",d.t+" ET"],["Transaction",d.h],["Policy","5 of 5 checks passed"],["NVDAB position",d.nv+" ("+Math.round(d.sh)+"% of portfolio)"],["USDT reserve",d.us.toFixed(1)+"%"]];
 $("rcpt").innerHTML='<div class="rh"><svg class="ck" width="20" height="20" viewBox="0 0 34 34" fill="none" stroke="#23c94a" stroke-width="3" aria-hidden="true"><circle cx="17" cy="17" r="15"/><path d="M10 17.5l5 5 9-10" stroke-linecap="square"/></svg><div><h2>Order completed</h2><span>Filled on BNB Chain</span></div></div><div class="order"><span><b>'+(d.s=="buy"?"Bought ":"Sold ")+d.q+' NVDAB</b></span><span class="num">$'+(d.q*d.k).toFixed(2)+'</span></div><ul class="rl">'+rows.map(function(r){return"<li><span>"+r[0]+'</span><span class="num">'+r[1]+"</span></li>"}).join("")+'</ul><div class="pf"><button class="btn quiet" id="rh">View in history</button><button class="btn solid" id="rn">Place another order</button></div>';
 $("rh").onclick=function(){location.hash="history"};$("rn").onclick=function(){S.done=null;rcpt();render()}}
-$("approve").addEventListener("click",function(){if(window.HANDELO_LIVE_WORKSPACE){return}if(!S.w){S.w=true;wal();render();return}var q=qty(),s=S.side,P=px(),k=P.k,t0=ts();if(exec(s,q)){log("Order filled: "+(s=="buy"?"bought ":"sold ")+q+" NVDAB at $"+k.toFixed(2)+". Verified.");var tot=S.nv*k+S.bnb*S.bnbp+S.usdt;S.on++;S.done={id:"HX-"+S.on,s:s,q:q,k:k,t:t0,h:"0x"+Math.random().toString(16).slice(2,6)+"..."+Math.random().toString(16).slice(2,6),nv:S.nv,sh:S.nv*k/tot*100,us:S.usdt/tot*100};rcpt();render()}});
+$("approve").addEventListener("click",function(){if(!S.w){S.w=true;wal();render();return}var q=qty(),s=S.side,P=px(),k=P.k,t0=ts();if(exec(s,q)){log("Order filled: "+(s=="buy"?"bought ":"sold ")+q+" NVDAB at $"+k.toFixed(2)+". Verified.");var tot=S.nv*k+S.bnb*S.bnbp+S.usdt;S.on++;S.done={id:"HX-"+S.on,s:s,q:q,k:k,t:t0,h:"0x"+Math.random().toString(16).slice(2,6)+"..."+Math.random().toString(16).slice(2,6),nv:S.nv,sh:S.nv*k/tot*100,us:S.usdt/tot*100};rcpt();render()}});
 document.addEventListener("keydown",function(e){if(e.key=="f"&&e.target.tagName!="INPUT"){S.sp=S.sp==1?6:S.sp==6?24:1}});
 function nm(x){return x.type=="buy"?"Daily buy of "+x.q+" NVDAB":"Take profit at +"+x.gain+"%"}
 function strl(P){S.str.forEach(function(x){var e=$("sx"+x.id);if(e)e.textContent=!x.on?"Paused":x.type=="buy"?"Active, next run 00:00":x.done?"Done, target hit":"Active, at "+Math.max(0,(P.k/S.avg-1)*100).toFixed(1)+"% of "+x.gain+"%"})}
@@ -595,10 +595,8 @@ function tlr(){var t=+$("ts").value,r=ref(t,1),k=r+prem(t,1),g=(k/r-1)*100;$("tl
 $("ts").addEventListener("input",tlr);
 function rl(){var P=px(),nv=S.nv*P.k,tot=nv+S.bnb*S.bnbp+S.usdt,b="";for(var i=0;i<14;i++){var h=i==9;b+='<rect x="'+(i*17+2)+'" y="'+(h?8:4)+'" width="10" height="'+(h?24:32)+'" fill="'+(h?"none":"#d4af37")+'"'+(h?' stroke="#e6af06"':"")+"/>"}
 $("c1").innerHTML=spark();setH("c2",'<svg viewBox="0 0 240 40" class="sp2">'+b+"</svg>");setH("c3",meter("NVDAB exposure",nv/tot*100,70,1))}
-function goLive(){window.HANDELO_LIVE_WORKSPACE=true;location.hash="workspace?mode=live";route();if(window.HandeloLiveWorkspace)window.HandeloLiveWorkspace.load()}
-function goDemo(){window.HANDELO_LIVE_WORKSPACE=false;location.hash="workspace?mode=demo";route();render()}
-["oh1","oh2","openh"].forEach(function(i){$(i).addEventListener("click",goLive)});
-$("tryd").addEventListener("click",goDemo);
+function go(){location.hash="workspace"}
+["oh1","oh2","openh","tryd"].forEach(function(i){$(i).addEventListener("click",go)});
 $("how").addEventListener("click",function(){$("loop").scrollIntoView({behavior:"smooth"})});
 window.addEventListener("resize",chart);
 tlr();rl();
@@ -611,6 +609,5 @@ document.querySelector(".lg").addEventListener("click",function(e){var b=e.targe
 setInterval(function(){if(S.run)step()},100);
 ranges();render();
 </script>
-<script src="./src/live-workspace.js"></script>
 </body>
 </html>
