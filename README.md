@@ -165,6 +165,8 @@ Never commit secrets or private keys.
 
 The repository uses GitHub Actions for TypeScript checks, frontend syntax checks and the full workspace test suite. The current web workspace is backed by live market data, real wallet status/address/guardrails, live BSC portfolio reconciliation, deterministic policy/risk review, security-audit gating and explicit execution boundaries.
 
+Active strategy cards also surface persisted runtime telemetry — next scheduled run, last execution, finished/failed counts and attributed spend — so autonomous behavior is observable rather than implied.
+
 The Ask Handelo workspace chat now surfaces the agent's server-generated decision trace — observe, reason, propose, policy-check and execution-gate — so users can see why an action is ready or blocked without exposing model signing authority.
 
 The transaction review surface is server-authoritative through `/api/review`: the browser does not run a second policy engine. PASS/READY, confirmation-required and BLOCK outcomes, policy reasons, quote quality and security-audit failures are surfaced from the runtime. Incomplete or unavailable token-security audit results fail closed before execution.
