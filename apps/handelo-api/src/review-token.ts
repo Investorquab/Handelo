@@ -4,6 +4,7 @@ export interface ReviewTokenInput {
   ticker: string;
   amountUsd: number;
   fromToken: string;
+  fromTokenQty: string;
   contract: string;
   slippage?: string;
   wallet: string;
@@ -57,6 +58,7 @@ export function verifyReviewToken(token: string, input: ReviewTokenInput, now = 
   return parsed.ticker === input.ticker
     && parsed.amountUsd === input.amountUsd
     && parsed.fromToken.toLowerCase() === input.fromToken.toLowerCase()
+    && parsed.fromTokenQty === input.fromTokenQty
     && parsed.contract.toLowerCase() === input.contract.toLowerCase()
     && parsed.slippage === input.slippage
     && parsed.wallet.toLowerCase() === input.wallet.toLowerCase()
