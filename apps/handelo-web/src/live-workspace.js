@@ -80,10 +80,10 @@
     } catch { return "#"; }
   }
 
-  function closeLiveStream(){
+  function closeLiveStream(resetAttempt = true){
     if(state.streamReconnectTimer){clearTimeout(state.streamReconnectTimer);state.streamReconnectTimer=null;}
     if(state.streamSource){state.streamSource.close();state.streamSource=null;}
-    state.streamAttempt=0;
+    if(resetAttempt)state.streamAttempt=0;
   }
 
   function scheduleLiveStreamReconnect(){
@@ -98,7 +98,7 @@
 
   async function connectWorkspaceStream(){
     if(!window.HANDELO_LIVE_WORKSPACE)return;
-    closeLiveStream();
+    closeLiveStream(false);
     const currentWallet=state.address?.connected?state.address.address:"";
     const query=currentWallet?"?wallet="+encodeURIComponent(currentWallet):"";
     try{

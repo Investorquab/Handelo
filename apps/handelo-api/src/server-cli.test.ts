@@ -98,3 +98,10 @@ test("live market refresh is shared across workspace clients", () => {
   assert.match(source, /2500/);
   assert.match(source, /marketRefresh/);
 });
+
+test("live workspace snapshot returns portfolio before history and strategy enrichment", () => {
+  assert.match(source, /workspacePortfolioFast/);
+  assert.match(source, /workspaceAccount\(client\.wallet\)/);
+  assert.match(source, /type: "snapshot"/);
+  assert.match(source, /type: "account"/);
+});

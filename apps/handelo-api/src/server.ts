@@ -96,6 +96,31 @@ async function workspaceAccount(walletAddress: string) {
   };
 }
 
+async function workspacePortfolioFast(walletAddress: string) {
+  try {
+    const portfolio = await portfolioSnapshot(walletAddress);
+    return {
+      wallet: { status: "CONNECTED", address: walletAddress },
+      address: { connected: true, address: walletAddress },
+      portfolio,
+      portfolioError: null,
+      history: null,
+      strategies: [],
+      generatedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      wallet: { status: "CONNECTED", address: walletAddress },
+      address: { connected: true, address: walletAddress },
+      portfolio: null,
+      portfolioError: errorMessage(error),
+      history: null,
+      strategies: [],
+      generatedAt: new Date().toISOString()
+    };
+  }
+}
+
 async function workspaceSnapshot(walletOverride?: string) {
   const markets = await discoverMarketsCached();
   const marketAsset = pickLiveMarket(markets);
@@ -107,7 +132,7 @@ async function workspaceSnapshot(walletOverride?: string) {
     catch { walletState = { status: "UNAVAILABLE", address: null }; }
   }
   if (walletState.status === "CONNECTED" && walletState.address) {
-    return { market: marketAsset, ...await workspaceAccount(walletState.address) };
+    return { market: marketAsset, ...await workspacePortfolioFast(walletState.address) };
   }
   return {
     market: marketAsset,
@@ -380,7 +405,7 @@ const server = createServer(async (req, res) => {
       "cache-control": "no-cache, no-store, must-revalidate",
       "connection": "keep-alive",
       "access-control-allow-origin": CORS_ORIGIN,
-      "access-control-allow-headers": "content-type, x-handando-api-key",
+      "access-control-allow-headers": "content-type, x-handelo-api-key",
       "x-accel-buffering": "no"
     });
     const client: LiveWorkspaceClient = { id: clientId, res, wallet: requestedWallet || null };
@@ -391,6 +416,11 @@ const server = createServer(async (req, res) => {
       const snapshot = await workspaceSnapshot(requestedWallet || undefined);
       client.wallet = snapshot.address?.connected ? snapshot.address.address : null;
       writeLiveWorkspaceEvent(client, { type: "snapshot", data: snapshot });
+      if (client.wallet) {
+        void workspaceAccount(client.wallet).then(account => {
+          if (liveWorkspaceClients.has(client.id)) writeLiveWorkspaceEvent(client, { type: "account", data: account });
+        }).catch(() => undefined);
+      }
     } catch (error) {
       writeLiveWorkspaceEvent(client, { type: "error", error: errorMessage(error) });
     }
