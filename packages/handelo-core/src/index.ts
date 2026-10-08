@@ -289,7 +289,8 @@ export function evaluatePortfolioStrategyRisk(
     maxSingleAssetExposurePercent: 35,
     maxTransactionUsd: 100,
     minimumReservePercent: 10
-  }
+  },
+  action: "BUY"|"SELL" = "BUY"
 ): RiskResult {
   const total = Number(portfolio.totalValueUsd);
   const current = portfolio.positions.find(
@@ -298,36 +299,44 @@ export function evaluatePortfolioStrategyRisk(
       position.tokenSymbol.toLowerCase() === asset.toLowerCase()
   );
   const currentValue = Number(current?.valueUsd ?? 0);
-  const projectedTotal = Number.isFinite(total) && total >= 0 ? total + amountUsd : amountUsd;
+  const isSell = action === "SELL";
+  const projectedTotal = Number.isFinite(total) && total >= 0
+    ? (isSell ? total : total + amountUsd)
+    : Math.max(amountUsd, 0);
+  const projectedAssetValue = Math.max(0, currentValue + (isSell ? -amountUsd : amountUsd));
   const projectedExposurePercent = projectedTotal > 0
-    ? ((currentValue + amountUsd) / projectedTotal) * 100
+    ? (projectedAssetValue / projectedTotal) * 100
     : 100;
-  const balance = portfolio.balanceUsd;
-  const minimumReservePercent = constraints.minimumReservePercent ?? 0;
-  const numericBalance = balance === null ? null : Number(balance);
-  const minimumReserveUsd = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
-    ? numericBalance * (minimumReservePercent / 100)
-    : null;
-  const availableAfterSpend = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
-    ? numericBalance - amountUsd
-    : null;
-  const cashSufficient = availableAfterSpend === null ||
-    (availableAfterSpend >= 0 && availableAfterSpend + 1e-9 >= (minimumReserveUsd ?? 0));
+
   const result = createRiskResult(constraints, {
     proposedAmountUsd: amountUsd,
-    projectedAssetExposurePercent: projectedExposurePercent,
+    projectedAssetExposurePercent,
     now: new Date().toISOString()
   });
-  if (!cashSufficient) {
-    result.decision = "BLOCK";
-    result.reasons.push(
-      "Insufficient available cash balance for the requested transaction while preserving the " +
-      minimumReservePercent + "% minimum reserve."
-    );
+
+  if (!isSell) {
+    const balance = portfolio.balanceUsd;
+    const minimumReservePercent = constraints.minimumReservePercent ?? 0;
+    const numericBalance = balance === null ? null : Number(balance);
+    const minimumReserveUsd = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
+      ? numericBalance * (minimumReservePercent / 100)
+      : null;
+    const availableAfterSpend = numericBalance !== null && Number.isFinite(numericBalance) && numericBalance >= 0
+      ? numericBalance - amountUsd
+      : null;
+    const cashSufficient = availableAfterSpend === null ||
+      (availableAfterSpend >= 0 && availableAfterSpend + 1e-9 >= (minimumReserveUsd ?? 0));
+    if (!cashSufficient) {
+      result.decision = "BLOCK";
+      result.reasons.push(
+        "Insufficient available cash balance for the requested transaction while preserving the " +
+        minimumReservePercent + "% minimum reserve."
+      );
+    }
   }
+
   return result;
 }
-
 
 export function createBasketDefinition(input: {
   name: string;

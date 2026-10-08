@@ -161,3 +161,9 @@ test("quote quality returns unavailable price deltas for invalid quote amounts",
   assert.equal(quality.quoteVsOnChainPercent, null);
   assert.equal(quality.quoteVsReferencePercent, null);
 });
+
+test("sell risk treats sold value as exposure reduction", () => {
+  const portfolio={wallet:"0x0000000000000000000000000000000000000001",positions:[{asset:"NVDAB",tokenSymbol:"NVDAB",allocationPercent:20,valueUsd:20}],totalValueUsd:100,balanceUsd:50,source:"BSC_TOKEN_BALANCES",asOf:new Date().toISOString()};
+  const result=evaluatePortfolioStrategyRisk(portfolio,"NVDAB",10,undefined,"SELL");
+  assert.equal(result.decision,"PASS");
+});

@@ -102,3 +102,10 @@ test("review token rejects a changed funding quantity", () => {
   const token = createReviewToken(input, now);
   assert.equal(verifyReviewToken(token, { ...input, fromTokenQty: "0.5" }, now + 1_000), false);
 });
+
+test("review token rejects a changed direction or destination", () => {
+  const now=1_000_000;
+  const token=createReviewToken(input,now);
+  assert.equal(verifyReviewToken(token,{...input,action:"sell"},now+1_000),false);
+  assert.equal(verifyReviewToken(token,{...input,toToken:"0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"},now+1_000),false);
+});

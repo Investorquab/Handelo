@@ -19,8 +19,10 @@ const consumedReviewTokens = new Map<string, number>();
 export interface VerifiedReviewToken {
   ticker: string;
   amountUsd: number;
+  action: "buy"|"sell";
   fromToken: string;
   fromTokenQty: string;
+  toToken: string;
   contract: string;
   slippage?: string;
   wallet: string;
