@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const appPath = fileURLToPath(new URL("./app.js", import.meta.url));
 const source = readFileSync(appPath, "utf8");
 const indexSource = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
+const liveWorkspaceSource = fs.readFileSync(path.join(__dirname, "../live-workspace.js"), "utf8");
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
 
 test("workspace Gap Radar renders cross-representation rows once", () => {
@@ -277,4 +278,23 @@ test("Try Demo and Open Handelo currently enter the same workspace mock interfac
   assert.match(indexSource, /function go\(\)\{location\.hash="workspace"\}/);
   assert.match(indexSource, /"openh","tryd"/);
   assert.doesNotMatch(indexSource, /tryd[^\n]*api|api[^\n]*tryd/i);
+});
+
+
+test("Open Handelo live mode is wired to the real backend without changing Try Demo", () => {
+  assert.match(indexSource, /function goLive\(\)/);
+  assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=true/);
+  assert.match(indexSource, /function goDemo\(\)/);
+  assert.match(indexSource, /window\.HANDELO_LIVE_WORKSPACE=false/);
+  assert.match(indexSource, /["oh1","oh2","openh"]/);
+  assert.match(indexSource, /\$\("tryd"\)\.addEventListener\("click",goDemo\)/);
+});
+
+test("live workspace uses the Handelo API for market and portfolio data", () => {
+  assert.match(liveWorkspaceSource, /\/api\/markets/);
+  assert.match(liveWorkspaceSource, /\/api\/wallet\/status/);
+  assert.match(liveWorkspaceSource, /\/api\/wallet\/address/);
+  assert.match(liveWorkspaceSource, /\/api\/portfolio\?wallet=/);
+  assert.match(liveWorkspaceSource, /NVDAB token · live API/);
+  assert.doesNotMatch(liveWorkspaceSource, /Try Demo/);
 });
