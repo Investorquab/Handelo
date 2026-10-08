@@ -7,6 +7,8 @@ const input: ReviewTokenInput = {
   amountUsd: 20,
   fromToken: "0x55d398326f99059fF775485246999027B3197955",
   fromTokenQty: "20",
+  toToken: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+  action: "buy",
   contract: "0x0000000000000000000000000000000000000001",
   slippage: "0.50",
   wallet: "0x0000000000000000000000000000000000000003"

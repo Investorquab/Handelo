@@ -139,7 +139,7 @@
     const wrap=document.createElement("label");
     wrap.id="live-funding-wrap";
     wrap.style.cssText="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--mute);";
-    wrap.innerHTML='<span>Pay with</span><select id="live-funding-token" aria-label="Funding token" style="flex:1;min-width:145px;background:#0d0b09;border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:6px 8px;font:12px monospace"></select>';
+    wrap.innerHTML='<span id="live-funding-label">Pay with</span><select id="live-funding-token" aria-label="Funding token" style="flex:1;min-width:145px;background:#0d0b09;border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:6px 8px;font:12px monospace"></select>';
     order.parentElement.insertBefore(wrap,order.nextSibling);
     $("live-funding-token")?.addEventListener("change",()=>{
       state.review=null;
@@ -153,27 +153,89 @@
     return state.walletBalances.find(balance=>String(balance?.address||"").toLowerCase()===address)||null;
   }
 
-  function renderFundingOptions(){
+  const LIVE_NATIVE_BNB="0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+  const LIVE_USDT="0x55d398326f99059fF775485246999027B3197955";
+  const LIVE_USDC="0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+
+  function currentLiveSide(){
+    return document.querySelector('.seg button[aria-pressed="true"]')?.dataset.side==="sell"?"sell":"buy";
+  }
+
+  function selectedFundingBalance(){
+    const address=String($("live-funding-token")?.value||"").toLowerCase();
+    const side=currentLiveSide();
+    if(side==="sell"){
+      const known=[
+        {symbol:"BNB",address:LIVE_NATIVE_BNB,price:null,value:null,balance:null},
+        {symbol:"USDT",address:LIVE_USDT,price:null,value:null,balance:null},
+        {symbol:"USDC",address:LIVE_USDC,price:null,value:null,balance:null}
+      ];
+      return known.find(token=>token.address.toLowerCase()===address)||null;
+    }
+    return state.walletBalances.find(balance=>String(balance?.address||"").toLowerCase()===address)||null;
+  }
+
+  function renderTradeMode(){
     ensureLiveFundingControl();
-    const select=$("live-funding-token");
+    const side=currentLiveSide();
+    const label=$("live-funding-label"),select=$("live-funding-token"),qty=$("qty"),approve=$("approve");
+    if(label)label.textContent=side==="sell"?"Receive":"Pay with";
+    if(select)select.setAttribute("aria-label",side==="sell"?"Receive token":"Funding token");
+
+    if(qty){
+      if(side==="sell"){
+        const held=state.walletBalances.find(b=>String(b.symbol||"").toUpperCase()==="NVDAB");
+        const max=Number(held?.balance);
+        qty.min="0.000001";
+        qty.step="0.000001";
+        qty.max=Number.isFinite(max)&&max>0?String(max):"500";
+        if(Number(qty.value)>Number(qty.max))qty.value=qty.max;
+        if(Number(qty.value)<=0)qty.value="0.000001";
+      }else{
+        qty.min="1";
+        qty.step="1";
+        qty.max="500";
+        if(!qty.value||Number(qty.value)<1)qty.value="1";
+      }
+    }
+
     if(!select)return;
     const current=select.value;
-    const target=String(state.market?.tokenSymbol||"NVDAB").toUpperCase();
-    const balances=state.walletBalances.filter(balance=>{
-      const symbol=String(balance?.symbol||"").toUpperCase();
-      const value=Number(balance?.value), price=Number(balance?.price);
-      return String(balance?.binanceChainId||"56")==="56"&&symbol!==target&&Number.isFinite(value)&&value>0&&Number.isFinite(price)&&price>0;
-    });
-    select.innerHTML=balances.map(balance=>'<option value="'+esc(balance.address||"")+'">'+esc(String(balance.symbol||"").toUpperCase())+" · "+esc(String(balance.balance||"0"))+" · "+esc(money(balance.value))+"</option>").join("");
-    const same=balances.find(balance=>String(balance.address||"").toLowerCase()===String(current).toLowerCase());
-    if(same)select.value=same.address;
-    else{
-      const usdt=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="USDT");
-      const bnb=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="BNB");
-      const first=usdt||bnb||balances[0];
-      if(first)select.value=first.address;
+
+    if(side==="sell"){
+      const options=[
+        {symbol:"BNB",address:LIVE_NATIVE_BNB},
+        {symbol:"USDT",address:LIVE_USDT},
+        {symbol:"USDC",address:LIVE_USDC}
+      ];
+      select.innerHTML=options.map(token=>{
+        const liveBalance=state.walletBalances.find(b=>String(b.address||"").toLowerCase()===token.address.toLowerCase());
+        const suffix=liveBalance?.balance?" · "+liveBalance.balance:"";
+        return '<option value="'+token.address+'">'+token.symbol+esc(suffix)+'</option>';
+      }).join("");
+      if(options.some(token=>token.address.toLowerCase()===current.toLowerCase()))select.value=current;
+      else select.value=LIVE_USDT;
+    }else{
+      const target=String(state.market?.tokenSymbol||"NVDAB").toUpperCase();
+      const balances=state.walletBalances.filter(balance=>{
+        const symbol=String(balance?.symbol||"").toUpperCase();
+        const value=Number(balance?.value),price=Number(balance?.price);
+        return String(balance?.binanceChainId||"56")==="56"&&symbol!==target&&Number.isFinite(value)&&value>0&&Number.isFinite(price)&&price>0;
+      });
+      select.innerHTML=balances.map(balance=>'<option value="'+esc(balance.address||"")+'">'+esc(String(balance.symbol||"").toUpperCase())+" · "+esc(String(balance.balance||"0"))+" · "+esc(money(balance.value))+"</option>").join("");
+      const same=balances.find(balance=>String(balance.address||"").toLowerCase()===current.toLowerCase());
+      if(same)select.value=same.address;
+      else{
+        const usdt=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="USDT");
+        const bnb=balances.find(balance=>String(balance.symbol||"").toUpperCase()==="BNB");
+        const first=usdt||bnb||balances[0];
+        if(first)select.value=first.address;
+      }
+      if(!balances.length)select.innerHTML='<option value="">No funded token available</option>';
     }
-    if(!balances.length)select.innerHTML='<option value="">No funded token available</option>';
+
+    updateLiveOrderValue();
+    if(approve && !state.review)approve.textContent=state.address?.connected?(side==="sell"?"Review live sell":"Review live buy"):(side==="sell"?"Connect wallet to sell":"Connect wallet to review");
   }
 
   function resetLiveSurface(){closeWalletMenu();closeLiveStream();
@@ -251,16 +313,25 @@
   }
 
   function updateLiveOrderValue(){
-    const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
+    const side=currentLiveSide();
+    const qty=Math.max(0.000001,Number($("qty")?.value)||0);
     const tokenPrice=Number(state.market?.tokenPrice);
-    const funding=selectedFundingBalance();
-    if($("ordv")&&!Number.isFinite(tokenPrice)){$("ordv").textContent="—";return;}
+    const selected=selectedFundingBalance();
+    if(!Number.isFinite(tokenPrice)||tokenPrice<=0){if($("ordv"))$("ordv").textContent="—";return;}
+    if(side==="sell"){
+      if(!selected){if($("ordv"))$("ordv").textContent="Choose a receiving token";return;}
+      const proceeds=qty*tokenPrice;
+      if($("ordv"))$("ordv").textContent="≈ "+money(proceeds)+" in "+String(selected.symbol||"").toUpperCase()+" before fees";
+      return;
+    }
+    if(!selected){if($("ordv"))$("ordv").textContent="Choose a funding token";return;}
     const usd=qty*tokenPrice;
-    if($("ordv")&&funding&&Number(funding.price)>0){
-      const sourceQty=usd/Number(funding.price);
-      $("ordv").textContent=money(usd)+" · ≈ "+sourceQty.toFixed(8)+" "+String(funding.symbol||"").toUpperCase();
-    }else if($("ordv")){
-      $("ordv").textContent=money(usd)+" · choose funding token";
+    const sourcePrice=Number(selected.price);
+    if($("ordv")){
+      if(Number.isFinite(sourcePrice)&&sourcePrice>0){
+        const sourceQty=usd/sourcePrice;
+        $("ordv").textContent=money(usd)+" · ≈ "+sourceQty.toFixed(8)+" "+String(selected.symbol||"").toUpperCase();
+      }else $("ordv").textContent=money(usd)+" · "+String(selected.symbol||"").toUpperCase();
     }
   }
 
@@ -287,8 +358,7 @@
       '<div class="t">'+esc(market.tokenSymbol || "NVDAB")+' token<b>'+money(token)+'</b></div>' +
       '<div>Gap<b>'+ (Number.isFinite(gap)?(gap>=0?"+":"")+gap.toFixed(2)+"%":"—") +'</b></div>';
     renderLiveChart();
-    renderFundingOptions();
-    updateLiveOrderValue();
+    renderTradeMode();
   }
 
   function portfolioTotals(portfolio) {
@@ -312,7 +382,7 @@
     state.strategies=Array.isArray(account.strategies)?account.strategies:[];
     renderWalletAndPortfolio(state.address,state.portfolio);
     renderLiveBalances();
-    renderFundingOptions();
+    renderTradeMode();
     renderStrategyCount();
     renderPortfolioView();
     renderHistoryView();
@@ -517,7 +587,7 @@
     const executable=Boolean(review?.reviewToken&&policyOk&&riskOk&&auditOk&&quoteReady);
     if ($("approve")) {
       $("approve").disabled=state.reviewInFlight;
-      $("approve").textContent=executable?"Confirm purchase":"Review blocked";
+      $("approve").textContent=executable?(review?.action==="sell"?"Confirm sale":"Confirm purchase"):"Review blocked";
       $("approve").title=executable?"Send the reviewed transaction to the controlled execution boundary.":"The server review did not produce an executable review.";
     }
     if ($("msg")) $("msg").textContent=executable?"Live review passed. Confirmation is still required before execution.":"Live review completed. Execution remains blocked until every server gate passes.";
@@ -722,48 +792,59 @@
   async function reviewLiveOrder(){
     if(state.reviewInFlight||!state.market)return;
     if(!state.address?.connected){await connectLiveWallet();return;}
-    const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
+    const side=currentLiveSide();
+    const qty=Math.max(0.000001,Number($("qty")?.value)||0);
     const tokenPrice=Number(state.market.tokenPrice);
-    const funding=selectedFundingBalance();
-    if(!Number.isFinite(tokenPrice)||tokenPrice<=0)return;
-    if(!funding){
-      if($("msg"))$("msg").textContent="Choose a funded BSC token to pay for NVDAB.";
+    const selected=selectedFundingBalance();
+    if(!Number.isFinite(tokenPrice)||tokenPrice<=0||!Number.isFinite(qty)||qty<=0)return;
+    if(!selected){
+      if($("msg"))$("msg").textContent=side==="sell"?"Choose a receiving token for the NVDAB sale.":"Choose a funded BSC token to pay for NVDAB.";
       return;
     }
-    state.reviewInFlight=true;
-    state.review=null;
-    updateLiveOrderValue();
-    if($("approve")){$("approve").disabled=true;$("approve").textContent="Reviewing live order…";}
+    if(side==="sell"){
+      const held=state.walletBalances.find(b=>String(b.symbol||"").toUpperCase()==="NVDAB");
+      const heldQty=Number(held?.balance);
+      if(!Number.isFinite(heldQty)||heldQty<qty){
+        if($("msg"))$("msg").textContent="Insufficient NVDAB balance for this sale.";
+        return;
+      }
+    }
+    state.reviewInFlight=true;state.review=null;updateLiveOrderValue();
+    if($("approve")){$("approve").disabled=true;$("approve").textContent=side==="sell"?"Reviewing live sale…":"Reviewing live buy…";}
     try{
-      const side=document.querySelector(".seg button[aria-pressed='true']")?.dataset.side==="sell"?"sell":"buy";
-      const data=await send("/api/review",{
+      const body={
         ticker:state.market.tokenSymbol||"NVDAB",
         amountUsd:qty*tokenPrice,
         action:side,
-        fromToken:String(funding.address||""),
+        fromToken:side==="sell"?String(state.market.tokenContractAddress||state.market.contract||""):String(selected.address||""),
+        fromTokenQty:String(qty),
+        toToken:side==="sell"?String(selected.address||""):String(state.market.tokenContractAddress||state.market.contract||""),
         wallet:state.address.address
-      },18000);
-      data.fromToken=String(funding.address||"");
+      };
+      const data=await send("/api/review",body,18000);
+      data.fromToken=body.fromToken;
+      data.toToken=body.toToken;
+      data.action=side;
       renderReview(data);
     }catch(error){
       state.review=null;
       if($("checks"))$("checks").innerHTML='<li class="fail"><span class="dot r"></span><span>Server review failed<small>'+esc(error.name==="AbortError"?"The review API timed out.":error.message)+'</small></span><span class="v">ERROR</span></li>';
-      if($("approve")){$("approve").disabled=false;$("approve").textContent="Review live order";}
-      if($("msg"))$("msg").textContent="Live order review failed.";
+      if($("approve")){$("approve").disabled=false;$("approve").textContent=side==="sell"?"Review live sell":"Review live buy";}
+      if($("msg"))$("msg").textContent=side==="sell"?"Live sell review failed.":"Live buy review failed.";
     }finally{state.reviewInFlight=false;}
   }
 
 async function executeLiveOrder(){
     if(!state.review?.reviewToken||!state.address?.connected)return;
     state.reviewInFlight=true;
-    if($("approve")){$("approve").disabled=true;$("approve").textContent="Executing…";}
+    if($("approve")){$("approve").disabled=true;$("approve").textContent=state.review.action==="sell"?"Executing sell…":"Executing buy…";}
     try{
-      const qty=Math.max(1,Math.min(500,parseInt($("qty")?.value,10)||1));
-      const tokenPrice=Number(state.market?.tokenPrice);
       const result=await send("/api/execute",{
         ticker:state.market?.tokenSymbol||"NVDAB",
-        amountUsd:qty*tokenPrice,
-        fromToken:state.review.fromToken||selectedFundingBalance()?.address||"",
+        amountUsd:Number(state.review.amountUsd),
+        action:state.review.action||currentLiveSide(),
+        fromToken:state.review.fromToken||"",
+        toToken:state.review.toToken||"",
         reviewToken:state.review.reviewToken,
         wallet:state.address.address,
         confirmed:true
@@ -776,7 +857,7 @@ async function executeLiveOrder(){
       if($("approve"))$("approve").disabled=false;
     }finally{
       state.reviewInFlight=false;
-      if($("approve")&&!state.review)$("approve").textContent=state.address?.connected?"Review live order":"Connect wallet to review";
+      if($("approve")&&!state.review)$("approve").textContent=state.address?.connected?(currentLiveSide()==="sell"?"Review live sell":"Review live buy"):(currentLiveSide()==="sell"?"Connect wallet to sell":"Connect wallet to review");
     }
   }
 
@@ -784,6 +865,14 @@ async function executeLiveOrder(){
     if(!window.HANDELO_LIVE_WORKSPACE)return;
     const target=event.target instanceof Element?event.target.closest("button,[role='button']"):null;
     if(!target)return;
+    if(target.matches(".seg button")){
+      event.preventDefault();event.stopImmediatePropagation();
+      document.querySelectorAll(".seg button").forEach(button=>button.setAttribute("aria-pressed",button===target?"true":"false"));
+      state.review=null;
+      renderTradeMode();
+      if($("msg"))$("msg").textContent=target.dataset.side==="sell"?"Live sell mode · choose the NVDAB amount and receiving token.":"Live buy mode · choose the funding token and NVDAB amount.";
+      return;
+    }
     if(target.id==="wal"){event.preventDefault();event.stopImmediatePropagation();if(state.address?.connected){if(document.querySelector(".live-wallet-menu"))closeWalletMenu();else showWalletMenu();}else{void connectLiveWallet();}return;}
     if(target.id==="approve"){event.preventDefault();event.stopImmediatePropagation();if(state.review?.reviewToken)void executeLiveOrder();else void reviewLiveOrder();return;}
     if(target.id==="ag"){event.preventDefault();event.stopImmediatePropagation();openLiveChat("Compare NVDAB and NVDA using the latest live market data.");return;}

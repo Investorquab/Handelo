@@ -129,3 +129,22 @@ test("live review and execution bind the exact funding quantity", () => {
   assert.match(source, /fromTokenQty: reviewedToken\?\.fromTokenQty/);
   assert.match(source, /ticker === "NVDA" \? "NVDAB" : ticker/);
 });
+
+test("live review supports both buy and sell actions", () => {
+  assert.match(source, /requestedAction=body\.action==="sell"\?"sell":"buy"/);
+  assert.match(source, /resolvePayoutToken/);
+  assert.match(source, /resolveHeldNvdabQuantity/);
+  assert.match(source, /executionAction\(requestedAction\)/);
+});
+test("live sell reviews the exact NVDAB quantity and payout token", () => {
+  assert.match(source, /amountUsd=nvdabQuantity\*liveTokenPrice/);
+  assert.match(source, /resolvedFromToken=asset\.tokenContractAddress/);
+  assert.match(source, /resolvedFromQty=fromTokenQtyInput/);
+  assert.match(source, /resolvedToToken=payout\.address/);
+});
+test("live execution uses the reviewed destination token and direction", () => {
+  assert.match(source, /action,\n        amountUsd: amount/);
+  assert.match(source, /const toToken = toTokenInput/);
+  assert.match(source, /toToken,\n        binanceChainId/);
+  assert.match(source, /action === "sell" \? "SELL" : "BUY"/);
+});

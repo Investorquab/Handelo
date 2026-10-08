@@ -33,6 +33,8 @@ export function evaluatePolicy(input:PolicyInput):PolicyResult{
 }
 
 
-export function executionAction(action:PolicyInput["action"]):"buy"|null{
-  return action==="buy"||action==="invest" ? "buy" : null;
+export function executionAction(action:PolicyInput["action"]):"buy"|"sell"|null{
+  if(action==="buy"||action==="invest")return "buy";
+  if(action==="sell")return "sell";
+  return null;
 }

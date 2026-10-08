@@ -3,8 +3,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export interface ReviewTokenInput {
   ticker: string;
   amountUsd: number;
+  action: "buy"|"sell";
   fromToken: string;
   fromTokenQty: string;
+  toToken: string;
   contract: string;
   slippage?: string;
   wallet: string;
@@ -58,8 +60,10 @@ export function verifyReviewToken(token: string, input: ReviewTokenInput, now = 
   if (!parsed) return false;
   return parsed.ticker === input.ticker
     && parsed.amountUsd === input.amountUsd
+    && parsed.action === input.action
     && parsed.fromToken.toLowerCase() === input.fromToken.toLowerCase()
     && parsed.fromTokenQty === input.fromTokenQty
+    && parsed.toToken.toLowerCase() === input.toToken.toLowerCase()
     && parsed.contract.toLowerCase() === input.contract.toLowerCase()
     && parsed.slippage === input.slippage
     && parsed.wallet.toLowerCase() === input.wallet.toLowerCase()

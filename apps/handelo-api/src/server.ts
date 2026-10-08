@@ -118,6 +118,25 @@ function fundingQtyForUsd(amountUsd:number,balance:WalletBalanceRow):string{
   return qty.toFixed(18).replace(/\.0+$/,"").replace(/(\.\d*?)0+$/,"$1");
 }
 
+
+function resolvePayoutToken(tokenAddress:string){
+  const normalized=tokenAddress.trim().toLowerCase();
+  const allowed=new Map([
+    ["0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","BNB"],
+    ["0x55d398326f99059ff775485246999027b3197955","USDT"],
+    ["0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d","USDC"]
+  ]);
+  const symbol=allowed.get(normalized);
+  if(!symbol)throw new Error("Sell proceeds must be paid to BNB, USDT, or USDC on BSC.");
+  return {address:tokenAddress.trim(),symbol};
+}
+
+function resolveHeldNvdabQuantity(balances:WalletBalanceRow[],assetAddress:string){
+  const holding=balances.find(item=>String(item.address??"").trim().toLowerCase()===assetAddress.trim().toLowerCase());
+  const quantity=Number(holding?.balance);
+  if(!holding||!Number.isFinite(quantity)||quantity<=0)throw new Error("The connected wallet does not hold a sellable NVDAB balance.");
+  return quantity;
+}
 async function workspaceAccount(walletAddress: string) {
   const [portfolioResult, balancesResult, historyResult, strategyResult] = await Promise.allSettled([
     portfolioSnapshot(walletAddress),
@@ -734,103 +753,119 @@ const server = createServer(async (req, res) => {
     try {
       const raw = await readRequestBody(req);
       const body = parseJsonBody<{
-        ticker?: unknown;
-        amountUsd?: unknown;
-        action?: unknown;
-        fromToken?: unknown;
-        slippage?: unknown;
-        wallet?: unknown;
+        ticker?: unknown; amountUsd?: unknown; action?: unknown;
+        fromToken?: unknown; fromTokenQty?: unknown; toToken?: unknown;
+        slippage?: unknown; wallet?: unknown;
       }>(raw);
 
-      const ticker = String(body.ticker ?? "").trim().toUpperCase();
-      const amountUsd = Number(body.amountUsd);
-      const action = body.action === "sell" ? "sell" : body.action === "invest" ? "invest" : "buy";
-      const executableAction = (await import("@handelo/policy")).executionAction(action);
+      const ticker=String(body.ticker??"").trim().toUpperCase();
+      const requestedAction=body.action==="sell"?"sell":"buy";
+      const amountInput=Number(body.amountUsd);
+      const fromToken=String(body.fromToken??"").trim();
+      const fromTokenQtyInput=String(body.fromTokenQty??"").trim();
+      const toTokenInput=String(body.toToken??"").trim();
 
-      if (!executableAction) {
-        return json(res, 400, { error: "Handelo execution currently supports buy/invest only. Sell execution is not enabled." });
-      }
-
-      if (!ticker || !Number.isFinite(amountUsd) || amountUsd <= 0) {
-        return json(res, 400, { error: "ticker and positive amountUsd are required" });
+      if(!ticker||(!Number.isFinite(amountInput)||amountInput<=0)){
+        return json(res,400,{error:"ticker and positive amountUsd are required"});
       }
 
-      const walletAddress = String(body.wallet ?? "").trim();
-      if (!isEvmAddress(walletAddress)) {
-        return json(res, 400, { error: "A valid connected wallet address is required for transaction review." });
+      const walletAddress=String(body.wallet??"").trim();
+      if(!isEvmAddress(walletAddress)){
+        return json(res,400,{error:"A valid connected wallet address is required for transaction review."});
       }
-      const connectedForReview = await connectedWalletState();
-      if (!connectedForReview.address || connectedForReview.address.toLowerCase() !== walletAddress.toLowerCase()) {
-        return json(res, 409, { error: "The connected Binance Agentic Wallet does not match the wallet supplied for review." });
+
+      const connected=await connectedWalletState();
+      if(!connected.address||connected.address.toLowerCase()!==walletAddress.toLowerCase()){
+        return json(res,409,{error:"The connected Binance Agentic Wallet does not match the wallet supplied for review."});
       }
-      const asset = await getMarket().find(ticker === "NVDA" ? "NVDAB" : ticker);
-      if (!isExecutableMarketAsset(asset)) {
-        return json(res, 422, { error: "Live market data is invalid for this tokenized stock, so Handelo will not create an executable review." });
+
+      const asset=await getMarket().find(ticker==="NVDA"?"NVDAB":ticker);
+      if(!isExecutableMarketAsset(asset)){
+        return json(res,422,{error:"Live market data is invalid for this tokenized stock, so Handelo will not create an executable review."});
       }
-      const premiumPct = (() => {
-        const token = Number(asset.tokenPrice);
-        const reference = Number(asset.referencePrice);
-        if (!Number.isFinite(token) || !Number.isFinite(reference) || reference === 0) return null;
-        return ((token - reference) / reference) * 100;
+
+      const premiumPct=(()=>{
+        const token=Number(asset.tokenPrice),reference=Number(asset.referencePrice);
+        if(!Number.isFinite(token)||!Number.isFinite(reference)||reference===0)return null;
+        return ((token-reference)/reference)*100;
       })();
 
-      const policy = (await import("@handelo/policy")).evaluatePolicy({
-        action,
-        amountUsd,
-        marketOpen: asset.statusInfo.openState,
-        premiumPct
+      let amountUsd=amountInput;
+      let resolvedFromToken="";
+      let resolvedFromQty="";
+      let resolvedToToken="";
+      let fundingSymbol:string|null=null;
+
+      const balances=await liveWalletBalances();
+
+      if(requestedAction==="buy"){
+        const funding=resolveFundingBalance(balances,fromToken,asset.tokenContractAddress);
+        resolvedFromToken=funding.address??"";
+        resolvedFromQty=fundingQtyForUsd(amountUsd,funding);
+        resolvedToToken=asset.tokenContractAddress;
+        fundingSymbol=funding.symbol??null;
+      }else{
+        const nvdabQuantity=Number(fromTokenQtyInput);
+        if(!Number.isFinite(nvdabQuantity)||nvdabQuantity<=0){
+          return json(res,400,{error:"A positive NVDAB quantity is required for a sell."});
+        }
+        const heldQuantity=resolveHeldNvdabQuantity(balances,asset.tokenContractAddress);
+        if(nvdabQuantity>heldQuantity+1e-9){
+          return json(res,409,{error:"The requested NVDAB sell quantity exceeds the connected wallet balance."});
+        }
+        const payout=resolvePayoutToken(toTokenInput);
+        const liveTokenPrice=Number(asset.tokenPrice);
+        if(!Number.isFinite(liveTokenPrice)||liveTokenPrice<=0){
+          return json(res,422,{error:"Live NVDAB price is unavailable for sell review."});
+        }
+        amountUsd=nvdabQuantity*liveTokenPrice;
+        resolvedFromToken=asset.tokenContractAddress;
+        resolvedFromQty=fromTokenQtyInput;
+        resolvedToToken=payout.address;
+        fundingSymbol=payout.symbol;
+      }
+
+      const policy=(await import("@handelo/policy")).evaluatePolicy({
+        action:requestedAction,amountUsd,marketOpen:asset.statusInfo.openState,premiumPct
       });
+      const executableAction=(await import("@handelo/policy")).executionAction(requestedAction);
+      if(!executableAction)return json(res,400,{error:"Unsupported transaction action."});
 
-      let portfolioRisk = null;
-      let portfolioRiskError: string | null = null;
-      if (walletAddress) {
-        try {
-          const snapshot = await portfolioSnapshot(walletAddress);
-          const { evaluatePortfolioStrategyRisk } = await import("@handelo/core");
-          portfolioRisk = evaluatePortfolioStrategyRisk(snapshot, asset.tokenSymbol, amountUsd);
-        } catch (error) {
-          portfolioRiskError = error instanceof Error ? error.message : String(error);
-        }
-      } else {
-        portfolioRiskError = "A connected wallet is required for portfolio risk review.";
+      let portfolioRisk=null;
+      let portfolioRiskError:string|null=null;
+      try{
+        const snapshot=await portfolioSnapshot(walletAddress);
+        const {evaluatePortfolioStrategyRisk}=await import("@handelo/core");
+        portfolioRisk=evaluatePortfolioStrategyRisk(snapshot,asset.tokenSymbol,amountUsd,undefined,requestedAction==="sell"?"SELL":"BUY");
+      }catch(error){
+        portfolioRiskError=error instanceof Error?error.message:String(error);
       }
-      const riskDecision = portfolioRisk?.decision ?? "BLOCK";
+      const riskDecision=portfolioRisk?.decision??"BLOCK";
 
-      let securityAudit: Awaited<ReturnType<typeof auditToken>> | null = null;
-      let securityAuditError: string | null = null;
-      let executionBlocked = false;
-      try {
-        securityAudit = normalizeTokenAudit(await auditToken("56", asset.tokenContractAddress));
-        executionBlocked =
-          !securityAudit.hasResult ||
-          !securityAudit.isSupported ||
-          (typeof securityAudit.riskLevel === "number" && securityAudit.riskLevel >= 4);
-        if (!securityAudit.isSupported) {
-          securityAuditError = "Token security audit data is unavailable for this token.";
-        }
-      } catch (error) {
-        executionBlocked = true;
-        securityAuditError = error instanceof Error ? error.message : String(error);
+      let securityAudit:Awaited<ReturnType<typeof auditToken>>|null=null;
+      let securityAuditError:string|null=null;
+      let executionBlocked=false;
+      try{
+        securityAudit=normalizeTokenAudit(await auditToken("56",asset.tokenContractAddress));
+        executionBlocked=!securityAudit.hasResult||!securityAudit.isSupported||(typeof securityAudit.riskLevel==="number"&&securityAudit.riskLevel>=4);
+        if(!securityAudit.isSupported)securityAuditError="Token security audit data is unavailable for this token.";
+      }catch(error){
+        executionBlocked=true;
+        securityAuditError=error instanceof Error?error.message:String(error);
       }
 
-      let quote: unknown = null;
-      const fromToken = String(body.fromToken ?? process.env.HANDELO_QUOTE_TOKEN ?? DEFAULT_BSC_QUOTE_TOKEN).trim();
-      const slippageResult = normalizeSlippage(body.slippage);
-      if (slippageResult.error) return json(res, 400, { error: slippageResult.error });
-      const slippage = slippageResult.value;
-      let quoteError: string | null = null;
-      let fromTokenQty: string | null = null;
-      let fundingSymbol: string | null = null;
+      let quote:unknown=null;
+      const slippageResult=normalizeSlippage(body.slippage);
+      if(slippageResult.error)return json(res,400,{error:slippageResult.error});
+      const slippage=slippageResult.value;
+      let quoteError:string|null=null;
 
-      if (fromToken && policy.decision !== "BLOCK" && riskDecision === "PASS") {
-        try {
-          const funding=resolveFundingBalance(await liveWalletBalances(),fromToken,asset.tokenContractAddress);
-          fromTokenQty=fundingQtyForUsd(amountUsd,funding);
-          fundingSymbol=funding.symbol??null;
+      if(policy.decision!=="BLOCK"&&riskDecision==="PASS"){
+        try{
           quote=await wallet.quote({
-            fromTokenQty,
-            fromToken,
-            toToken:asset.tokenContractAddress,
+            fromTokenQty:resolvedFromQty,
+            fromToken:resolvedFromToken,
+            toToken:resolvedToToken,
             binanceChainId:"56",
             slippage
           });
@@ -839,54 +874,46 @@ const server = createServer(async (req, res) => {
         }
       }
 
-      const quoteQuality = quote && typeof quote === "object" && "fromCoinAmount" in quote && "toCoinAmount" in quote
-        ? createQuoteQuality({
-            fromCoinAmount: String((quote as { fromCoinAmount: unknown }).fromCoinAmount),
-            toCoinAmount: String((quote as { toCoinAmount: unknown }).toCoinAmount),
-            onChainPrice: Number(asset.tokenPrice),
-            referencePrice: Number(asset.referencePrice),
-            requestedSlippagePercent: Number((quote as { slippage?: unknown }).slippage)
-          })
-        : null;
+      const quoteQuality=quote&&typeof quote==="object"&&"fromCoinAmount" in quote&&"toCoinAmount" in quote
+        ?createQuoteQuality({
+          fromCoinAmount:String((quote as {fromCoinAmount:unknown}).fromCoinAmount),
+          toCoinAmount:String((quote as {toCoinAmount:unknown}).toCoinAmount),
+          onChainPrice:Number(asset.tokenPrice),
+          referencePrice:Number(asset.referencePrice),
+          requestedSlippagePercent:Number((quote as {slippage?:unknown}).slippage)
+        }):null;
 
-      return json(res, 200, {
-        asset: {
-          ticker: asset.underlyingTicker,
-          tokenSymbol: asset.tokenSymbol,
-          contract: asset.tokenContractAddress,
-          provider: asset.platformId,
-          tokenPrice: asset.tokenPrice,
-          referencePrice: asset.referencePrice,
-          premiumPct,
-          market: asset.statusInfo
+      return json(res,200,{
+        action:requestedAction,
+        amountUsd,
+        asset:{
+          ticker:asset.underlyingTicker,tokenSymbol:asset.tokenSymbol,contract:asset.tokenContractAddress,
+          provider:asset.platformId,tokenPrice:asset.tokenPrice,referencePrice:asset.referencePrice,premiumPct,market:asset.statusInfo
         },
-        policy,
-        portfolioRisk,
-        portfolioRiskError,
-        riskDecision,
-        securityAudit,
-        securityAuditError,
-        executionBlocked,
-        quote,
-        quoteQuality,
-        quoteError,
-        quoteToken: fromToken || null,
-        fundingToken: fundingSymbol,
-        fundingTokenQty: fromTokenQty,
-        reviewToken: quote && riskDecision === "PASS" && fromTokenQty ? createReviewToken({
-          ticker: asset.tokenSymbol,
+        policy,portfolioRisk,portfolioRiskError,riskDecision,securityAudit,securityAuditError,executionBlocked,
+        quote,quoteQuality,quoteError,
+        quoteToken:fundingSymbol,
+        fundingToken:requestedAction==="buy"?fundingSymbol:null,
+        fundingTokenQty:requestedAction==="buy"?resolvedFromQty:null,
+        fromToken:resolvedFromToken,
+        fromTokenQty:resolvedFromQty,
+        toToken:resolvedToToken,
+        reviewToken:quote&&riskDecision==="PASS"?createReviewToken({
+          ticker:asset.tokenSymbol,
           amountUsd,
-          fromToken,
-          fromTokenQty,
-          contract: asset.tokenContractAddress,
+          action:requestedAction,
+          fromToken:resolvedFromToken,
+          fromTokenQty:resolvedFromQty,
+          toToken:resolvedToToken,
+          contract:asset.tokenContractAddress,
           slippage,
-          wallet: walletAddress,
-          reviewedQuotePrice: quoteQuality?.impliedPrice ?? null
-        }) : null
+          wallet:walletAddress,
+          reviewedQuotePrice:quoteQuality?.impliedPrice??null
+        }):null
       });
-    } catch (error) {
-      const status = requestBodyErrorStatus(error) ?? marketErrorStatus(error);
-      return json(res, status ?? 500, { error: errorMessage(error) });
+    }catch(error){
+      const status=requestBodyErrorStatus(error)??marketErrorStatus(error);
+      return json(res,status??500,{error:errorMessage(error)});
     }
   }
 
@@ -962,7 +989,9 @@ const server = createServer(async (req, res) => {
       const body = parseJsonBody<{
         ticker?: unknown;
         amountUsd?: unknown;
+        action?: unknown;
         fromToken?: unknown;
+        toToken?: unknown;
         slippage?: unknown;
         confirmed?: unknown;
         reviewToken?: unknown;
@@ -970,7 +999,9 @@ const server = createServer(async (req, res) => {
       }>(raw);
 
       const ticker = String(body.ticker ?? "").trim().toUpperCase();
+      const action = body.action === "sell" ? "sell" : "buy";
       const fromToken = String(body.fromToken ?? "").trim();
+      const toTokenInput = String(body.toToken ?? "").trim();
       const amount = Number(body.amountUsd);
       const reviewToken = String(body.reviewToken ?? "").trim();
       const walletAddress = String(body.wallet ?? "").trim();
@@ -990,11 +1021,14 @@ const server = createServer(async (req, res) => {
       const slippage = slippageResult.value;
 
       const reviewedToken = readVerifiedReviewToken(reviewToken);
+      const toToken = toTokenInput || reviewedToken?.toToken || (action === "buy" ? asset.tokenContractAddress : DEFAULT_BSC_QUOTE_TOKEN);
       if (!verifyReviewToken(reviewToken, {
-        ticker: asset.underlyingTicker,
+        ticker: asset.tokenSymbol,
         amountUsd: amount,
+        action,
         fromToken,
         fromTokenQty: reviewedToken?.fromTokenQty ?? "",
+        toToken,
         contract: asset.tokenContractAddress,
         slippage,
         wallet: walletAddress,
@@ -1021,7 +1055,7 @@ const server = createServer(async (req, res) => {
         ? ((tokenPrice - referencePrice) / referencePrice) * 100
         : null;
       const policy = (await import("@handelo/policy")).evaluatePolicy({
-        action: "buy",
+        action,
         amountUsd: amount,
         marketOpen: asset.statusInfo.openState,
         premiumPct
@@ -1045,7 +1079,7 @@ const server = createServer(async (req, res) => {
 
       const snapshot = await portfolioSnapshot(walletAddress);
       const { evaluatePortfolioStrategyRisk } = await import("@handelo/core");
-      const portfolioRisk = evaluatePortfolioStrategyRisk(snapshot, asset.tokenSymbol, amount);
+      const portfolioRisk = evaluatePortfolioStrategyRisk(snapshot, asset.tokenSymbol, amount, undefined, action === "sell" ? "SELL" : "BUY");
       if (portfolioRisk.decision !== "PASS") {
         return json(res, 409, {
           error: "Execution blocked by portfolio risk controls.",
@@ -1075,7 +1109,7 @@ const server = createServer(async (req, res) => {
       const reviewedQuote = await wallet.quote({
         fromTokenQty: reviewedToken?.fromTokenQty ?? "",
         fromToken,
-        toToken: asset.tokenContractAddress,
+        toToken,
         binanceChainId: "56",
         slippage: typeof body.slippage === "string" ? body.slippage : undefined
       });
@@ -1105,7 +1139,7 @@ const server = createServer(async (req, res) => {
         {
           fromTokenQty: reviewedQuote.fromCoinAmount,
           fromToken,
-          toToken: asset.tokenContractAddress,
+          toToken,
           binanceChainId: "56",
           slippage: typeof body.slippage === "string" ? body.slippage : undefined
         },
@@ -1117,6 +1151,7 @@ const server = createServer(async (req, res) => {
           ticker: asset.underlyingTicker,
           tokenSymbol: asset.tokenSymbol,
           contract: asset.tokenContractAddress,
+          action,
           provider: asset.platformId
         },
         policy,

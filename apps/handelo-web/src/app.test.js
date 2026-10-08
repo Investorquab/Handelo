@@ -449,3 +449,21 @@ test("live buy displays the selected funding-token equivalent", () => {
   assert.match(liveWorkspaceSource, /sourceQty=usd\/Number\(funding\.price\)/);
   assert.match(liveWorkspaceSource, /funding\.symbol/);
 });
+
+test("live Buy and Sell modes have distinct real trade semantics", () => {
+  assert.match(liveWorkspaceSource, /currentLiveSide/);
+  assert.match(liveWorkspaceSource, /target\.dataset\.side==="sell"/);
+  assert.match(liveWorkspaceSource, /Review live sell/);
+  assert.match(liveWorkspaceSource, /Review live buy/);
+});
+test("live Sell uses NVDAB as source and a real BSC payout token", () => {
+  assert.match(liveWorkspaceSource, /LIVE_NATIVE_BNB/);
+  assert.match(liveWorkspaceSource, /LIVE_USDT/);
+  assert.match(liveWorkspaceSource, /LIVE_USDC/);
+  assert.match(liveWorkspaceSource, /fromToken:side==="sell"\?String\(state\.market\.tokenContractAddress/);
+  assert.match(liveWorkspaceSource, /toToken:side==="sell"\?String\(selected\.address/);
+});
+test("live Buy uses the selected wallet token as source and NVDAB as destination", () => {
+  assert.match(liveWorkspaceSource, /fromToken:side==="sell"\?String\(state\.market\.tokenContractAddress\|\|"\":String\(selected\.address/);
+  assert.match(liveWorkspaceSource, /toToken:side==="sell"\?String\(selected\.address\|\|"\":String\(state\.market\.tokenContractAddress/);
+});
