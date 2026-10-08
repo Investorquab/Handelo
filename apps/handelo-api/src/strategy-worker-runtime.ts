@@ -57,6 +57,47 @@ function premiumPercent(asset: RwaAsset): number | null {
   return ((tokenPrice - referencePrice) / referencePrice) * 100;
 }
 
+function assertExecutionPolicyReady(asset: RwaAsset, amountUsd: number): void {
+  const { openState } = asset.statusInfo;
+  if (!openState) throw new Error("Reference market is closed; execution is blocked at the execution boundary.");
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("Execution amount is invalid.");
+}
+
+async function revalidateExecution(
+  strategy: StrategyDefinition,
+  portfolio: PortfolioSnapshot,
+  asset: RwaAsset,
+  amountUsd: number
+): Promise<void> {
+  assertExecutionPolicyReady(asset, amountUsd);
+  const { evaluatePolicy } = await import("@handelo/policy");
+  const policy = evaluatePolicy({
+    action: "buy",
+    amountUsd,
+    marketOpen: asset.statusInfo.openState,
+    premiumPct: premiumPercent(asset)
+  });
+  if (policy.decision !== "READY") {
+    throw new Error("Autonomous execution was blocked by the final server-side policy recheck.");
+  }
+  const risk = evaluatePortfolioStrategyRisk(
+    portfolio,
+    asset.tokenSymbol,
+    amountUsd,
+    strategy.constraints
+  );
+  if (risk.decision !== "PASS") {
+    throw new Error("Autonomous execution was blocked by the final portfolio-risk recheck.");
+  }
+  const grant = executionGrantFromStrategy(strategy);
+  if (!grant.allowedAssets.some(
+    allowed => allowed.toLowerCase() === asset.tokenSymbol.toLowerCase() ||
+      allowed.toLowerCase() === asset.underlyingTicker.toLowerCase()
+  )) {
+    throw new Error("Autonomous execution asset scope no longer matches the active strategy grant.");
+  }
+}
+
 export interface HandeloStrategyWorkerDependencies {
   walletAddress: string;
   executionWallet: BinanceAgenticWalletAdapter;
@@ -241,6 +282,8 @@ export function createHandeloStrategyWorkerDependencies(
       if (!asset.statusInfo.openState) {
         throw new Error("Tokenized-stock reference market is closed; autonomous execution is blocked.");
       }
+
+      await revalidateExecution(strategy, portfolio, asset, strategy.amountUsd);
 
       let quote: Awaited<ReturnType<BinanceAgenticWalletAdapter["quote"]>>;
       try {
