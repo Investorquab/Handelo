@@ -1,21 +1,31 @@
 # Handelo Telegram
 
-Telegram is a thin conversational client over the Handelo runtime.
+Telegram is a private-chat conversational client over the same Handelo API/runtime used by the web application. It does not implement separate market, policy, wallet, or execution logic.
 
 ## Configuration
 
-Set:
+Set these environment variables:
 
-- `TELEGRAM_BOT_TOKEN`
-- `HANDELO_API_URL` (defaults to `http://localhost:8787`)
-- `HANDELO_CLIENT_API_KEY` when the API requires it
+- TELEGRAM_BOT_TOKEN — token created with Telegram's BotFather. Keep it secret and out of source control.
+- HANDELO_API_URL — Handelo API base URL; defaults to http://localhost:8787 for local development.
+- HANDELO_CLIENT_API_KEY — set this when the Handelo API requires external-client authentication.
 
-Then run:
+The root .env file is loaded when starting through the package command. For a hosted process, configure these values in the hosting provider's environment settings instead of committing an .env file.
 
-```bash
-pnpm --filter @handelo/telegram start
-```
+## Run locally
 
-The bot accepts private-chat messages only. It does not receive or store private keys, activate strategies, or bypass Handelo's risk/review controls.
+Start the Handelo API in one terminal, then start the Telegram client from the repository root:
 
-For production, run the bot as a long-lived service with a process supervisor and keep the bot token outside source control.
+    pnpm --filter @handelo/telegram start
+
+The bot supports /start and /help and forwards private-chat questions to the Handelo runtime. It ignores group messages, caps replies to Telegram's message-size limit, returns a safe generic message when a request fails, retries temporary polling failures with backoff, and shuts down on SIGINT/SIGTERM.
+
+Telegram does not receive private keys, activate strategies, bypass policy, or replace the user's required review/approval. Strategy content is presented as a preview only.
+
+## Before public launch
+
+- Create the bot with BotFather and set TELEGRAM_BOT_TOKEN outside source control.
+- Confirm the API URL is reachable from the bot host and configure HANDELO_CLIENT_API_KEY if required.
+- Validate /start, /help, market questions, a simulated API failure, and polling recovery in a real private chat.
+- Run the bot as a long-lived process with a supervisor; do not use a short-lived serverless function for long polling.
+- Confirm that logs do not contain bot tokens, API keys, private keys, or unnecessary user-message content.
