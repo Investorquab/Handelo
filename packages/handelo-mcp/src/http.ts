@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { marketClientFromEnv } from "@handelo/market";
 import { createMcpProtocolHandler, jsonRpcParseError, type McpMarketClient } from "./protocol.js";
@@ -141,8 +141,14 @@ export function createHandeloMcpHttpServer(options: HandeloMcpHttpOptions = {}):
   });
 }
 
-const entryPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
-if (import.meta.url === entryPath) {
+export function isHandeloMcpHttpEntrypoint(moduleUrl: string, argvPath?: string, pm2ExecPath?: string): boolean {
+  const modulePath = resolve(fileURLToPath(moduleUrl));
+  return [argvPath, pm2ExecPath].some(
+    (candidate) => typeof candidate === "string" && candidate.length > 0 && resolve(candidate) === modulePath,
+  );
+}
+
+if (isHandeloMcpHttpEntrypoint(import.meta.url, process.argv[1], process.env.pm_exec_path)) {
   try {
     const server = createHandeloMcpHttpServer();
     const port = Number(process.env.HANDELO_MCP_PORT ?? "8789");

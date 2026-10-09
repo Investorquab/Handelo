@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
-import { createHandeloMcpHttpServer } from "./http.js";
+import { createHandeloMcpHttpServer, isHandeloMcpHttpEntrypoint } from "./http.js";
+import { fileURLToPath } from "node:url";
 import type { McpMarketClient } from "./protocol.js";
 
 const API_KEY = "test-secret-key-with-at-least-thirty-two-characters";
@@ -100,4 +101,17 @@ test("HTTP MCP blocks unapproved origins and non-POST calls", async () => {
 
 test("HTTP MCP rejects weak/missing server keys before creating a server", () => {
   assert.throws(() => createHandeloMcpHttpServer({ apiKey: "short", market: fixture() }), /at least 32 characters/);
+});
+
+
+test("HTTP MCP entrypoint detection supports PM2's ESM process wrapper", () => {
+  const moduleUrl = new URL("./http.ts", import.meta.url).href;
+  const modulePath = fileURLToPath(new URL(moduleUrl));
+
+  assert.equal(
+    isHandeloMcpHttpEntrypoint(moduleUrl, "/usr/lib/node_modules/pm2/lib/ProcessContainerFork.js", modulePath),
+    true,
+  );
+  assert.equal(isHandeloMcpHttpEntrypoint(moduleUrl, modulePath, undefined), true);
+  assert.equal(isHandeloMcpHttpEntrypoint(moduleUrl, "/opt/other/http.ts", undefined), false);
 });

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { createHandeloClient, type HandeloClient } from "@handelo/sdk";
 import type { AgentResult } from "@handelo/agent";
 
@@ -380,8 +380,14 @@ export async function runTelegramBot(options: TelegramBotOptions): Promise<void>
   }
 }
 
-const entryPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
-if (import.meta.url === entryPath) {
+export function isTelegramEntrypoint(moduleUrl: string, argvPath?: string, pm2ExecPath?: string): boolean {
+  const modulePath = resolve(fileURLToPath(moduleUrl));
+  return [argvPath, pm2ExecPath].some(
+    (candidate) => typeof candidate === "string" && candidate.length > 0 && resolve(candidate) === modulePath,
+  );
+}
+
+if (isTelegramEntrypoint(import.meta.url, process.argv[1], process.env.pm_exec_path)) {
   const controller = new AbortController();
   process.once("SIGINT", () => controller.abort());
   process.once("SIGTERM", () => controller.abort());

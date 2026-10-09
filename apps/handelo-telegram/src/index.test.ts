@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createTelegramHandler, formatHandeloResponse, runTelegramBot } from "./index.js";
+import { createTelegramHandler, formatHandeloResponse, runTelegramBot, isTelegramEntrypoint } from "./index.js";
 import type { AgentResult } from "@handelo/agent";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -218,4 +218,16 @@ test("Telegram sends formatted responses using HTML parse mode", async () => {
 test("Telegram uses the server-side client API key configuration", () => {
   assert.match(telegramSource, /HANDELO_CLIENT_API_KEY/);
   assert.doesNotMatch(telegramSource, /HANDELO_API_KEY/);
+});
+
+test("Telegram entrypoint detection supports PM2's ESM process wrapper", () => {
+  const moduleUrl = new URL("./index.ts", import.meta.url).href;
+  const modulePath = fileURLToPath(new URL(moduleUrl));
+
+  assert.equal(
+    isTelegramEntrypoint(moduleUrl, "/usr/lib/node_modules/pm2/lib/ProcessContainerFork.js", modulePath),
+    true,
+  );
+  assert.equal(isTelegramEntrypoint(moduleUrl, modulePath, undefined), true);
+  assert.equal(isTelegramEntrypoint(moduleUrl, "/opt/other/index.ts", undefined), false);
 });
