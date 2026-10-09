@@ -3,7 +3,10 @@ const path = require("node:path");
 const root = __dirname;
 const logs = path.join(root, "logs");
 const common = {
-  interpreter: process.execPath,
+  // Resolve Node through the service PATH. Do not pin the child interpreter
+  // to process.execPath, which can resolve differently from the executable
+  // used by the service launcher on some VPS images.
+  interpreter: "node",
   autorestart: true,
   watch: false,
   max_restarts: 10,
