@@ -458,6 +458,7 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
 
   function beginAuthorization(url: URL, res: ServerResponse): void {
     clearExpiredTransientState();
+    console.info("[Handelo OAuth] authorize_get", JSON.stringify({ method: "GET", path: "/authorize" }));
     if (url.searchParams.get("response_type") !== "code") {
       authorizationError(res, "Only the authorization-code response type is supported.");
       return;
@@ -503,6 +504,7 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
       createdAt: now(),
       failedAttempts: 0,
     });
+    console.info("[Handelo OAuth] authorize_form_issued", JSON.stringify({ pendingCount: pendingAuthorizations.size, ttlMs: AUTH_REQUEST_TTL_MS }));
     html(res, 200, renderLoginForm(requestId, client.client_name));
   }
 
@@ -522,11 +524,14 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
 
     const requestId = form.get("request_id") ?? "";
     const pending = pendingAuthorizations.get(requestId);
+    const ageMs = pending ? Math.max(0, now() - pending.createdAt) : null;
     if (!pending || now() - pending.createdAt > AUTH_REQUEST_TTL_MS) {
       if (pending) pendingAuthorizations.delete(requestId);
+      console.warn("[Handelo OAuth] authorize_form_rejected", JSON.stringify({ reason: pending ? "expired_request" : "missing_request", ageMs, pendingCount: pendingAuthorizations.size }));
       authorizationError(res, "This authorization request expired. Return to Claude and try connecting again.");
       return;
     }
+    console.info("[Handelo OAuth] authorize_form_accepted", JSON.stringify({ ageMs, pendingCount: pendingAuthorizations.size }));
 
     const username = form.get("username") ?? "";
     const password = form.get("password") ?? "";
