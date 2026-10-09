@@ -6,45 +6,45 @@ Handelo exposes read-only market-intelligence tools to MCP-compatible clients.
 
 For MCP clients that can launch a local subprocess:
 
-\`\`\`bash
+```bash
 pnpm --filter @handelo/mcp start
-\`\`\`
+```
 
 ## Claude.ai remote connector
 
-Claude.ai custom connectors require a remote MCP server that is reachable from Anthropic's cloud. They cannot launch Handelo's local stdio process, so use the authenticated Streamable HTTP transport.
+Claude.ai custom connectors use a remote MCP server reachable from Anthropic's cloud. The local stdio process is not usable by Claude.ai in the browser; deploy the authenticated Streamable HTTP transport on a server with a public HTTPS hostname.
 
-Required repository-root \`.env\` variables:
+Follow [VPS deployment](./VPS-DEPLOYMENT.md) to run the HTTP transport under PM2 and publish it through Nginx with TLS. The MCP process binds to `127.0.0.1:8789`; do not expose that port directly to the internet. A tunnel is not needed for the VPS deployment.
 
-- \`BINANCE_WEB3_API_KEY\`
-- \`BINANCE_WEB3_SECRET_KEY\`
-- \`HANDELO_MCP_API_KEY\` — use a random secret of at least 32 characters; never commit it
+Required repository-root `.env` variables:
+
+- `BINANCE_WEB3_API_KEY`
+- `BINANCE_WEB3_SECRET_KEY`
+- `HANDELO_MCP_API_KEY` — use a random secret of at least 32 characters; never commit it
 
 Optional:
 
-- \`HANDELO_MCP_PORT\` (default \`8789\`)
-- \`HANDELO_MCP_ALLOWED_ORIGINS\` (default \`https://claude.ai,https://www.claude.ai\`)
+- `HANDELO_MCP_PORT` (default `8789`)
+- `HANDELO_MCP_ALLOWED_ORIGINS` (default `https://claude.ai,https://www.claude.ai`)
 
-Generate a secret locally with Node.js:
+Generate a secret on the VPS:
 
-\`\`\`powershell
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-\`\`\`
+```bash
+openssl rand -hex 32
+```
 
-Start the HTTP process:
+Start locally for development with:
 
-\`\`\`bash
+```bash
 pnpm --filter @handelo/mcp start:http
-\`\`\`
+```
 
-It binds only to loopback and exposes a minimal \`GET /health\` endpoint plus authenticated \`POST /mcp\`. Every MCP request must include the \`X-Handelo-MCP-Key\` request header. Bodies are limited, provided origins are allowlisted, and provider/internal errors are not returned verbatim to Claude.
-
-For initial testing, run a temporary HTTPS tunnel to \`http://127.0.0.1:8789\`, then add the resulting public URL plus \`/mcp\` in Claude.ai under **Customize → Connectors → Add custom connector**. Configure the fixed request header \`X-Handelo-MCP-Key\` with the secret from the local \`.env\`. Stop the tunnel after validation; permanent hosting remains a later deployment step.
+The HTTP process exposes a minimal `GET /health` endpoint plus authenticated `POST /mcp`. Every MCP request must include the `X-Handelo-MCP-Key` request header. Request bodies are limited, configured origins are allowlisted, and provider/internal errors are not returned verbatim to Claude.
 
 ## Tools
 
-- \`handelo_market_lookup\`
-- \`handelo_market_search\`
+- `handelo_market_lookup`
+- `handelo_market_search`
 
 Search results identify candidate representations and must not be treated as proof that every result is validated. The currently individually validated asset remains NVIDIA (NVDA) represented by NVDAB on BNB Chain.
 

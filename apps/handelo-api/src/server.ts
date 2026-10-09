@@ -19,6 +19,7 @@ import { createHandeloStrategyWorkerDependencies } from "./strategy-worker-runti
 import { normalizeWalletGuardrails } from "./wallet-guardrails.js";
 
 const port = Number(process.env.PORT ?? "8787");
+const host = process.env.HOST?.trim() || "127.0.0.1";
 const execFileAsync = promisify(execFile);
 let walletAuth: { status: "IDLE" | "WAITING" | "SUCCESS" | "FAILED"; urlForWeb?: string; pairingCode?: string; error?: string } = { status: "IDLE" };
 let agent: HandeloAgent | null = null;
@@ -1218,7 +1219,7 @@ const liveAccountTimer = setInterval(() => {
 }, 15000);
 liveAccountTimer.unref?.();
 
-server.listen(port, () => {
-  console.log(`Handelo API listening on http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`Handelo API listening on http://${host}:${port}`);
   void discoverMarketsCached(true).catch(() => undefined);
 });

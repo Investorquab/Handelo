@@ -148,3 +148,9 @@ test("live execution uses the reviewed destination token and direction", () => {
   assert.match(source, /toToken,\n        binanceChainId/);
   assert.match(source, /action === "sell" \? "SELL" : "BUY"/);
 });
+
+
+test("API server binds to loopback by default for reverse-proxied deployments", () => {
+  assert.ok(source.includes('const host = process.env.HOST?.trim() || "127.0.0.1";'));
+  assert.ok(source.includes("server.listen(port, host, () => {"));
+});
