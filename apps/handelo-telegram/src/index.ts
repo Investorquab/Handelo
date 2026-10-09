@@ -121,19 +121,16 @@ function formatTelegramMarkdown(message: string): string {
 
     const tableHeaders = parseMarkdownTableRow(line);
     if (tableHeaders && index + 1 < lines.length && isMarkdownTableDivider(lines[index + 1])) {
-      index += 2;
+      let rowIndex = index + 2;
       const rows: string[][] = [];
-      while (index < lines.length) {
-        const row = parseMarkdownTableRow(lines[index]);
-        if (!row) {
-          index -= 1;
-          break;
-        }
+      while (rowIndex < lines.length) {
+        const row = parseMarkdownTableRow(lines[rowIndex]);
+        if (!row) break;
         rows.push(row);
-        index += 1;
+        rowIndex += 1;
       }
-      index -= 1;
       output.push(renderMarkdownTable(tableHeaders, rows));
+      index = rowIndex - 1;
       continue;
     }
 
