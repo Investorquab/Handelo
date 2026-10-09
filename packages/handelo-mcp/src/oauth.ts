@@ -523,6 +523,12 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
     }
 
     const requestId = form.get("request_id") ?? "";
+    console.info("[Handelo OAuth] authorize_form_received", JSON.stringify({
+      requestIdPresent: requestId.length > 0,
+      usernamePresent: form.has("username"),
+      passwordPresent: form.has("password"),
+      pendingCount: pendingAuthorizations.size,
+    }));
     const pending = pendingAuthorizations.get(requestId);
     const ageMs = pending ? Math.max(0, now() - pending.createdAt) : null;
     if (!pending || now() - pending.createdAt > AUTH_REQUEST_TTL_MS) {
@@ -539,6 +545,10 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
     const passwordMatches = safeEqual(password, options.password);
     if (!usernameMatches || !passwordMatches) {
       pending.failedAttempts += 1;
+      console.warn("[Handelo OAuth] authorize_credentials_rejected", JSON.stringify({
+        failedAttempts: pending.failedAttempts,
+        pendingCount: pendingAuthorizations.size,
+      }));
       if (pending.failedAttempts >= 5) {
         pendingAuthorizations.delete(requestId);
         authorizationError(res, "Too many failed attempts. Return to Claude and start a new connection.");
@@ -569,6 +579,11 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
     const redirect = new URL(pending.redirectUri);
     redirect.searchParams.set("code", code);
     redirect.searchParams.set("state", pending.state);
+    console.info("[Handelo OAuth] authorize_redirect_issued", JSON.stringify({
+      redirectOrigin: redirect.origin,
+      redirectPath: redirect.pathname,
+      pendingCount: pendingAuthorizations.size,
+    }));
     res.writeHead(302, {
       location: redirect.toString(),
       "cache-control": "no-store",
@@ -595,7 +610,16 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
     const grantType = form.get("grant_type") ?? "";
     const clientId = form.get("client_id") ?? "";
     const client = store.clients[clientId];
+    console.info("[Handelo OAuth] token_request_received", JSON.stringify({
+      grantType: grantType === "authorization_code" || grantType === "refresh_token" ? grantType : "unsupported",
+      clientRegistered: Boolean(client),
+      codePresent: form.has("code") && Boolean(form.get("code")),
+      verifierPresent: form.has("code_verifier") && Boolean(form.get("code_verifier")),
+      refreshTokenPresent: form.has("refresh_token") && Boolean(form.get("refresh_token")),
+      resourcePresent: form.has("resource") && Boolean(form.get("resource")),
+    }));
     if (!client || (form.has("client_secret") && Boolean(form.get("client_secret")))) {
+      console.warn("[Handelo OAuth] token_request_rejected", JSON.stringify({ reason: "invalid_client", grantType: grantType === "authorization_code" || grantType === "refresh_token" ? grantType : "unsupported" }));
       oauthError(res, 401, "invalid_client", "A registered public client_id is required; client secrets are not used.");
       return;
     }
@@ -612,21 +636,49 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
         ? createHash("sha256").update(verifier).digest("base64url")
         : "";
 
+      const authorizationExpired = Boolean(authorization && now() > authorization.expiresAt);
+      const clientMatches = Boolean(authorization && authorization.clientId === clientId);
+      const redirectMatches = Boolean(authorization && authorization.redirectUri === redirectUri);
+      const redirectRegistered = client.redirect_uris.includes(redirectUri);
+      const pkceMatches = Boolean(authorization && verifierValid && safeEqual(calculatedChallenge, authorization.codeChallenge));
+      const resourceMatches = Boolean(authorization && requestedResource(form.get("resource")) === authorization.resource);
       if (
         !authorization ||
-        now() > authorization.expiresAt ||
-        authorization.clientId !== clientId ||
-        authorization.redirectUri !== redirectUri ||
-        !client.redirect_uris.includes(redirectUri) ||
+        authorizationExpired ||
+        !clientMatches ||
+        !redirectMatches ||
+        !redirectRegistered ||
         !verifierValid ||
-        !safeEqual(calculatedChallenge, authorization.codeChallenge) ||
-        requestedResource(form.get("resource")) !== authorization.resource
+        !pkceMatches ||
+        !resourceMatches
       ) {
+        const reason = !authorization ? "unknown_or_reused_code"
+          : authorizationExpired ? "expired_code"
+          : !clientMatches ? "client_mismatch"
+          : !redirectMatches || !redirectRegistered ? "redirect_uri_mismatch"
+          : !verifierValid || !pkceMatches ? "pkce_mismatch"
+          : "resource_mismatch";
+        console.warn("[Handelo OAuth] token_exchange_rejected", JSON.stringify({
+          reason,
+          codeFound: Boolean(authorization),
+          authorizationExpired,
+          clientMatches,
+          redirectMatches,
+          redirectRegistered,
+          verifierValid,
+          pkceMatches,
+          resourceMatches,
+        }));
         oauthError(res, 400, "invalid_grant", "The authorization code, redirect URI, resource, or PKCE verifier is invalid or expired.");
         return;
       }
 
-      json(res, 200, issueTokens(client, authorization.username, authorization.scope));
+      const tokenResponse = issueTokens(client, authorization.username, authorization.scope);
+      console.info("[Handelo OAuth] token_exchange_succeeded", JSON.stringify({
+        grantType: "authorization_code",
+        scope: authorization.scope,
+      }));
+      json(res, 200, tokenResponse);
       return;
     }
 
@@ -640,19 +692,26 @@ export function createHandeloOAuthProvider(options: HandeloOAuthOptions) {
       const refreshKey = hash(refreshToken);
       const record = store.refreshTokens[refreshKey];
       const timestamp = Math.floor(now() / 1000);
+      const refreshReason = !record ? "unknown_or_reused_refresh_token"
+        : record.client_id !== clientId ? "client_mismatch"
+        : timestamp >= record.expires_at ? "expired_refresh_token"
+        : "resource_mismatch";
       if (
         !record ||
         record.client_id !== clientId ||
         timestamp >= record.expires_at ||
         requestedResource(form.get("resource")) !== record.resource
       ) {
+        console.warn("[Handelo OAuth] refresh_exchange_rejected", JSON.stringify({ reason: refreshReason }));
         oauthError(res, 400, "invalid_grant", "The refresh token is invalid, expired, or belongs to another client.");
         return;
       }
 
       delete store.refreshTokens[refreshKey];
       persist();
-      json(res, 200, issueTokens(client, record.username, REQUIRED_SCOPE));
+      const tokenResponse = issueTokens(client, record.username, REQUIRED_SCOPE);
+      console.info("[Handelo OAuth] token_exchange_succeeded", JSON.stringify({ grantType: "refresh_token", scope: REQUIRED_SCOPE }));
+      json(res, 200, tokenResponse);
       return;
     }
 
