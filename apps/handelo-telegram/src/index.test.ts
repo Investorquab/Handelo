@@ -75,15 +75,16 @@ test("Telegram converts Markdown headings, lists and tables into polished chat f
     ].join("\n"),
   } as AgentResult);
 
-  assert.match(text, /<b>1\\. Why diversify\\?<\\/b>/);
-  assert.match(text, /• <b>Sector tilt:<\\/b> Avoid concentrating everything in one sector\\./);
-  assert.match(text, /• <b>Liquidity:<\\/b> Low liquidity can increase slippage\\./);
-  assert.match(text, /<b>Large-cap US tech<\\/b>/);
+  assert.ok(text.includes("<b>1. Why diversify?</b>"));
+  assert.ok(text.includes("• <b>Sector tilt:</b> Avoid concentrating everything in one sector."));
+  assert.ok(text.includes("• <b>Liquidity:</b> Low liquidity can increase slippage."));
+  assert.ok(text.includes("<b>Large-cap US tech</b>"));
   assert.equal(text.match(/Large-cap US tech/g)?.length, 1, "each table row should render once");
-  assert.match(text, /<b>Approx\\. \\$ amount:<\\/b> \\$30/);
-  assert.match(text, /<b>Reason:<\\/b> Established companies with growth potential\\./);
-  assert.doesNotMatch(text, /###|\\| --- \\||\\* \\*\\*/);
-  assert.doesNotMatch(text, /\\| Allocation \\|/);
+  assert.ok(text.includes("<b>Approx. $ amount:</b> $30"));
+  assert.ok(text.includes("<b>Reason:</b> Established companies with growth potential."));
+  assert.ok(!text.includes("###"));
+  assert.ok(!text.includes("| --- |"));
+  assert.ok(!text.includes("| Allocation |"));
 });
 
 test("Telegram response stays within its message-size budget", () => {
