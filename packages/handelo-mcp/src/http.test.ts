@@ -286,3 +286,20 @@ test("OAuth-mode MCP rejects requests without a valid bearer token and advertise
     assert.match(response.headers.get("www-authenticate") ?? "", /oauth-protected-resource/);
   });
 });
+
+
+test("OAuth authorization rejects a missing pending request with a safe expiration page", async () => {
+  await withOAuthServer(async (baseUrl) => {
+    const response = await fetch(baseUrl + "/authorize", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        request_id: "not-a-live-request",
+        username: "test-user",
+        password: "this-is-a-long-oauth-test-password",
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match(await response.text(), /authorization request expired/i);
+  });
+});
