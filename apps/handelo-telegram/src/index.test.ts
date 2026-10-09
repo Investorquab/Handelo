@@ -58,6 +58,33 @@ test("Telegram formats Markdown bold and inline code as safe HTML", () => {
   assert.doesNotMatch(text, /\*\*OPEN\*\*/);
 });
 
+
+test("Telegram converts Markdown headings, lists and tables into polished chat formatting", () => {
+  const text = formatHandeloResponse({
+    answer: [
+      "### 1. Why diversify?",
+      "Diversification spreads risk across different assets.",
+      "",
+      "* **Sector tilt:** Avoid concentrating everything in one sector.",
+      "* **Liquidity:** Low liquidity can increase slippage.",
+      "",
+      "| Allocation | Approx. $ amount | Reason |",
+      "| --- | --- | --- |",
+      "| Large-cap US tech | $30 | Established companies with growth potential. |",
+      "| Consumer staples | $20 | Adds a more defensive sector. |",
+    ].join("\n"),
+  } as AgentResult);
+
+  assert.match(text, /<b>1\\. Why diversify\\?<\\/b>/);
+  assert.match(text, /• <b>Sector tilt:<\\/b> Avoid concentrating everything in one sector\\./);
+  assert.match(text, /• <b>Liquidity:<\\/b> Low liquidity can increase slippage\\./);
+  assert.match(text, /<b>Large-cap US tech<\\/b>/);
+  assert.match(text, /<b>Approx\\. \\$ amount:<\\/b> \\$30/);
+  assert.match(text, /<b>Reason:<\\/b> Established companies with growth potential\\./);
+  assert.doesNotMatch(text, /###|\\| --- \\||\\* \\*\\*/);
+  assert.doesNotMatch(text, /\\| Allocation \\|/);
+});
+
 test("Telegram response stays within its message-size budget", () => {
   const text = formatHandeloResponse({ answer: "😀".repeat(6000) } as AgentResult);
   const visibleText = text.replace(/<[^>]*>/g, "").replace(/&(?:amp|lt|gt);/g, "x");

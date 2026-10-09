@@ -44,17 +44,139 @@ function fitTelegramMessage(message: string): string {
     .trimEnd() + suffix;
 }
 
-function formatTelegramMarkdown(message: string): string {
-  const escaped = message
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-  return escaped
-    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
-    .replace(/\x60([^\x60\n]+)\x60/g, "<code>$1</code>");
+function escapeTelegramHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function formatTelegramInline(value: string): string {
+  const codeSegments: string[] = [];
+  const backtick = String.fromCharCode(96);
+  const codePattern = new RegExp(backtick + "([^" + backtick + "\\n]+)" + backtick, "g");
+  const withCodeTokens = value.replace(codePattern, (_match, code: string) => {
+    const token = "\uE000" + codeSegments.length + "\uE001";
+    codeSegments.push("<code>" + escapeTelegramHtml(code) + "</code>");
+    return token;
+  });
+
+  let formatted = escapeTelegramHtml(withCodeTokens)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/__(.+?)__/g, "<b>$1</b>")
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<i>$1</i>");
+
+  for (let index = 0; index < codeSegments.length; index += 1) {
+    formatted = formatted.replace("\uE000" + index + "\uE001", codeSegments[index]);
+  }
+  return formatted;
+}
+
+function parseMarkdownTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return null;
+  return trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+}
+
+function isMarkdownTableDivider(line: string): boolean {
+  const cells = parseMarkdownTableRow(line);
+  return Boolean(cells?.length && cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+}
+
+function renderMarkdownTable(headers: string[], rows: string[][]): string {
+  return rows.map((row) => {
+    const fields = row
+      .map((value, index) => ({ label: headers[index] ?? "Detail", value }))
+      .filter((field) => field.value.length > 0);
+    if (!fields.length) return "";
+
+    const [primary, ...details] = fields;
+    const lines = ["• <b>" + escapeTelegramHtml(primary.value) + "</b>"];
+    for (const field of details) {
+      lines.push("   <b>" + formatTelegramInline(field.label) + ":</b> " + formatTelegramInline(field.value));
+    }
+    return lines.join("\n");
+  }).filter(Boolean).join("\n\n");
+}
+
+function formatTelegramMarkdown(message: string): string {
+  const lines = message.replace(/\r\n?/g, "\n").split("\n");
+  const output: string[] = [];
+  let fencedCode: string[] | null = null;
+  const codeFence = String.fromCharCode(96).repeat(3);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (line.trimStart().startsWith(codeFence)) {
+      if (fencedCode === null) {
+        fencedCode = [];
+      } else {
+        output.push("<pre>" + escapeTelegramHtml(fencedCode.join("\n")) + "</pre>");
+        fencedCode = null;
+      }
+      continue;
+    }
+    if (fencedCode !== null) {
+      fencedCode.push(line);
+      continue;
+    }
+
+    const tableHeaders = parseMarkdownTableRow(line);
+    if (tableHeaders && index + 1 < lines.length && isMarkdownTableDivider(lines[index + 1])) {
+      index += 2;
+      const rows: string[][] = [];
+      while (index < lines.length) {
+        const row = parseMarkdownTableRow(lines[index]);
+        if (!row) {
+          index -= 1;
+          break;
+        }
+        rows.push(row);
+        index += 1;
+      }
+      index -= 1;
+      output.push(renderMarkdownTable(tableHeaders, rows));
+      continue;
+    }
+
+    if (!line.trim()) {
+      if (output.length && output[output.length - 1] !== "") output.push("");
+      continue;
+    }
+
+    const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      output.push("<b>" + formatTelegramInline(heading[1]) + "</b>");
+      continue;
+    }
+
+    if (/^\s*(?:---+|___+|\*\*\*+)\s*$/.test(line)) {
+      continue;
+    }
+
+    const bullet = line.match(/^(\s*)[*+-]\s+(.+)$/);
+    if (bullet) {
+      const indent = bullet[1].length >= 2 ? "   " : "";
+      output.push(indent + "• " + formatTelegramInline(bullet[2]));
+      continue;
+    }
+
+    const numbered = line.match(/^(\s*)(\d+)[.)]\s+(.+)$/);
+    if (numbered) {
+      output.push(numbered[1].length >= 2 ? "   " + numbered[2] + ". " + formatTelegramInline(numbered[3]) : numbered[2] + ". " + formatTelegramInline(numbered[3]));
+      continue;
+    }
+
+    const quote = line.match(/^\s*>\s?(.*)$/);
+    if (quote) {
+      output.push("│ " + formatTelegramInline(quote[1]));
+      continue;
+    }
+
+    output.push(formatTelegramInline(line));
+  }
+
+  if (fencedCode !== null) output.push("<pre>" + escapeTelegramHtml(fencedCode.join("\n")) + "</pre>");
+  return output.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 export function formatHandeloResponse(result: AgentResult): string {
   const sections = [result.answer.trim()];
 
