@@ -4,12 +4,15 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { marketClientFromEnv } from "@handelo/market";
 import { createMcpProtocolHandler, jsonRpcParseError, type McpMarketClient } from "./protocol.js";
+import { createHandeloOAuthProvider, type HandeloOAuthOptions } from "./oauth.js";
 
 const MAX_REQUEST_BODY_BYTES = 64 * 1024;
 const DEFAULT_ALLOWED_ORIGINS = ["https://claude.ai", "https://www.claude.ai"];
 
 export interface HandeloMcpHttpOptions {
   apiKey?: string;
+  authMode?: "api-key" | "oauth";
+  oauth?: HandeloOAuthOptions;
   allowedOrigins?: string[];
   market?: McpMarketClient;
 }
@@ -48,9 +51,25 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 }
 
 export function createHandeloMcpHttpServer(options: HandeloMcpHttpOptions = {}): Server {
+  const envAuthMode = process.env.HANDELO_MCP_AUTH_MODE;
+  if (envAuthMode && envAuthMode !== "api-key" && envAuthMode !== "oauth" && options.authMode === undefined) {
+    throw new Error("HANDELO_MCP_AUTH_MODE must be either api-key or oauth.");
+  }
+  const authMode = options.authMode ?? (envAuthMode === "oauth" ? "oauth" : "api-key");
   const apiKey = options.apiKey ?? process.env.HANDELO_MCP_API_KEY ?? "";
-  if (apiKey.length < 32) {
-    throw new Error("HANDELO_MCP_API_KEY must be configured with at least 32 characters before HTTP MCP can start.");
+  let oauth: ReturnType<typeof createHandeloOAuthProvider> | null = null;
+
+  if (authMode === "oauth") {
+    const oauthOptions = options.oauth ?? {
+      issuer: process.env.HANDELO_OAUTH_ISSUER ?? "",
+      username: process.env.HANDELO_OAUTH_USERNAME ?? "",
+      password: process.env.HANDELO_OAUTH_PASSWORD ?? "",
+      tokenSecret: process.env.HANDELO_OAUTH_TOKEN_SECRET ?? "",
+      storePath: process.env.HANDELO_OAUTH_STORE_PATH ?? "/opt/handelo/data/oauth-state.json",
+    };
+    oauth = createHandeloOAuthProvider(oauthOptions);
+  } else if (apiKey.length < 32) {
+    throw new Error("HANDELO_MCP_API_KEY must be configured with at least 32 characters before API-key HTTP MCP can start.");
   }
 
   const configuredOrigins = process.env.HANDELO_MCP_ALLOWED_ORIGINS;
@@ -64,6 +83,8 @@ export function createHandeloMcpHttpServer(options: HandeloMcpHttpOptions = {}):
 
   return createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+
+    if (oauth && await oauth.handleRequest(req, res, url)) return;
 
     if (req.method === "GET" && url.pathname === "/health") {
       json(res, 200, { ok: true, service: "handelo-mcp-http" });
@@ -87,11 +108,26 @@ export function createHandeloMcpHttpServer(options: HandeloMcpHttpOptions = {}):
       return;
     }
 
-    const presentedKey = req.headers["x-handelo-mcp-key"];
-    const candidate = typeof presentedKey === "string" ? presentedKey.trim() : "";
-    if (!safeEqual(candidate, apiKey)) {
-      json(res, 401, { error: "A valid X-Handelo-MCP-Key header is required." });
-      return;
+    if (authMode === "oauth") {
+      const authorization = req.headers.authorization;
+      const bearer = typeof authorization === "string"
+        ? authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? ""
+        : "";
+      if (!oauth || !bearer || !oauth.validateAccessToken(bearer)) {
+        res.setHeader(
+          "www-authenticate",
+          'Bearer resource_metadata="' + (oauth?.resourceMetadataUrl ?? "") + '", scope="market:read"',
+        );
+        json(res, 401, { error: "invalid_token", error_description: "A valid OAuth bearer access token is required." });
+        return;
+      }
+    } else {
+      const presentedKey = req.headers["x-handelo-mcp-key"];
+      const candidate = typeof presentedKey === "string" ? presentedKey.trim() : "";
+      if (!safeEqual(candidate, apiKey)) {
+        json(res, 401, { error: "A valid X-Handelo-MCP-Key header is required." });
+        return;
+      }
     }
 
     const origin = req.headers.origin;
