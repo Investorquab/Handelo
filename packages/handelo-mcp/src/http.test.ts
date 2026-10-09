@@ -209,6 +209,21 @@ test("HTTP MCP supports Claude OAuth registration, PKCE, bearer access, and rota
       }),
     });
     assert.equal(authorizeResponse.status, 302);
+
+    // A repeated form submission must be rejected after the first one consumes
+    // the pending request, without invalidating the already-issued auth code.
+    const duplicateAuthorizeResponse = await fetch(baseUrl + "/authorize", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        request_id: requestId,
+        username: "test-user",
+        password: "this-is-a-long-oauth-test-password",
+      }),
+    });
+    assert.equal(duplicateAuthorizeResponse.status, 400);
+    assert.match(await duplicateAuthorizeResponse.text(), /authorization request expired/i);
+
     const callback = new URL(authorizeResponse.headers.get("location") ?? "");
     assert.equal(callback.origin, "http://127.0.0.1:4321");
     assert.equal(callback.searchParams.get("state"), "state-test-value");
