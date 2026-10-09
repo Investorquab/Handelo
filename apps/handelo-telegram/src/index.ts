@@ -44,6 +44,17 @@ function fitTelegramMessage(message: string): string {
     .trimEnd() + suffix;
 }
 
+function formatTelegramMarkdown(message: string): string {
+  const escaped = message
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\x60([^\x60\n]+)\x60/g, "<code>$1</code>");
+}
+
 export function formatHandeloResponse(result: AgentResult): string {
   const sections = [result.answer.trim()];
 
@@ -51,13 +62,13 @@ export function formatHandeloResponse(result: AgentResult): string {
     const gap = result.market.premiumPct === null ? "n/a" : result.market.premiumPct.toFixed(2) + "%";
     sections.push(
       [
-        "MARKET INSIGHT",
-        "Asset: " + result.market.tokenSymbol,
-        "Provider: " + result.market.provider,
-        "On-chain: " + result.market.tokenPrice,
-        "Reference: " + result.market.referencePrice,
-        "Divergence: " + gap,
-        "Status: " + result.market.marketStatus,
+        "**MARKET INSIGHT**",
+        "**Asset:** " + result.market.tokenSymbol,
+        "**Provider:** " + result.market.provider,
+        "**On-chain:** " + result.market.tokenPrice,
+        "**Reference:** " + result.market.referencePrice,
+        "**Divergence:** " + gap,
+        "**Status:** " + result.market.marketStatus,
       ].join("\n"),
     );
   }
@@ -65,12 +76,12 @@ export function formatHandeloResponse(result: AgentResult): string {
   if (result.strategy) {
     sections.push(
       [
-        "STRATEGY PREVIEW",
-        "Type: " + result.strategy.type,
-        "Asset: " + result.strategy.asset,
-        result.strategy.amountUsd === undefined ? null : "Amount: $" + result.strategy.amountUsd,
-        result.strategy.frequency ? "Frequency: " + result.strategy.frequency : null,
-        "Status: " + result.strategy.status,
+        "**STRATEGY PREVIEW**",
+        "**Type:** " + result.strategy.type,
+        "**Asset:** " + result.strategy.asset,
+        result.strategy.amountUsd === undefined ? null : "**Amount:** $" + result.strategy.amountUsd,
+        result.strategy.frequency ? "**Frequency:** " + result.strategy.frequency : null,
+        "**Status:** " + result.strategy.status,
         "No strategy is activated by Telegram.",
       ].filter(Boolean).join("\n"),
     );
@@ -79,9 +90,9 @@ export function formatHandeloResponse(result: AgentResult): string {
   if (result.policy) {
     sections.push(
       [
-        "RISK RESULT",
-        "Decision: " + result.policy.decision,
-        "Reason: " + (result.policy.reasons[0] ?? "No reason supplied."),
+        "**RISK RESULT**",
+        "**Decision:** " + result.policy.decision,
+        "**Reason:** " + (result.policy.reasons[0] ?? "No reason supplied."),
       ].join("\n"),
     );
   }
@@ -89,15 +100,15 @@ export function formatHandeloResponse(result: AgentResult): string {
   if (result.basket) {
     sections.push(
       [
-        "BASKET PREVIEW",
-        "Name: " + result.basket.name,
-        "Assets: " + result.basket.assets.map((asset) => asset.asset).join(", "),
+        "**BASKET PREVIEW**",
+        "**Name:** " + result.basket.name,
+        "**Assets:** " + result.basket.assets.map((asset) => asset.asset).join(", "),
       ].join("\n"),
     );
   }
 
   const message = sections.filter((section) => section.trim()).join("\n\n") || "Handelo did not return a response.";
-  return fitTelegramMessage(message);
+  return formatTelegramMarkdown(fitTelegramMessage(message));
 }
 
 export function createTelegramTransport(
@@ -152,6 +163,7 @@ export function createTelegramHandler(client: HandeloClient, transport: Telegram
     await transport.call("sendMessage", {
       chat_id: message.chat.id,
       text: formatHandeloResponse(result),
+      parse_mode: "HTML",
       disable_web_page_preview: true,
     });
   };

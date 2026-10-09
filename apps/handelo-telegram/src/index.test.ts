@@ -46,10 +46,23 @@ test("Telegram formatter renders structured Handelo context", () => {
   assert.match(text, /No strategy is activated by Telegram/);
 });
 
+test("Telegram formats Markdown bold and inline code as safe HTML", () => {
+  const text = formatHandeloResponse({
+    answer: "The market is **OPEN** at `180`. Never trust <script>alert(1)</script> & raw HTML.",
+  } as AgentResult);
+
+  assert.match(text, /<b>OPEN<\/b>/);
+  assert.match(text, /<code>180<\/code>/);
+  assert.match(text, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(text, /&amp;/);
+  assert.doesNotMatch(text, /\*\*OPEN\*\*/);
+});
+
 test("Telegram response stays within its message-size budget", () => {
   const text = formatHandeloResponse({ answer: "😀".repeat(6000) } as AgentResult);
+  const visibleText = text.replace(/<[^>]*>/g, "").replace(/&(?:amp|lt|gt);/g, "x");
 
-  assert.ok(Array.from(text).length <= 3900);
+  assert.ok(Array.from(visibleText).length <= 3900);
   assert.match(text, /Response shortened/);
 });
 
@@ -149,6 +162,28 @@ test("Telegram polling recovers from temporary network failures and can stop cle
 
   assert.equal(waits, 1);
   assert.deepEqual(loggedContexts, ["Telegram polling failed; retrying"]);
+});
+
+
+test("Telegram sends formatted responses using HTML parse mode", async () => {
+  let sent: Record<string, unknown> | undefined;
+  const client = {
+    chat: async (): Promise<AgentResult> => ({ answer: "The market is **OPEN**." } as AgentResult),
+  };
+  const transport = {
+    call: async <T>(_method: string, body?: Record<string, unknown>): Promise<T> => {
+      sent = body;
+      return {} as T;
+    },
+  };
+
+  await createTelegramHandler(client, transport)({
+    update_id: 10,
+    message: { chat: { id: 1, type: "private" }, text: "market status" },
+  });
+
+  assert.equal(sent?.parse_mode, "HTML");
+  assert.match(String(sent?.text), /<b>OPEN<\/b>/);
 });
 
 test("Telegram uses the server-side client API key configuration", () => {
