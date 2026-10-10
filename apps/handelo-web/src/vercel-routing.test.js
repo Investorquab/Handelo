@@ -58,10 +58,10 @@ test("shared proxy keeps the API key server-side and supports optional website a
   for (const marker of ["HANDELO_CLIENT_API_KEY", "x-handelo-api-key", "x-handelo-auth-required", "HANDELO_WEB_AUTH_ENABLED"]) {
     assert.ok(proxy.includes(marker), `Shared proxy is missing security/configuration marker: ${marker}`);
   }
-  assert.match(proxy, /webAuthEnabled===\\"true\\"/);
-  assert.match(proxy, /path===\\"execute\\"/);
+  assert.ok(proxy.includes('process.env.HANDELO_WEB_AUTH_ENABLED==="true"'));
+  assert.ok(proxy.includes('method==="POST"&&path==="execute"'));
   const routedSource = readFileSync(join(apiDir, "proxy.js"), "utf8");
-  assert.match(routedSource, /query\.delete\("\\?__route|query\.delete\("\\?__route/);
+  assert.ok(routedSource.includes('query.delete("__route")'));
   assert.match(routedSource, /sharedHandler\(req, res\)/);
 });
 
