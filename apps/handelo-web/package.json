@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "check": "node --check src/app.js && node --check src/live-workspace.js && node --check \"api/[...path].js\"",
+    "check": "node --check src/app.js && node --check src/live-workspace.js && node --check \"api/[...path].js\" && node --check api/proxy.js",
     "test": "node --test src/app.test.js src/vercel-routing.test.js"
   }
 }

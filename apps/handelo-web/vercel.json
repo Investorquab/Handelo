@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/wallet/:endpoint",
+      "destination": "/api/proxy?__route=wallet/:endpoint"
+    },
+    {
+      "source": "/api/workspace/:endpoint",
+      "destination": "/api/proxy?__route=workspace/:endpoint"
+    },
+    {
+      "source": "/api/portfolio/:endpoint",
+      "destination": "/api/proxy?__route=portfolio/:endpoint"
+    },
+    {
+      "source": "/api/strategy/:endpoint",
+      "destination": "/api/proxy?__route=strategy/:endpoint"
+    },
+    {
+      "source": "/api/strategies/:endpoint",
+      "destination": "/api/proxy?__route=strategies/:endpoint"
+    }
+  ]
+}
