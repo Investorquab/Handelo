@@ -30,7 +30,7 @@ export default async function handler(req,res){
  if(!origin||!apiKey)return reject(res,503,"Handelo API proxy is not configured in Vercel.");
  const incoming=new URL(req.url||"/","https://handelo.invalid");const method=String(req.method||"GET").toUpperCase();
  if(!["GET","POST","OPTIONS"].includes(method)){res.setHeader("allow","GET, POST, OPTIONS");return reject(res,405,"Method not allowed.");}
- const path=incoming.pathname.startsWith("/api/")?incoming.pathname.slice(5):incoming.pathname.replace(/^\\/+/, "");const segments=path.split("/");
+ const path=incoming.pathname.startsWith("/api/")?incoming.pathname.slice(5):incoming.pathname.slice(1);const segments=path.split("/");
  if(!path||segments.some(s=>!s||s==="."||s===".."||!/^[A-Za-z0-9._-]+$/.test(s)))return reject(res,400,"Invalid API path.");
  if(!webAuthEnabled&&method==="POST"&&path==="execute")return reject(res,403,"Execution is disabled for the public workspace.");
  if(webAuthEnabled&&!publicRead(method,path)){
