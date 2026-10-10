@@ -23,7 +23,7 @@ test("single-segment API paths are rewritten through the shared proxy", () => {
   assert.ok(existsSync(join(apiDir, "proxy.js")), "Missing shared proxy function");
   assert.ok(existsSync(join(apiDir, "[...path].js")), "Missing direct catch-all API fallback");
   const catchAllSource = readFileSync(join(apiDir, "[...path].js"), "utf8");
-  assert.match(catchAllSource, /proxy-handler\\.js/);
+  assert.ok(catchAllSource.includes("../src/proxy-handler.js"));
   assert.ok(config.rewrites.some(rule =>
     rule.source === "/api/:endpoint" &&
     rule.destination === "/api/proxy?__route=:endpoint"
