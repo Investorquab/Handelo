@@ -137,7 +137,12 @@ test("catch-all requests normalize paths and discard internal rewrite parameters
       urls.push(String(url));
       return mockUpstream(200);
     };
-    for (const path of ["/markets", "/api/markets?__route=markets"]) {
+    for (const path of [
+      "/markets",
+      "/api/markets?__route=markets",
+      "/api/markets?path=markets",
+      "/api/wallet/status?path=wallet&path=status"
+    ]) {
       const req = { url: path, method: "GET", headers: { accept: "application/json" } };
       const res = mockResponse();
       await sharedHandler(req, res);
@@ -145,7 +150,9 @@ test("catch-all requests normalize paths and discard internal rewrite parameters
     }
     assert.deepEqual(urls, [
       "https://handelo-api.185-7-81-139.sslip.io/api/markets",
-      "https://handelo-api.185-7-81-139.sslip.io/api/markets"
+      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
+      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
+      "https://handelo-api.185-7-81-139.sslip.io/api/wallet/status"
     ]);
   } finally {
     globalThis.fetch = oldFetch;
