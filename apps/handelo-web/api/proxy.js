@@ -22,6 +22,9 @@ export default function handler(req, res) {
 
   const query = new URLSearchParams(incoming.searchParams);
   query.delete("__route");
+  query.delete("endpoint");
+  query.delete("path");
+  query.delete("...path");
   const search = query.toString();
   req.url = "/api/" + segments.map(encodeURIComponent).join("/") + (search ? "?" + search : "");
   return sharedHandler(req, res);

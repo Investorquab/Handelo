@@ -4,7 +4,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import routedProxy from "../api/proxy.js";
-import sharedHandler from "./proxy-handler.js";
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
 const apiDir = join(rootDir, "api");
@@ -21,9 +20,7 @@ const topLevelRoutes = ["markets", "earnings", "gap-radar", "portfolio", "histor
 
 test("single-segment API paths are rewritten through the shared proxy", () => {
   assert.ok(existsSync(join(apiDir, "proxy.js")), "Missing shared proxy function");
-  assert.ok(existsSync(join(apiDir, "[...path].js")), "Missing direct catch-all API fallback");
-  const catchAllSource = readFileSync(join(apiDir, "[...path].js"), "utf8");
-  assert.ok(catchAllSource.includes("../src/proxy-handler.js"));
+  assert.equal(existsSync(join(apiDir, "[...path].js")), false, "Do not use Next.js catch-all syntax in this non-Next Vercel function project");
   assert.ok(config.rewrites.some(rule =>
     rule.source === "/api/:endpoint" &&
     rule.destination === "/api/proxy?__route=:endpoint"
@@ -124,7 +121,7 @@ test("public top-level route reaches the configured API without website credenti
   }
 });
 
-test("catch-all requests normalize paths and discard internal rewrite parameters", async () => {
+test("Vercel rewrite routing parameters are removed before upstream forwarding", async () => {
   const names = ["HANDELO_API_ORIGIN", "HANDELO_CLIENT_API_KEY", "HANDELO_WEB_AUTH_ENABLED"];
   const oldEnv = Object.fromEntries(names.map(name => [name, process.env[name]]));
   const oldFetch = globalThis.fetch;
@@ -137,23 +134,18 @@ test("catch-all requests normalize paths and discard internal rewrite parameters
       urls.push(String(url));
       return mockUpstream(200);
     };
-    for (const path of [
-      "/markets",
-      "/api/markets?__route=markets",
-      "/api/markets?path=markets",
-      "/api/wallet/status?path=wallet&path=status"
-    ]) {
+    const routedRequests = [
+      ["/api/proxy?__route=markets&endpoint=markets", "https://handelo-api.185-7-81-139.sslip.io/api/markets"],
+      ["/api/proxy?__route=wallet/status&endpoint=status", "https://handelo-api.185-7-81-139.sslip.io/api/wallet/status"],
+      ["/api/proxy?__route=portfolio&endpoint=portfolio&wallet=0x1111111111111111111111111111111111111111", "https://handelo-api.185-7-81-139.sslip.io/api/portfolio?wallet=0x1111111111111111111111111111111111111111"]
+    ];
+    for (const [path, expectedUrl] of routedRequests) {
       const req = { url: path, method: "GET", headers: { accept: "application/json" } };
       const res = mockResponse();
-      await sharedHandler(req, res);
+      await routedProxy(req, res);
       assert.equal(res.statusCode, 200, path);
+      assert.equal(urls.at(-1), expectedUrl, path);
     }
-    assert.deepEqual(urls, [
-      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
-      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
-      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
-      "https://handelo-api.185-7-81-139.sslip.io/api/wallet/status"
-    ]);
   } finally {
     globalThis.fetch = oldFetch;
     for (const name of names) {
