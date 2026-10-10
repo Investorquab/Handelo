@@ -19,7 +19,11 @@ python -m http.server 5173
 
 The UI uses `http://localhost:8787` in local development. On Vercel it calls the same-origin `/api/*` serverless proxy, which forwards requests to the VPS without exposing the backend client key to browser JavaScript.
 
-### Vercel environment variables
+## Vercel API route layout
+
+This is a static, non-Next.js frontend. Vercel's non-Next.js file router does not implement the Next.js arbitrary-depth `[...path]` catch-all behavior. Keep explicit function entry points for nested API paths under `api/`; they delegate to the shared `api/[...path].js` proxy handler. The route-coverage test ensures wallet, workspace, strategy, and portfolio endpoints do not silently become 404s.
+
+## Vercel environment variables
 
 Set these as server-side project environment variables. Do not prefix them with `NEXT_PUBLIC_` or `VITE_`:
 
