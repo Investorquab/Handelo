@@ -20,6 +20,7 @@ const topLevelRoutes = ["markets", "earnings", "gap-radar", "portfolio", "histor
 
 test("single-segment API paths are rewritten through the shared proxy", () => {
   assert.ok(existsSync(join(apiDir, "proxy.js")), "Missing shared proxy function");
+  assert.equal(existsSync(join(apiDir, "[...path].js")), false, "Catch-all API function must not intercept Vercel rewrites");
   assert.ok(config.rewrites.some(rule =>
     rule.source === "/api/:endpoint" &&
     rule.destination === "/api/proxy?__route=:endpoint"
@@ -54,7 +55,7 @@ test("nested API routes are rewritten through one shared proxy function", () => 
 });
 
 test("shared proxy keeps the API key server-side and supports optional website auth", () => {
-  const proxy = readFileSync(join(apiDir, "[...path].js"), "utf8");
+  const proxy = readFileSync(join(rootDir, "src", "proxy-handler.js"), "utf8");
   for (const marker of ["HANDELO_CLIENT_API_KEY", "x-handelo-api-key", "x-handelo-auth-required", "HANDELO_WEB_AUTH_ENABLED"]) {
     assert.ok(proxy.includes(marker), `Shared proxy is missing security/configuration marker: ${marker}`);
   }
