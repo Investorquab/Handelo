@@ -334,7 +334,7 @@ test("live workspace uses raw Binance market fields without demo simulation", ()
 test("live workspace loads a coherent snapshot and then receives streamed updates", () => {
   assert.match(liveWorkspaceSource, /\/api\/workspace\/snapshot/);
   assert.match(liveWorkspaceSource, /\/api\/workspace\/stream/);
-  assert.match(liveWorkspaceSource, /new EventSource/);
+  assert.match(liveWorkspaceSource, /response\.body\.getReader\(\)/);
   assert.match(liveWorkspaceSource, /Promise\.allSettled/);
   assert.match(liveWorkspaceSource, /\/api\/portfolio\?wallet=/);
   assert.match(liveWorkspaceSource, /function applyWorkspaceSnapshot\(snapshot\)/);
@@ -408,7 +408,7 @@ test("live-only wallet and chat work remains isolated from Try Demo", () => {
 test("live workspace uses one snapshot plus an SSE stream instead of independent polling", () => {
   assert.match(liveWorkspaceSource, /\/api\/workspace\/snapshot/);
   assert.match(liveWorkspaceSource, /\/api\/workspace\/stream/);
-  assert.match(liveWorkspaceSource, /new EventSource/);
+  assert.match(liveWorkspaceSource, /response\.body\.getReader\(\)/);
   assert.doesNotMatch(liveWorkspaceSource, /void refreshMarket\(\);/);
   assert.doesNotMatch(liveWorkspaceSource, /void refreshAccount\(\);/);
 });

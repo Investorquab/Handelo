@@ -111,29 +111,51 @@ const API_BASE = window.HANDELO_API_URL || localStorage.getItem("handelo_api_url
     }catch(error){
       if($("msg"))$("msg").textContent="Live workspace snapshot delayed: "+(error.name==="AbortError"?"API timeout":error.message);
     }
-    if(!window.EventSource||!window.HANDELO_LIVE_WORKSPACE)return;
-    const source=new EventSource(API_BASE+"/api/workspace/stream"+query);
+    if(!window.HANDELO_LIVE_WORKSPACE)return;
+    const controller=new AbortController();
+    const source={close:()=>controller.abort()};
     state.streamSource=source;
-    source.onopen=()=>{
+    try{
+      const response=await fetch(API_BASE+"/api/workspace/stream"+query,{
+        method:"GET",headers:{accept:"text/event-stream"},cache:"no-store",signal:controller.signal
+      });
+      if(!response.ok)throw new Error("Live stream request failed (HTTP "+response.status+").");
+      if(!response.body)throw new Error("Streaming responses are not supported by this browser.");
       state.streamAttempt=0;
       if($("msg"))$("msg").textContent="Live workspace connected";
-    };
-    source.onmessage=(event)=>{
-      try{
-        const message=JSON.parse(event.data);
-        if(message.type==="snapshot"){applyWorkspaceSnapshot(message.data);return;}
-        if(message.type==="market"){if(message.data)renderMarket(message.data);return;}
-        if(message.type==="account"){applyWorkspaceAccount(message.data);return;}
-      }catch(error){
-        if($("msg"))$("msg").textContent="Live stream message ignored: "+(error instanceof Error?error.message:String(error));
+      const reader=response.body.getReader();
+      const decoder=new TextDecoder();
+      let buffered="";
+      while(window.HANDELO_LIVE_WORKSPACE&&!controller.signal.aborted){
+        const item=await reader.read();
+        if(item.done)break;
+        buffered+=decoder.decode(item.value,{stream:true});
+        let separator;
+        while((separator=buffered.indexOf("\n\n"))>=0){
+          const frame=buffered.slice(0,separator);
+          buffered=buffered.slice(separator+2);
+          const data=frame.split(/\r?\n/).filter(line=>line.startsWith("data:")).map(line=>line.slice(5).trimStart()).join("\n");
+          if(!data)continue;
+          try{
+            const message=JSON.parse(data);
+            if(message.type==="snapshot"){applyWorkspaceSnapshot(message.data);continue;}
+            if(message.type==="market"){if(message.data)renderMarket(message.data);continue;}
+            if(message.type==="account"){applyWorkspaceAccount(message.data);continue;}
+          }catch(error){
+            if($("msg"))$("msg").textContent="Live stream message ignored: "+(error instanceof Error?error.message:String(error));
+          }
+        }
       }
-    };
-    source.onerror=()=>{
-      source.close();
+      try{await reader.cancel();}catch{}
+    }catch(error){
+      if(!controller.signal.aborted&&$("msg"))$("msg").textContent="Live stream reconnecting…";
+    }finally{
       if(state.streamSource===source)state.streamSource=null;
-      if($("msg"))$("msg").textContent="Live stream reconnecting…";
-      scheduleLiveStreamReconnect();
-    };
+      if(!controller.signal.aborted&&window.HANDELO_LIVE_WORKSPACE){
+        if($("msg"))$("msg").textContent="Live stream reconnecting…";
+        scheduleLiveStreamReconnect();
+      }
+    }
   }
   function ensureLiveFundingControl(){
     if(document.getElementById("live-funding-wrap"))return;
