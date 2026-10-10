@@ -21,18 +21,29 @@ The UI uses `http://localhost:8787` in local development. On Vercel it calls the
 
 ## Vercel API routing
 
-This is a static, non-Next.js frontend, so Vercel's `[...path]` function filename is not an arbitrary-depth catch-all. Nested wallet, workspace, portfolio, strategy and strategies routes are rewritten through `api/proxy.js`, which restores the requested path and delegates to the shared authenticated proxy. This keeps the deployment to two API functions rather than creating one serverless function per nested route, and avoids the Vercel Hobby plan's non-framework function-count limit.
+This is a static, non-Next.js frontend. Both single-segment endpoints (such as `/api/markets`) and nested endpoints (such as `/api/wallet/status`) are explicitly rewritten through `api/proxy.js`. The wrapper restores the canonical `/api/...` path before invoking the shared proxy. Regression tests cover both route families and the proxy's upstream URL construction.
 
-## Vercel environment variables
+## Vercel and VPS configuration
 
-Set these as server-side project environment variables. Do not prefix them with `NEXT_PUBLIC_` or `VITE_`:
+Set these as server-side Vercel Production environment variables. Do not prefix them with `NEXT_PUBLIC_` or `VITE_`:
 
-- `HANDELO_API_ORIGIN=https://handelo.duckdns.org`
-- `HANDELO_CLIENT_API_KEY` (the same generated secret as the VPS)
-- `HANDELO_WEB_USERNAME` (workspace login username)
-- `HANDELO_WEB_PASSWORD` (strong workspace login password)
+- `HANDELO_API_ORIGIN=https://handelo-api.185-7-81-139.sslip.io`
+- `HANDELO_CLIENT_API_KEY` (must match the VPS value; never expose it to browser JavaScript)
+- `HANDELO_WEB_AUTH_ENABLED=false` (public hackathon demo, no website username/password prompt)
 
-The public market-read endpoints do not require the workspace login. Wallet, strategy, review, execution and chat requests pass through the authenticated proxy. Keep `HANDELO_EXECUTION_ENABLED=false` until controlled real-money validation.
+For the dedicated API hostname, add this separate site to `/etc/caddy/Caddyfile` on the VPS:
+
+```caddy
+handelo-api.185-7-81-139.sslip.io {
+    reverse_proxy 127.0.0.1:8787
+}
+```
+
+Validate the Caddyfile before reloading. On this VPS, use `caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile` rather than relying on `systemctl reload caddy`.
+
+Public demo mode means the API proxy is publicly callable; it is a shared demo instance, not a multi-user private account system. The proxy hard-blocks `POST /api/execute` while public mode is active. Keep both `HANDELO_EXECUTION_ENABLED=false` and `HANDELO_STRATEGY_WORKER_ENABLED=false` on the VPS. To re-enable the website Basic-auth gate, set `HANDELO_WEB_AUTH_ENABLED=true` and configure `HANDELO_WEB_USERNAME` and `HANDELO_WEB_PASSWORD` server-side. MCP authentication remains separate.
+
+The existing market-read endpoints are public in either mode. Keep execution disabled until controlled real-money validation.
 
 To point it at another API without rebuilding:
 
