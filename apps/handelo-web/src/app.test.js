@@ -9,6 +9,14 @@ const indexSource = readFileSync(fileURLToPath(new URL("../index.html", import.m
 const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("./live-workspace.js", import.meta.url)), "utf8");
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
 
+test("frontend defaults to the deployed Handelo API outside local development", () => {
+  assert.match(source, /DEFAULT_API_BASE[\\s\\S]*https:\\/\\/handelo\\.duckdns\\.org/);
+  assert.match(liveWorkspaceSource, /DEFAULT_API_BASE[\\s\\S]*https:\\/\\/handelo\\.duckdns\\.org/);
+  assert.match(source, /window\\.HANDELO_API_URL \\|\\| localStorage\\.getItem\\("handelo_api_url"\\) \\|\\| DEFAULT_API_BASE/);
+  assert.match(liveWorkspaceSource, /window\\.HANDELO_API_URL \\|\\| localStorage\\.getItem\\("handelo_api_url"\\) \\|\\| DEFAULT_API_BASE/);
+});
+
+
 test("workspace Gap Radar renders cross-representation rows once", () => {
   assert.match(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ empty;/);
   assert.doesNotMatch(source, /workspaceGapRadar\.innerHTML = marketRows \+ comparisonHeader \+ comparisonRows \+ empty;/);

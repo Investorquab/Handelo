@@ -17,7 +17,7 @@ cd apps/handelo-web
 python -m http.server 5173
 ```
 
-The UI expects the Handelo API at `http://localhost:8787` by default.
+The UI uses `http://localhost:8787` in local development and `https://handelo.duckdns.org` when hosted on a non-local domain. The deployed frontend therefore targets the Handelo VPS API by default.
 
 To point it at another API without rebuilding:
 

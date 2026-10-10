@@ -1,4 +1,7 @@
-const API_BASE = window.HANDELO_API_URL || localStorage.getItem("handelo_api_url") || "http://localhost:8787";
+const DEFAULT_API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ? "http://localhost:8787"
+  : "https://handelo.duckdns.org";
+const API_BASE = window.HANDELO_API_URL || localStorage.getItem("handelo_api_url") || DEFAULT_API_BASE;
 
 const conversation = document.querySelector("#conversation");
 const welcome = document.querySelector("#welcome");
