@@ -1,7 +1,7 @@
 (() => {
   const DEFAULT_API_BASE = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? "http://localhost:8787"
-  : "https://handelo.duckdns.org";
+  : "";
 const API_BASE = window.HANDELO_API_URL || localStorage.getItem("handelo_api_url") || DEFAULT_API_BASE;
   const USDT = "0x55d398326f99059fF775485246999027B3197955";
   const state = {

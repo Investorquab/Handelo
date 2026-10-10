@@ -363,6 +363,19 @@ const server = createServer(async (req, res) => {
     return json(res, 200, { ok: true, service: "handelo-agent" });
   }
 
+  const requestPath = (req.url ?? "").split("?")[0];
+  const isPublicMarketRead = req.method === "GET" && (
+    requestPath === "/api/markets" ||
+    requestPath === "/api/earnings" ||
+    requestPath.startsWith("/api/earnings/") ||
+    requestPath === "/api/gap-radar" ||
+    requestPath.startsWith("/api/gap-radar/")
+  );
+  if (requestPath.startsWith("/api/") && !isPublicMarketRead) {
+    if (!CLIENT_API_KEY) return json(res, 503, { error: "Private Handelo API routes are disabled until HANDELO_CLIENT_API_KEY is configured." });
+    if (req.headers["x-handelo-api-key"] !== CLIENT_API_KEY) return json(res, 401, { error: "A valid Handelo client API key is required." });
+  }
+
   if (req.method === "GET" && req.url === "/api/wallet/status") {
     try {
       const status = await walletStatus();
@@ -1168,10 +1181,6 @@ const server = createServer(async (req, res) => {
 
   if (req.method !== "POST" || req.url !== "/api/chat") {
     return json(res, 404, { error: "Not found" });
-  }
-
-  if (CLIENT_API_KEY && req.headers["x-handelo-api-key"] !== CLIENT_API_KEY) {
-    return json(res, 401, { error: "A valid Handelo client API key is required." });
   }
 
   try {

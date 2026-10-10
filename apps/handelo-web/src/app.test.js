@@ -8,12 +8,20 @@ const source = readFileSync(appPath, "utf8");
 const indexSource = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
 const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("./live-workspace.js", import.meta.url)), "utf8");
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
+const proxySource = readFileSync(fileURLToPath(new URL("../api/%5B...path%5D.js", import.meta.url)), "utf8");
+const apiClientSource = readFileSync(fileURLToPath(new URL("./api-client.js", import.meta.url)), "utf8");
 
-test("frontend defaults to the deployed Handelo API outside local development", () => {
-  assert.ok(source.includes("https://handelo.duckdns.org"));
-  assert.ok(liveWorkspaceSource.includes("https://handelo.duckdns.org"));
-  assert.ok(source.includes("|| DEFAULT_API_BASE;"));
-  assert.ok(liveWorkspaceSource.includes("|| DEFAULT_API_BASE;"));
+test("deployed frontend uses a same-origin protected API proxy", () => {
+  assert.ok(source.includes('"http://localhost:8787"'));
+  assert.ok(source.includes(': ""'));
+  assert.ok(liveWorkspaceSource.includes('"http://localhost:8787"'));
+  assert.ok(liveWorkspaceSource.includes(': ""'));
+  assert.ok(indexSource.includes('<script src="./src/api-client.js"></script>'));
+});
+
+test("Vercel API proxy authenticates private requests and keeps upstream keys server-side", () => {
+  for (const key of ["HANDELO_API_ORIGIN", "HANDELO_CLIENT_API_KEY", "HANDELO_WEB_USERNAME", "HANDELO_WEB_PASSWORD", "x-handelo-auth-required"]) assert.ok(proxySource.includes(key));
+  assert.ok(apiClientSource.includes("authorization"));
 });
 
 

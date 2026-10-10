@@ -25,6 +25,13 @@ test("chat boundary enforces the configured client API key", () => {
 });
 
 
+test("private API routes fail closed and require the configured server-side client key", () => {
+  assert.ok(source.includes('const isPublicMarketRead = req.method === "GET"'));
+  assert.ok(source.includes("Private Handelo API routes are disabled until HANDELO_CLIENT_API_KEY is configured."));
+  assert.ok(source.includes('req.headers["x-handelo-api-key"] !== CLIENT_API_KEY'));
+  assert.ok(source.includes('requestPath === "/api/markets"'));
+});
+
 test("strategy activation boundary is wallet-scoped and risk-gated", () => {
   assert.match(source, /GET.*\/api\/strategies/);
   assert.match(source, /POST.*\/api\/strategies\/activate/);

@@ -17,7 +17,18 @@ cd apps/handelo-web
 python -m http.server 5173
 ```
 
-The UI uses `http://localhost:8787` in local development and `https://handelo.duckdns.org` when hosted on a non-local domain. The deployed frontend therefore targets the Handelo VPS API by default.
+The UI uses `http://localhost:8787` in local development. On Vercel it calls the same-origin `/api/*` serverless proxy, which forwards requests to the VPS without exposing the backend client key to browser JavaScript.
+
+### Vercel environment variables
+
+Set these as server-side project environment variables. Do not prefix them with `NEXT_PUBLIC_` or `VITE_`:
+
+- `HANDELO_API_ORIGIN=https://handelo.duckdns.org`
+- `HANDELO_CLIENT_API_KEY` (the same generated secret as the VPS)
+- `HANDELO_WEB_USERNAME` (workspace login username)
+- `HANDELO_WEB_PASSWORD` (strong workspace login password)
+
+The public market-read endpoints do not require the workspace login. Wallet, strategy, review, execution and chat requests pass through the authenticated proxy. Keep `HANDELO_EXECUTION_ENABLED=false` until controlled real-money validation.
 
 To point it at another API without rebuilding:
 
