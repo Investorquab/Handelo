@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import routedProxy from "../api/proxy.js";
+import sharedHandler from "./proxy-handler.js";
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
 const apiDir = join(rootDir, "api");
@@ -20,7 +21,9 @@ const topLevelRoutes = ["markets", "earnings", "gap-radar", "portfolio", "histor
 
 test("single-segment API paths are rewritten through the shared proxy", () => {
   assert.ok(existsSync(join(apiDir, "proxy.js")), "Missing shared proxy function");
-  assert.equal(existsSync(join(apiDir, "[...path].js")), false, "Catch-all API function must not intercept Vercel rewrites");
+  assert.ok(existsSync(join(apiDir, "[...path].js")), "Missing direct catch-all API fallback");
+  const catchAllSource = readFileSync(join(apiDir, "[...path].js"), "utf8");
+  assert.match(catchAllSource, /proxy-handler\\.js/);
   assert.ok(config.rewrites.some(rule =>
     rule.source === "/api/:endpoint" &&
     rule.destination === "/api/proxy?__route=:endpoint"
@@ -112,6 +115,38 @@ test("public top-level route reaches the configured API without website credenti
     assert.equal(requestedUrl, "https://handelo-api.185-7-81-139.sslip.io/api/markets");
     assert.equal(forwardedHeaders["x-handelo-api-key"], "test-key-never-used-in-production");
     assert.equal(forwardedHeaders.authorization, undefined);
+  } finally {
+    globalThis.fetch = oldFetch;
+    for (const name of names) {
+      if (oldEnv[name] === undefined) delete process.env[name];
+      else process.env[name] = oldEnv[name];
+    }
+  }
+});
+
+test("catch-all requests normalize paths and discard internal rewrite parameters", async () => {
+  const names = ["HANDELO_API_ORIGIN", "HANDELO_CLIENT_API_KEY", "HANDELO_WEB_AUTH_ENABLED"];
+  const oldEnv = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  const oldFetch = globalThis.fetch;
+  const urls = [];
+  try {
+    process.env.HANDELO_API_ORIGIN = "https://handelo-api.185-7-81-139.sslip.io";
+    process.env.HANDELO_CLIENT_API_KEY = "test-key-never-used-in-production";
+    delete process.env.HANDELO_WEB_AUTH_ENABLED;
+    globalThis.fetch = async url => {
+      urls.push(String(url));
+      return mockUpstream(200);
+    };
+    for (const path of ["/markets", "/api/markets?__route=markets"]) {
+      const req = { url: path, method: "GET", headers: { accept: "application/json" } };
+      const res = mockResponse();
+      await sharedHandler(req, res);
+      assert.equal(res.statusCode, 200, path);
+    }
+    assert.deepEqual(urls, [
+      "https://handelo-api.185-7-81-139.sslip.io/api/markets",
+      "https://handelo-api.185-7-81-139.sslip.io/api/markets"
+    ]);
   } finally {
     globalThis.fetch = oldFetch;
     for (const name of names) {
