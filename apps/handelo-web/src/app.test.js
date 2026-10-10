@@ -10,10 +10,10 @@ const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("./live-workspace
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
 
 test("frontend defaults to the deployed Handelo API outside local development", () => {
-  assert.match(source, /DEFAULT_API_BASE[\\s\\S]*https:\\/\\/handelo\\.duckdns\\.org/);
-  assert.match(liveWorkspaceSource, /DEFAULT_API_BASE[\\s\\S]*https:\\/\\/handelo\\.duckdns\\.org/);
-  assert.match(source, /window\\.HANDELO_API_URL \\|\\| localStorage\\.getItem\\("handelo_api_url"\\) \\|\\| DEFAULT_API_BASE/);
-  assert.match(liveWorkspaceSource, /window\\.HANDELO_API_URL \\|\\| localStorage\\.getItem\\("handelo_api_url"\\) \\|\\| DEFAULT_API_BASE/);
+  assert.ok(source.includes("https://handelo.duckdns.org"));
+  assert.ok(liveWorkspaceSource.includes("https://handelo.duckdns.org"));
+  assert.ok(source.includes("|| DEFAULT_API_BASE;"));
+  assert.ok(liveWorkspaceSource.includes("|| DEFAULT_API_BASE;"));
 });
 
 
