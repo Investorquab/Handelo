@@ -20,6 +20,10 @@
     {
       "source": "/api/strategies/:endpoint",
       "destination": "/api/proxy?__route=strategies/:endpoint"
+    },
+    {
+      "source": "/api/:endpoint",
+      "destination": "/api/proxy?__route=:endpoint"
     }
   ]
 }
