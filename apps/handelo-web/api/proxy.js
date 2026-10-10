@@ -1,4 +1,4 @@
-import sharedHandler from "./[...path].js";
+import sharedHandler from "../src/proxy-handler.js";
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
 

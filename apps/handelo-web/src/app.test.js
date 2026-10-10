@@ -8,7 +8,7 @@ const source = readFileSync(appPath, "utf8");
 const indexSource = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
 const liveWorkspaceSource = readFileSync(fileURLToPath(new URL("./live-workspace.js", import.meta.url)), "utf8");
 const styles = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
-const proxySource = readFileSync(fileURLToPath(new URL("../api/%5B...path%5D.js", import.meta.url)), "utf8");
+const proxySource = readFileSync(fileURLToPath(new URL("./proxy-handler.js", import.meta.url)), "utf8");
 const apiClientSource = readFileSync(fileURLToPath(new URL("./api-client.js", import.meta.url)), "utf8");
 
 test("deployed frontend uses a same-origin protected API proxy", () => {
