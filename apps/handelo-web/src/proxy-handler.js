@@ -40,7 +40,7 @@ export default async function handler(req,res){
  }
  let body;
  if(method==="POST"){const chunks=[];let size=0;try{for await(const chunk of req){const b=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=b.length;if(size>MAX_BODY_BYTES)return reject(res,413,"Request body is too large.");chunks.push(b);}body=Buffer.concat(chunks);}catch{return reject(res,400,"Could not read request body.");}}
- const upstreamUrl=new URL("/api/"+segments.map(encodeURIComponent).join("/"),origin);const query=new URLSearchParams(incoming.search);query.delete("__route");upstreamUrl.search=query.toString();
+ const upstreamUrl=new URL("/api/"+segments.map(encodeURIComponent).join("/"),origin);const query=new URLSearchParams(incoming.search);query.delete("__route");query.delete("path");upstreamUrl.search=query.toString();
  const headers={"x-handelo-api-key":apiKey,"accept":String(req.headers.accept||"application/json")};if(req.headers["content-type"])headers["content-type"]=req.headers["content-type"];if(req.headers["last-event-id"])headers["last-event-id"]=req.headers["last-event-id"];
  let upstream;
  try{upstream=await fetch(upstreamUrl,{method,headers,...(body&&body.length?{body,duplex:"half"}:{})});}
