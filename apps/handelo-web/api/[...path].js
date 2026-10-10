@@ -1,5 +1,8 @@
+import { timingSafeEqual } from "node:crypto";
 export const config = { api: { bodyParser: false, responseLimit: false } };
 const MAX_BODY_BYTES = 64 * 1024;
+function safeEqual(a0,b0){const a=Buffer.from(String(a0??"")),b=Buffer.from(String(b0??""));return a.length===b.length&&a.length>0&&timingSafeEqual(a,b);}
+function decodeBasic(value){if(typeof value!=="string"||!value.startsWith("Basic "))return null;try{const s=Buffer.from(value.slice(6),"base64").toString("utf8");const i=s.indexOf(":");return i<1?null:{username:s.slice(0,i),password:s.slice(i+1)};}catch{return null;}}
 const SAFE_NETWORK_CODES = new Set([
   "ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT",
   "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_SOCKET", "ENETUNREACH", "EHOSTUNREACH",
@@ -31,8 +34,11 @@ export default async function handler(req,res){
  const path=incoming.pathname.slice(5);const segments=path.split("/");
  if(!path||segments.some(s=>!s||s==="."||s===".."||!/^[A-Za-z0-9._-]+$/.test(s)))return reject(res,400,"Invalid API path.");
  if(!webAuthEnabled&&method==="POST"&&path==="execute")return reject(res,403,"Execution is disabled for the public workspace.");
- if(webAuthEnabled&&!publicRead(method,path)){if(!expectedUser||!expectedPass)return reject(res,503,"Handelo workspace login is not configured in Vercel.");const authValue=req.headers.authorization;let supplied=null;if(typeof authValue==="string"&&authValue.startsWith("Basic ")){try{const decoded=Buffer.from(authValue.slice(6),"base64").toString("utf8");const separator=decoded.indexOf(":");if(separator>0)supplied={username:decoded.slice(0,separator),password:decoded.slice(separator+1)};}catch{}}
- if(!supplied||supplied.username!==expectedUser||supplied.password!==expectedPass)return reject(res,401,"Sign in to access the Handelo workspace.",true);}
+ if(webAuthEnabled&&!publicRead(method,path)){
+  if(!expectedUser||!expectedPass)return reject(res,503,"Handelo workspace login is not configured in Vercel.");
+  const supplied=decodeBasic(req.headers.authorization);
+  if(!supplied||!safeEqual(supplied.username,expectedUser)||!safeEqual(supplied.password,expectedPass))return reject(res,401,"Sign in to access the Handelo workspace.",true);
+ }
  let body;
  if(method==="POST"){const chunks=[];let size=0;try{for await(const chunk of req){const b=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=b.length;if(size>MAX_BODY_BYTES)return reject(res,413,"Request body is too large.");chunks.push(b);}body=Buffer.concat(chunks);}catch{return reject(res,400,"Could not read request body.");}}
  const upstreamUrl=new URL("/api/"+segments.map(encodeURIComponent).join("/"),origin);upstreamUrl.search=incoming.search;
