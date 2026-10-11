@@ -26,8 +26,19 @@
 
 ---
 
+## 🎥 Demo
+
+**Live application:** https://handelo.vercel.app/
+
+[![Handelo Demo](https://img.youtube.com/vi/p2IIcPUbbuY/maxresdefault.jpg)](https://youtu.be/p2IIcPUbbuY)
+
+**Watch the full demo on YouTube:** https://youtu.be/p2IIcPUbbuY
+
+---
+
 ## Contents
 
+- [Demo](#-demo)
 - [What is Handelo?](#what-is-handelo)
 - [Why we built it](#why-we-built-it)
 - [The problem](#the-problem)
@@ -873,4 +884,4 @@ License and distribution status will be finalized with the submission package.
 - **BNB Agent Studio:** https://www.bnbchain.org/en/bnb-agent-studio
 - **Binance Agentic Wallet:** https://developers.binance.com/en/docs/products/agentic-wallet/welcome
 
-> Deployment URLs, YouTube demo, public MCP endpoint, Telegram bot and other final submission resources will be added only after they are actually live and validated.
+> Public MCP endpoint, Telegram bot and other final submission resources will be added only after they are actually live and validated.
